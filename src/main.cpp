@@ -5,57 +5,57 @@
 #include "boost/polygon/polygon.hpp"
 #include "colours.h"
 #include "units.h"
-// #include "cord.h"
+#include "cord.h"
 
 
-// namespace gtl = boost::polygon;
-// using namespace boost::polygon::operators;
+namespace gtl = boost::polygon;
+using namespace boost::polygon::operators;
 
-// template <typename Point>
-// void test_point() {
-//     //constructing a gtl point
-//     int x = 10;
-//     int y = 20;
-//     //Point pt(x, y);
-//     Point pt = gtl::construct<Point>(x, y);
-//     assert(gtl::x(pt) == 10);
-//     assert(gtl::y(pt) == 20);
+template <typename Point>
+void test_point() {
+    //constructing a gtl point
+    int x = 10;
+    int y = 20;
+    //Point pt(x, y);
+    Point pt = gtl::construct<Point>(x, y);
+    assert(gtl::x(pt) == 10);
+    assert(gtl::y(pt) == 20);
    
-//     //a quick primer in isotropic point access
-//     typedef gtl::orientation_2d O;
-//     using gtl::HORIZONTAL;
-//     using gtl::VERTICAL;
-//     O o = HORIZONTAL;
-//     assert(gtl::x(pt) == gtl::get(pt, o));
+    //a quick primer in isotropic point access
+    typedef gtl::orientation_2d O;
+    using gtl::HORIZONTAL;
+    using gtl::VERTICAL;
+    O o = HORIZONTAL;
+    assert(gtl::x(pt) == gtl::get(pt, o));
    
-//     o = o.get_perpendicular();
-//     assert(o == VERTICAL);
-//     assert(gtl::y(pt) == gtl::get(pt, o));
+    o = o.get_perpendicular();
+    assert(o == VERTICAL);
+    assert(gtl::y(pt) == gtl::get(pt, o));
    
-//     gtl::set(pt, o, 30);
-//     assert(gtl::y(pt) == 30);
+    gtl::set(pt, o, 30);
+    assert(gtl::y(pt) == 30);
    
-//     //using some of the library functions
-//     //Point pt2(10, 30);
-//     Point pt2 = gtl::construct<Point>(10, 30);
-//     assert(gtl::equivalence(pt, pt2));
+    //using some of the library functions
+    //Point pt2(10, 30);
+    Point pt2 = gtl::construct<Point>(10, 30);
+    assert(gtl::equivalence(pt, pt2));
    
-//     gtl::transformation<len_t> tr(gtl::axis_transformation::SWAP_XY);
-//     gtl::transform(pt, tr);
-//     assert(gtl::equivalence(pt, gtl::construct<Point>(30, 10)));
+    gtl::transformation<len_t> tr(gtl::axis_transformation::SWAP_XY);
+    gtl::transform(pt, tr);
+    assert(gtl::equivalence(pt, gtl::construct<Point>(30, 10)));
    
-//     gtl::transformation<len_t> tr2 = tr.inverse();
-//     assert(tr == tr2); //SWAP_XY is its own inverse transform
+    gtl::transformation<len_t> tr2 = tr.inverse();
+    assert(tr == tr2); //SWAP_XY is its own inverse transform
    
-//     gtl::transform(pt, tr2);
-//     assert(gtl::equivalence(pt, pt2)); //the two points are equal again
+    gtl::transform(pt, tr2);
+    assert(gtl::equivalence(pt, pt2)); //the two points are equal again
    
-//     gtl::move(pt, o, 10); //move pt 10 units in y
-//     assert(gtl::euclidean_distance(pt, pt2) == 10.0f);
+    gtl::move(pt, o, 10); //move pt 10 units in y
+    assert(gtl::euclidean_distance(pt, pt2) == 10.0f);
    
-//     gtl::move(pt, o.get_perpendicular(), 10); //move pt 10 units in x
-//     assert(gtl::manhattan_distance(pt, pt2) == 20);
-// }
+    gtl::move(pt, o.get_perpendicular(), 10); //move pt 10 units in x
+    assert(gtl::manhattan_distance(pt, pt2) == 20);
+}
 
 int main(int argc, char const *argv[]){
 

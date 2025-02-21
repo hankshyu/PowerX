@@ -1,5 +1,40 @@
-#include <math.h>
-#include "units.h"
+//////////////////////////////////////////////////////////////////////////////////
+//  Engineer:           Tzu-Han Hsu
+//  Create Date:        02/21/2025 10:53:12 PM
+//  Module Name:        units
+//  Project Name:       PowerX
+//  C++(Version):       C++17 
+//  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
+//  Target:             arm64-apple-darwin24.3.0
+//  Thread model:       posix
+//  Dependencies
+//  1. C++ STL:         cmath
+//  2. Boost Library:   None
+//  3. Texo Library:    units.hpp
+//
+//////////////////////////////////////////////////////////////////////////////////
+//  Description:        Defines the basic datatypes and some global definitions
+//
+//////////////////////////////////////////////////////////////////////////////////
+//  Revision:
+//  02/21/2025:         Remove sector struct related functions
+//////////////////////////////////////////////////////////////////////////////////
+
+/*
+Header File Dependencies
+1. C++ STL:         ostream
+2. Boost Library:   boost/polygon/polygon.hpp
+3. Texo Library:    units.hpp
+*/
+
+// Dependencies
+// 1. C++ STL:
+#include <cmath>
+
+// 2. Boost Library:
+
+// 3. Texo Library:
+#include "units.hpp"
 
 std::ostream &operator << (std::ostream &os, const direction1D &w){
     if(w == direction1D::CLOCKWISE) os << "direction1D::CLOCKWISE";
