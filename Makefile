@@ -14,7 +14,7 @@ DEBUGFLAGS = -g
 LINKFLAGS = -lm
 
 
-INF_OBJS = units.o 
+INF_OBJS = units.o cord.o
 
 	
 PI_OBJS = eqCktExtractor.o
@@ -33,10 +33,10 @@ pwrx: $(OBJS)
 $(OBJPATH)/main.o: $(SRCPATH)/main.cpp 
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
-$(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.h
+$(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
-$(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.h
+$(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
 
@@ -47,10 +47,10 @@ pwrx_dbg: $(DBG_OBJS)
 $(OBJPATH)/main_dbg.o: $(SRCPATH)/main.cpp 
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) -I $(BOOSTPATH) $(CFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
-$(OBJPATH)/%_dbg.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.h
+$(OBJPATH)/%_dbg.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) -I $(BOOSTPATH) $(CFLAGS) $< -o $@
 
-$(OBJPATH)/%_dbg.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.h
+$(OBJPATH)/%_dbg.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) -I $(CFLAGS) $< -o $@
 
 .PHONY: clean

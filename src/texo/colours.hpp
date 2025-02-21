@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
 //  Create Date:        02/21/2025 09:47:23 PM
-//  Module Name:        colours
+//  Module Name:        colours.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -17,7 +17,7 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
-//  02/21/2025:         Introduce namespace colours, change #define into const char *
+//  02/21/2025:         Introduces namespace colours, change #define into const char *
 //
 //////////////////////////////////////////////////////////////////////////////////
 

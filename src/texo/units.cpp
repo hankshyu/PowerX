@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
 //  Create Date:        02/21/2025 10:53:12 PM
-//  Module Name:        units
+//  Module Name:        units.cpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -22,9 +22,9 @@
 
 /*
 Header File Dependencies
-1. C++ STL:         ostream
-2. Boost Library:   boost/polygon/polygon.hpp
-3. Texo Library:    units.hpp
+//  1. C++ STL:         cstdint, climits, ostream
+//  2. Boost Library:   boost/polygon/polygon.hpp
+//  3. Texo Library:    None
 */
 
 // Dependencies

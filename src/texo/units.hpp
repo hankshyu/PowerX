@@ -23,12 +23,16 @@
 #ifndef __UNITS_H__
 #define __UNITS_H__
 
+// Dependencies
+// 1. C++ STL:
 #include <cstdint>
 #include <climits>
 #include <ostream>
 
-
+// 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
+
+// 3. Texo Library:
 
 typedef int32_t len_t;
 typedef int64_t  area_t;

@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        02/21/2025 23:01:28 PM
-//  Module Name:        cord
+//  Create Date:        02/21/2025 23:19:18 PM
+//  Module Name:        cord.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -25,10 +25,15 @@
 #ifndef __CORD_H__
 #define __CORD_H__
 
+// Dependencies
+// 1. C++ STL:
 #include <ostream>
 
+// 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
-#include "units.h"
+
+// 3. Texo Library:
+#include "units.hpp"
 
 class Cord {
 private:
