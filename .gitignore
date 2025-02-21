@@ -12,3 +12,4 @@ obj/*
 !obj/.gitkeep
 outputs/*
 !outputs/.gitkeep
+archive/*
