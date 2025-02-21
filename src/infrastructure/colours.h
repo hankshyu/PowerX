@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:       Tzu-Han Hsu
 //  Create Date:    02/21/2025 09:47:23 PM
-//  Module Name:    colours.h
+//  Module Name:    colours
 //  Project Name:   PowerX
 //  C++(Version):   C++17 
 //  g++(Version):   Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -10,7 +10,7 @@
 //  Dependencies:
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:     This is a 3:2 compressor, a.k.a carry save adder.
+//  Description:    Defines string that adds colouring to terminal display
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
