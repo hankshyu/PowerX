@@ -5,6 +5,7 @@ bin/*
 inputs/*
 !inputs/*.txt
 !inputs/.gitkeep
+!lib/.gitkeep
 !lib/boost*/.gitkeep
 lib/*
 obj/*

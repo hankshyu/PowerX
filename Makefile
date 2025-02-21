@@ -3,7 +3,7 @@ INF_SRCPATH = $(SRCPATH)/infrastructure
 PI_SRCPATH = $(SRCPATH)/pi
 BINPATH = ./bin
 OBJPATH = ./obj
-BOOSTPATH = ./lib/boost_1_84_0/
+BOOSTPATH = ./lib/boost_1_87_0/
 
 # CXX = /usr/bin/g++
 CXX = g++
