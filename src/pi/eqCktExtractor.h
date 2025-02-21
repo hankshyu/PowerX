@@ -1,0 +1,7 @@
+class EqCktExtractor{
+private:
+
+public:
+
+
+};
