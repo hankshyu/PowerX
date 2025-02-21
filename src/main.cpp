@@ -4,7 +4,7 @@
 
 #include "boost/polygon/polygon.hpp"
 #include "colours.h"
-// #include "units.h"
+#include "units.h"
 // #include "cord.h"
 
 
@@ -60,6 +60,7 @@
 int main(int argc, char const *argv[]){
 
     std::cout << colours::RED << "im in red!!" << colours::COLORRST << std::endl;
+    std::cout << direction2D::DOWN << flipAngle(1.01) << " " << translateAngleToQuadrant(0.75) << std::endl;
     // test_point<Cord>();
     // std::cout << "Complete test!" << std::endl;
 

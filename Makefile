@@ -14,10 +14,9 @@ DEBUGFLAGS = -g
 LINKFLAGS = -lm
 
 
-INF_OBJS = 
+INF_OBJS = units.o 
 
 	
-
 PI_OBJS = eqCktExtractor.o
 
 _OBJS = main.o $(INF_OBJS) $(PI_OBJS)
@@ -25,10 +24,10 @@ _OBJS = main.o $(INF_OBJS) $(PI_OBJS)
 OBJS = $(patsubst %,$(OBJPATH)/%,$(_OBJS))
 DBG_OBJS = $(patsubst %.o, $(OBJPATH)/%_dbg.o, $(_OBJS))
 
-all: asprun
-debug: asprun_debug
+all: pwrx
+debug: pwrx_dbg
 
-asprun: $(OBJS)
+pwrx: $(OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -o $(BINPATH)/$@
 
 $(OBJPATH)/main.o: $(SRCPATH)/main.cpp 
@@ -42,7 +41,7 @@ $(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.h
 
 
 
-asorun_debug: $(DBG_OBJS)
+pwrx_dbg: $(DBG_OBJS)
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) $(LINKFLAGS) $^ -o $(BINPATH)/$@
 
 $(OBJPATH)/main_dbg.o: $(SRCPATH)/main.cpp 
