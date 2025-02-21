@@ -1,5 +1,5 @@
 SRCPATH = ./src
-INF_SRCPATH = $(SRCPATH)/infrastructure
+TEXO_SRCPATH = $(SRCPATH)/texo
 PI_SRCPATH = $(SRCPATH)/pi
 BINPATH = ./bin
 OBJPATH = ./obj
@@ -7,7 +7,7 @@ BOOSTPATH = ./lib/boost_1_87_0/
 
 # CXX = /usr/bin/g++
 CXX = g++
-FLAGS = -std=c++17 -I $(INF_SRCPATH) -I $(PI_SRCPATH) -DNDEBUG
+FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) -DNDEBUG
 CFLAGS = -c 
 OPTFLAGS = -O3
 DEBUGFLAGS = -g
@@ -33,7 +33,7 @@ pwrx: $(OBJS)
 $(OBJPATH)/main.o: $(SRCPATH)/main.cpp 
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
-$(OBJPATH)/%.o: $(INF_SRCPATH)/%.cpp $(INF_SRCPATH)/%.h
+$(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.h
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
 $(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.h
@@ -47,7 +47,7 @@ pwrx_dbg: $(DBG_OBJS)
 $(OBJPATH)/main_dbg.o: $(SRCPATH)/main.cpp 
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) -I $(BOOSTPATH) $(CFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
-$(OBJPATH)/%_dbg.o: $(INF_SRCPATH)/%.cpp $(INF_SRCPATH)/%.h
+$(OBJPATH)/%_dbg.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.h
 	$(CXX) $(FLAGS) $(DEBUGFLAGS) -I $(BOOSTPATH) $(CFLAGS) $< -o $@
 
 $(OBJPATH)/%_dbg.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.h
