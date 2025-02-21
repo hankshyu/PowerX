@@ -1,20 +1,23 @@
 //////////////////////////////////////////////////////////////////////////////////
-//  Engineer:       Tzu-Han Hsu
-//  Create Date:    02/21/2025 09:47:23 PM
-//  Module Name:    colours
-//  Project Name:   PowerX
-//  C++(Version):   C++17 
-//  g++(Version):   Apple clang version 16.0.0 (clang-1600.0.26.6)
-//  Target:         arm64-apple-darwin24.3.0
-//  Thread model:   posix
-//  Dependencies:
+//  Engineer:           Tzu-Han Hsu
+//  Create Date:        02/21/2025 09:47:23 PM
+//  Module Name:        colours
+//  Project Name:       PowerX
+//  C++(Version):       C++17 
+//  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
+//  Target:             arm64-apple-darwin24.3.0
+//  Thread model:       posix
+//  Dependencies
+//  1. C++ STL:         None
+//  2. Boost Library:   None
+//  3. Texo Library:    None
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:    Defines string that adds colouring to terminal display
+//  Description:        Defines string that adds colouring to terminal display
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
-//  02/21/2025 - Introduce namespace colours, change #define into const char *
+//  02/21/2025:         Introduce namespace colours, change #define into const char *
 //
 //////////////////////////////////////////////////////////////////////////////////
 

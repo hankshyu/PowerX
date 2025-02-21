@@ -1,9 +1,30 @@
+//////////////////////////////////////////////////////////////////////////////////
+//  Engineer:           Tzu-Han Hsu
+//  Create Date:        02/21/2025 10:53:12 PM
+//  Module Name:        units
+//  Project Name:       PowerX
+//  C++(Version):       C++17 
+//  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
+//  Target:             arm64-apple-darwin24.3.0
+//  Thread model:       posix
+//  Dependencies
+//  1. C++ STL:         cstdint, climits, ostream
+//  2. Boost Library:   boost/polygon/polygon.hpp
+//  3. Texo Library:    None
+//
+//////////////////////////////////////////////////////////////////////////////////
+//  Description:        Defines the basic datatypes and some global definitions
+//
+//////////////////////////////////////////////////////////////////////////////////
+//  Revision:
+//  02/21/2025:         Remove sector struct and some redundant functions
+//////////////////////////////////////////////////////////////////////////////////
+
 #ifndef __UNITS_H__
 #define __UNITS_H__
 
 #include <cstdint>
-#include <cfloat>
-#include <limits.h>
+#include <climits>
 #include <ostream>
 
 
