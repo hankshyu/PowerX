@@ -7,10 +7,6 @@
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
 //  Target:             arm64-apple-darwin24.3.0
 //  Thread model:       posix
-//  Dependencies
-//  1. C++ STL:         cmath
-//  2. Boost Library:   None
-//  3. Texo Library:    units.hpp
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Description:        Defines the basic datatypes and some global definitions

@@ -7,10 +7,6 @@
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
 //  Target:             arm64-apple-darwin24.3.0
 //  Thread model:       posix
-//  Dependencies
-//  1. C++ STL:         None
-//  2. Boost Library:   boost/polygon/hash.hpp
-//  3. Texo Library:    cord.hpp
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Description:        A len_t data type of boost::point_concept implementation
