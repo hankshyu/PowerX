@@ -16,6 +16,8 @@
 //  02/21/2025:         Change to suggested way to register as as a model of point concept
 //                      in boost library. Full implementation of documented members.
 //
+//  02/22/2025:         Add conversion operator from Cord to FCord
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __CORD_H__
@@ -30,6 +32,7 @@
 
 // 3. Texo Library:
 #include "units.hpp"
+#include "fcord.hpp"
 
 class Cord {
 private:
@@ -39,6 +42,9 @@ private:
 public:
     Cord();
     explicit Cord(len_t x, len_t y);
+
+    //conversin operator that allows Cord to be casted to FCord
+    operator FCord() const;
 
     bool operator==(const Cord &other) const;
     bool operator!=(const Cord &other) const;
@@ -101,6 +107,5 @@ namespace std {
 len_t calL1Distance(const Cord &c1, const Cord &c2) noexcept;
 flen_t calL2Distance(const Cord &c1, const Cord &c2) noexcept;
 len_t calDistanceSquared(const Cord &c1, const Cord &c2) noexcept;
-
 
 #endif  // #define __CORD_H__
