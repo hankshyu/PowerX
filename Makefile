@@ -14,7 +14,7 @@ DEBUGFLAGS = -g
 LINKFLAGS = -lm
 
 
-INF_OBJS = units.o cord.o fcord.o
+INF_OBJS = units.o cord.o fcord.o interval.o
 
 	
 PI_OBJS = eqCktExtractor.o

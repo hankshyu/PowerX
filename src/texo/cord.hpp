@@ -75,6 +75,7 @@ namespace boost { namespace polygon {
     template <>
     struct point_traits<Cord> {
         typedef len_t coordinate_type;
+        
         static inline coordinate_type get(const Cord& point, orientation_2d orient){
             return point.get(orient);
         }
@@ -88,11 +89,10 @@ namespace boost { namespace polygon {
             point.set(orient, value);
         }
 
-        static inline Cord construct(int x_value, int y_value){
+        static inline Cord construct(len_t x_value, len_t y_value){
             return Cord(x_value, y_value);
         }
     };
-
 }}
 
 // Cord class std::hash function implementation 
@@ -108,4 +108,4 @@ len_t calL1Distance(const Cord &c1, const Cord &c2) noexcept;
 flen_t calL2Distance(const Cord &c1, const Cord &c2) noexcept;
 len_t calDistanceSquared(const Cord &c1, const Cord &c2) noexcept;
 
-#endif  // #define __CORD_H__
+#endif  // __CORD_H__

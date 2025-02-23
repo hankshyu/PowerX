@@ -10,6 +10,9 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Description:        A flen_t data type of boost::point_concept implementation
+//                      Note that boost::polygon library doest not well support
+//                      floating point type coordinate systems in most data structures
+//                      This implementation merely serves for calculation purposes
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:

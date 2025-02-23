@@ -31,7 +31,7 @@ Cord::Cord() = default;
 
 Cord::Cord(len_t x, len_t y): m_x(x), m_y(y){
 
-};
+}
 
 Cord::operator FCord() const {
     return FCord(static_cast<flen_t>(m_x), static_cast<flen_t>(m_y));
