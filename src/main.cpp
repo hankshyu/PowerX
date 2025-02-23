@@ -27,9 +27,19 @@ int main(int argc, char const *argv[]){
     
     // std::cout << boost::polygon::delta(iv4) << std::endl;
     
-    Direction3D d3 = boost::polygon::direction_2d_enum::NORTH;
-    std::cout << d3 << std::endl;
-    std::cout << boost::polygon::direction_2d_enum::NORTH << std::endl;
+    Interval it1(9, 14);
+    
+    Interval it2(10, 13);
+    Interval it3(3, 9);
+    Interval it4(3, 12);
+
+    std::cout << boost::polygon::intersects(it1, it2, true);
+    std::cout << boost::polygon::intersects(it1, it3, true);
+    std::cout << boost::polygon::intersects(it1, it4, true);
+
+    std::cout << boost::polygon::boundaries_intersect(it1, it2, true);
+    std::cout << boost::polygon::boundaries_intersect(it1, it3, true);
+    std::cout << boost::polygon::boundaries_intersect(it1, it4, true);
 
 
     return 0;
