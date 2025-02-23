@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        02/23/2025 00:31:54 PM
+//  Create Date:        02/23/2025 12:31:54
 //  Module Name:        interval.cpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
@@ -106,11 +106,10 @@ Interval &Interval::high(len_t value){
 void swap(Interval &first, Interval &second) noexcept{
     std::swap(first.m_low, second.m_low);
     std::swap(first.m_high, second.m_high);
-
 }
 
 std::ostream &operator<<(std::ostream &os, const Interval &intv){
-    return os << "[L: " << intv.m_low << " H: " << intv.m_high << "]";
+    return os << "I[L: " << intv.m_low << " H: " << intv.m_high << "]";
 }
 
 size_t std::hash<Interval>::operator()(const Interval &key) const {

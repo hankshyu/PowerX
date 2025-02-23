@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        02/23/2025 00:15:48 PM
+//  Create Date:        02/23/2025 00:15:48
 //  Module Name:        interval.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
