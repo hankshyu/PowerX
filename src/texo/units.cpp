@@ -32,6 +32,26 @@ Header File Dependencies
 // 3. Texo Library:
 #include "units.hpp"
 
+std::ostream &operator << (std::ostream &os, const quadrant &q){
+    switch (q){
+        case quadrant::I:
+            os << "Quadrant::I";
+            break;
+        case quadrant::II:
+            os << "Quadrant::II";
+            break;
+        case quadrant::III:
+            os << "Quadrant::III";
+            break;
+        case quadrant::IV:
+            os << "quadrant::IV";
+            break;
+        default:
+            break;
+    }
+    
+    return os;
+}
 
 angle_t flipAngle(angle_t angle){
     return (angle > 0)? (angle - M_PI) : (angle + M_PI);

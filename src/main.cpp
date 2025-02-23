@@ -4,6 +4,7 @@
 
 #include "boost/polygon/polygon.hpp"
 #include "interval.hpp"
+#include "isotropy.hpp"
 
 
 namespace gtl = boost::polygon;
@@ -11,9 +12,6 @@ using namespace boost::polygon::operators;
 
 int main(int argc, char const *argv[]){
 
-    boost::polygon::direction_1d d1 = boost::polygon::direction_1d_enum::LOW;
-
-    std::cout << boost::polygon::direction_1d_enum::LOW << std::endl;
 
 
     // Interval iv1 = Interval(7, 3);
@@ -29,8 +27,9 @@ int main(int argc, char const *argv[]){
     
     // std::cout << boost::polygon::delta(iv4) << std::endl;
     
-    
-
+    Direction3D d3 = boost::polygon::direction_2d_enum::NORTH;
+    std::cout << d3 << std::endl;
+    std::cout << boost::polygon::direction_2d_enum::NORTH << std::endl;
 
 
     return 0;
