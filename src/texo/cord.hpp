@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        02/21/2025 23:19:18 PM
+//  Create Date:        02/21/2025 23:19:18
 //  Module Name:        cord.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
