@@ -101,6 +101,13 @@ size_t std::hash<Cord>::operator()(const Cord &key) const {
     return seed;
 }
 
+size_t boost::hash<Cord>::operator()(const Cord &key) const {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, key.x());
+    boost::hash_combine(seed, key.y());
+    return seed;
+}
+
 len_t calL1Distance(const Cord &c1, const Cord &c2) noexcept {
     return boost::polygon::manhattan_distance<Cord, Cord>(c1, c2);
 }

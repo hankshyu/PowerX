@@ -30,6 +30,7 @@
 
 // 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
+#include "boost/functional/hash.hpp"
 
 // 3. Texo Library:
 #include "units.hpp"
@@ -93,7 +94,7 @@ namespace boost { namespace polygon {
 
 }}
     
-// Cord class std::hash function implementation 
+// Cord class hash function implementations
 namespace std {
     template <>
     struct hash<FCord> {
@@ -101,6 +102,14 @@ namespace std {
     };
 
 }  // namespace std
+
+namespace boost {
+    template <>
+    struct hash<FCord> {
+        size_t operator()(const FCord &key) const;
+    };
+
+}  // namespace boost
 
 flen_t calL1Distance(const FCord &c1, const FCord &c2) noexcept;
 flen_t calL2Distance(const FCord &c1, const FCord &c2) noexcept;

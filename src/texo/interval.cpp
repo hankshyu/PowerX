@@ -118,3 +118,10 @@ size_t std::hash<Interval>::operator()(const Interval &key) const {
     boost::hash_combine(seed, key.high());
     return seed;
 }
+
+size_t boost::hash<Interval>::operator()(const Interval &key) const {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, key.low());
+    boost::hash_combine(seed, key.high());
+    return seed;
+}

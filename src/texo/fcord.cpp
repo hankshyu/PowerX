@@ -100,6 +100,13 @@ size_t std::hash<FCord>::operator()(const FCord &key) const {
     return seed;
 }
 
+size_t boost::hash<FCord>::operator()(const FCord &key) const {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, key.x());
+    boost::hash_combine(seed, key.y());
+    return seed;
+}
+
 flen_t calL1Distance(const FCord &c1, const FCord &c2) noexcept {
     return boost::polygon::manhattan_distance<FCord, FCord>(c1, c2);
 }

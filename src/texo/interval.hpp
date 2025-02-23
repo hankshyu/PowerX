@@ -27,6 +27,7 @@
 
 // 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
+#include "boost/functional/hash.hpp"
 
 // 3. Texo Library:
 #include "units.hpp"
@@ -89,7 +90,7 @@ namespace boost {namespace polygon{
 
 }}
 
-// Interval class std::hash function implementation 
+// Interval class hash function implementations
 namespace std {
     template <>
     struct hash<Interval> {
@@ -97,6 +98,14 @@ namespace std {
     };
 
 }  // namespace std
+
+namespace boost {
+    template <>
+    struct hash<Interval> {
+        size_t operator()(const Interval &key) const;
+    };
+
+}  // namespace boost
 
 
 #endif  // __INTERVAL_H__
