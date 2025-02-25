@@ -13,8 +13,10 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
-//  02/21/2025:         move most inline functions in rec namespace to Rectangle
+//  02/21/2025:         Move most inline functions in rec namespace to Rectangle
 //                      member functions.
+//
+//  02/25/2025:         Change private members to protected for inherited class access
 //
 //////////////////////////////////////////////////////////////////////////////////｀
 
@@ -35,7 +37,7 @@
 
 
 class Rectangle{
-private:
+protected:
     len_t m_xl, m_yl;
     len_t m_xh, m_yh;
     

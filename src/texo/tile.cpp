@@ -29,14 +29,16 @@
 
 std::ostream &operator << (std::ostream &os, const eTileType &t){
     switch (t){
-        case tileType::BLOCK:
-            os << "BLOCK";
+        case eTileType::EMPTY:
+            os << "eTileType::EMPTY";
+        case eTileType::BLOCK:
+            os << "eTileType::BLOCK";
             break;
-        case tileType::BLANK:
-            os << "BLANK";
+        case eTileType::BLANK:
+            os << "eTileType::BLANK";
             break;
-        case tileType::OVERLAP:
-            os << "OVERLAP";
+        case eTileType::OVERLAP:
+            os << "eTileType::OVERLAP";
             break;
         default:
             break;
@@ -51,11 +53,21 @@ Tile::Tile(): Rectangle(),
 }
 
 Tile::Tile(const eTileType &t, const Cord &ll, len_t w, len_t h): Rectangle(ll, w, h), 
-    m_type(eTileType::EMPTY), rt(nullptr), tr(nullptr), bl(nullptr), lb(nullptr){
+    m_type(t), rt(nullptr), tr(nullptr), bl(nullptr), lb(nullptr){
 
 }
 
 Tile::Tile(const eTileType &t, const Cord &ll, const Cord &ur): Rectangle(ll, ur),
+    m_type(t), rt(nullptr), tr(nullptr), bl(nullptr), lb(nullptr){
+
+}
+
+Tile::Tile(len_t xl, len_t yl, len_t xh, len_t yh): Rectangle(xl, yl, xh, yh),
+    m_type(eTileType::EMPTY), rt(nullptr), tr(nullptr), bl(nullptr), lb(nullptr){
+
+}
+
+Tile::Tile(const Interval &horizontal_interval, const Interval &vertical_interval): Rectangle(horizontal_interval, vertical_interval),
     m_type(eTileType::EMPTY), rt(nullptr), tr(nullptr), bl(nullptr), lb(nullptr){
 
 }
@@ -73,7 +85,7 @@ bool Tile::operator != (const Tile &other) const {
 eTileType Tile::getType() const {
     return m_type;
 }
-void Tile::setType(eTileType newType){
+void Tile::setType(const eTileType &newType){
     m_type = newType;
 }
 
@@ -92,9 +104,9 @@ void swap(Tile &first, Tile &second) noexcept{
 std::ostream &operator<<(std::ostream &os, const Tile &t) {
 
     os << "T[" << t.m_type;
-    os << ", (" << rec.m_xl << ", " << rec.m_yl << ") W=";
-    os << (rec.m_xh - rec.m_xl) << " H=" << (rec.m_yh - rec.m_yl);
-    os << "(" << rec.m_xh << ", " << rec.m_yh << ")]";
+    os << ", (" << t.m_xl << ", " << t.m_yl << ") W=";
+    os << (t.m_xh - t.m_xl) << " H=" << (t.m_yh - t.m_yl);
+    os << "(" << t.m_xh << ", " << t.m_yh << ")]";
 
     return os;
 }
@@ -103,7 +115,7 @@ size_t std::hash<Tile>::operator()(const Tile &key) const {
     std::size_t seed = 0;
     boost::hash_combine(seed, key.get(boost::polygon::orientation_2d_enum::HORIZONTAL));
     boost::hash_combine(seed, key.get(boost::polygon::orientation_2d_enum::VERTICAL));
-    boost::hash_combine(seed, key.m_type);
+    boost::hash_combine(seed, key.getType());
     boost::hash_combine(seed, key.rt);
     boost::hash_combine(seed, key.tr);
     boost::hash_combine(seed, key.bl);
@@ -115,7 +127,7 @@ size_t boost::hash<Tile>::operator()(const Tile &key) const {
     std::size_t seed = 0;
     boost::hash_combine(seed, key.get(boost::polygon::orientation_2d_enum::HORIZONTAL));
     boost::hash_combine(seed, key.get(boost::polygon::orientation_2d_enum::VERTICAL));
-    boost::hash_combine(seed, key.m_type);
+    boost::hash_combine(seed, key.getType());
     boost::hash_combine(seed, key.rt);
     boost::hash_combine(seed, key.tr);
     boost::hash_combine(seed, key.bl);

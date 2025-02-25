@@ -1,6 +1,7 @@
 #include <iostream>
 #include <assert.h>
 #include <unordered_map>
+#include "vector"
 
 #include "boost/polygon/polygon.hpp"
 
@@ -10,6 +11,9 @@
 #include "line.hpp"
 #include "interval.hpp"
 #include "rectangle.hpp"
+#include "tile.hpp"
+
+
 
 
 namespace gtl = boost::polygon;
@@ -17,25 +21,17 @@ using namespace boost::polygon::operators;
 
 int main(int argc, char const *argv[]){
 
-    Rectangle r1(0, 3, 5, 11);
-    std::cout << "r1 = " << r1 << std::endl;
+    Rectangle r1 (0, 2, 7, 9);
+    Rectangle r2 (7, 9, 11, 13);
 
-    std::cout << r1.getXL() << std::endl;
-    std::cout << r1.getYL() << std::endl;
-    std::cout << r1.getXH() << std::endl;
-    std::cout << r1.getYH() << std::endl;
+    Tile t1(0, 2, 7, 9);
+    Tile t2(7, 9, 11, 13);
 
-    std::cout << r1.getLL() << std::endl;
-    std::cout << r1.getLR() << std::endl;
-    std::cout << r1.getUL() << std::endl;
-    std::cout << r1.getUR() << std::endl;
-    
-    FCord ct1;
-    boost::polygon::center(ct1, r1);
-    std::cout << ct1 << std::endl;
+    std::cout << t1.bl << t1.lb << std::endl;
 
-    std::cout << r1.getCentre() << std::endl;
-
-    std::cout << boost::polygon::contains(r1, Cord(5, 3), false) << std::endl; 
+    std::cout << boost::polygon::intersects(r1, r2, false) << std::endl;
+    std::cout << boost::polygon::intersects(t1, t2, false) << std::endl;
+    std::cout << boost::polygon::intersects(r1, t2, false) << std::endl;
+    // std::cout << boost::polygon::contains(t1, Cord(1, 7), true) << std::endl;
     return 0;
 }

@@ -14,7 +14,9 @@ DEBUGFLAGS = -g
 LINKFLAGS = -lm
 
 
-INF_OBJS = isotropy.o units.o cord.o fcord.o interval.o line.o rectangle.o
+INF_OBJS =	isotropy.o units.o cord.o fcord.o interval.o line.o rectangle.o \
+			tile.o
+		
 
 	
 PI_OBJS = eqCktExtractor.o
