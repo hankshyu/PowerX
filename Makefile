@@ -5,18 +5,19 @@ BINPATH = ./bin
 OBJPATH = ./obj
 BOOSTPATH = ./lib/boost_1_87_0/
 
+# OpenCV Paths
+OPENCV_INCLUDE = -I /opt/homebrew/opt/opencv/include/opencv4
+OPENCV_LIBS = -L /opt/homebrew/opt/opencv/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs
+
 # CXX = /usr/bin/g++
 CXX = g++
-FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) -DNDEBUG
+FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) -DNDEBUG $(OPENCV_INCLUDE)
 CFLAGS = -c 
 OPTFLAGS = -O3
 DEBUGFLAGS = -g
-LINKFLAGS = -lm
+LINKFLAGS = -lm $(OPENCV_LIBS)
 
-
-INF_OBJS =	isotropy.o units.o cord.o fcord.o interval.o line.o rectangle.o \
-			tile.o
-		
+INF_OBJS =	isotropy.o units.o cord.o fcord.o interval.o line.o rectangle.o tile.o #doughnutPolygon.o doughnutPolygonSet.o 
 
 	
 PI_OBJS = eqCktExtractor.o
@@ -30,10 +31,10 @@ all: pwrx
 debug: pwrx_dbg
 
 pwrx: $(OBJS)
-	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -o $(BINPATH)/$@
+	$(CXX) $(FLAGS) $(LINKFLAGS) $(OPENCV_FLAGS) $^ -o $(BINPATH)/$@
 
 $(OBJPATH)/main.o: $(SRCPATH)/main.cpp 
-	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
+	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPENCV_FLAGS) $(OPTFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
 $(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
