@@ -33,6 +33,7 @@
 
 // 3. Texo Library:
 #include "doughnutPolygon.hpp"
+#include "isotropy.hpp"
 
 typedef std::vector<DoughnutPolygon> DoughnutPolygonSet;
 
@@ -50,7 +51,7 @@ namespace dps{
 
     inline Rectangle getBoundingBox(const DoughnutPolygonSet &dpSet){
         Rectangle bbox;
-        boost::polygon::extents<DoughnutPolygonSet, Rectangle>(bbox, dp);
+        boost::polygon::extents(bbox, dpSet);
         return bbox;
     }
 
@@ -58,39 +59,27 @@ namespace dps{
         return dpSet.size();
     }
 
-    inline size_t getHolesCount(const DoughnutPolygonSet &dpSet){
-        return dpSet.size_holes();
+
+    len_t calMinInnerWidth(const DoughnutPolygonSet &dpSet);
+
+    // dice geometry of an object into non overlapping rectangles, default vertical orientation 
+    inline void diceIntoRectangles(const DoughnutPolygonSet &dpSet, std::vector<Rectangle> &fragments, Orientation2D orient = eOrientation2D::VERTICAL){
+        boost::polygon::get_rectangles(fragments, dpSet, orient);
     }
 
-    // len_t calMinInnerWidth(const DoughnutPolygonSet &dpSet);
-
-
-    inline void diceIntoRectangles(const DoughnutPolygonSet &dpSet, std::vector<Rectangle> &fragments){
-        boost::polygon::get_rectangles(fragments, dpSet);
+    inline bool isOneShape(const DoughnutPolygonSet &dpSet){
+        return (dpSet.size() == 1);
     }
 
-    // inline void diceIntoMaxRectangles(const DoughnutPolygonSet &dpSet, std::vector<Rectangle> &fragments){
-    //     boost::polygon::get_max_rectangles(fragments, dpSet);
-    // }
+    inline bool isHoleFree(const DoughnutPolygonSet &dpSet){
 
-    // inline bool oneShape(const DoughnutPolygonSet &dpSet){
-    //     return (dpSet.size() == 1);
-    // }
+        for(int i = 0; i < dpSet.size(); ++i){
+            DoughnutPolygon curSegment = dpSet[i];
+            if(curSegment.begin_holes() != curSegment.end_holes()) return false;
+        }
 
-    // inline bool noHole(const DoughnutPolygonSet &dpSet){
-
-    //     for(int i = 0; i < dpSet.size(); ++i){
-    //         DoughnutPolygon curSegment = dpSet[i];
-    //         if(curSegment.begin_holes() != curSegment.end_holes()) return false;
-    //     }
-
-    //     return true;
-    // }
-
-
-
-
-
+        return true;
+    }
 
 }
 

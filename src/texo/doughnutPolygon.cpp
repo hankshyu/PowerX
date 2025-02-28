@@ -56,7 +56,7 @@ std::ostream &operator << (std::ostream &os, const DoughnutPolygon &dp){
 
 }
 
-void dp::acquireWinding(const DoughnutPolygon &rectilinearShape, std::vector<Cord> &winding, Direction1D direction = eDirection1D::CLOCKWISE){
+void dp::acquireWinding(const DoughnutPolygon &rectilinearShape, std::vector<Cord> &winding, Direction1D direction){
     
     boost::polygon::direction_1d actualDirection = boost::polygon::winding(rectilinearShape);
     

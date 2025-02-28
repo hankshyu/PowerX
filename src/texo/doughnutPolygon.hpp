@@ -42,8 +42,8 @@ typedef boost::polygon::polygon_90_with_holes_data<len_t> DoughnutPolygon;
 std::ostream &operator << (std::ostream &os, const DoughnutPolygon &dp);
 
 namespace dp{
-
-    inline int getEdgeCount(const DoughnutPolygon &dp){
+    // Returns the number of edges in the outer shell, excludes sizes of the holes
+    inline size_t getEdgeCount(const DoughnutPolygon &dp){
         return boost::polygon::size<DoughnutPolygon>(dp);
     }
 
@@ -55,21 +55,21 @@ namespace dp{
         return boost::polygon::area<DoughnutPolygon>(dp);
     }
 
-    inline bool isContained(const DoughnutPolygon &dp, const cord &c, bool considerTouch = true){
-        return boost::polygon::contains<DoughnutPolygon, Cord>(dp, c, considerTouch);
+    inline size_t getHoleCount(const DoughnutPolygon &dp){
+        return dp.size_holes();
     }
+
+    // inline bool isContained(const DoughnutPolygon &dp, const Cord &c, bool considerTouch = true){
+    //     return boost::polygon::contains<DoughnutPolygon, Cord>(dp, c, considerTouch);
+    // }
 
     inline Rectangle getBoundingBox(const DoughnutPolygon &dp){
         Rectangle bbox;
-        boost::polygon::extents<DoughnutPolygon, Rectangle>(bbox, dp);
+        boost::polygon::extents(bbox, dp);
         return bbox;
     }
 
     void acquireWinding(const DoughnutPolygon &rectilinearShape, std::vector<Cord> &winding, Direction1D direction = eDirection1D::CLOCKWISE);
-
-
-    inline 
-
 
 }
 

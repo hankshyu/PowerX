@@ -49,3 +49,27 @@ std::ostream &operator << (std::ostream &os, const doughnutPolygonSetIllegalType
    
     return os;
 }
+
+len_t rec::calMinInnerWidth(const DoughnutPolygonSet &dpSet){
+    len_t minInnerWidth = LEN_T_MAX;
+    len_t tmpInnerWidth = LEN_T_MAX;
+    
+    if (dpSet.empty()) return LEN_T_MIN;
+
+    using namespace boost::polygon::operators;
+    
+    // dice the rectangle vertically and measure the height
+    std::vector<Rectangle> verticalFragments;
+    boost::polygon::get_rectangles(verticalFragments, dpSet, eOrientation2D::VERTICAL);
+    for(const Rectangle &vrec : verticalFragments){
+        tmpInnerWidth = rec::getWidth(vrec);
+        if(tmpInnerWidth < minInnerWidth) minInnerWidth = 
+    }
+
+    // dice the rectangle horizontally and measure the width
+    std::vector<Rectangle> horizontalFragments;
+    boost::polygon::get_rectangles(horizontalFragments, dpSet, eOrientation2D::HORIZONTAL);
+    for(const Rectangle &hrec : horizontalFragments){
+        if(rec::getWidth(hrec) < minInnerWidth) return false;
+    }
+}
