@@ -5,31 +5,24 @@
 
 #include "boost/polygon/polygon.hpp"
 
-#include "isotropy.hpp"
 #include "cord.hpp"
-#include "fcord.hpp"
+#include "interval.hpp"
 
 // #include "doughnutPolygon.hpp"
 
 namespace gtl = boost::polygon;
 using namespace boost::polygon::operators;
 
-// int main(int argc, char const *argv[]){
-//     Rectangle r1(3, 9, 11, 17);
-//     Tile t1(7, 9, 11, 14);
+int main(int argc, char const *argv[])
+{
+    Interval iv1(3, 7);
+    Interval *iv3 = new Interval(iv1);
+    
 
-//     std::cout << boost::polygon::delta<Rectangle>(boost::polygon::rectangle_data<len_t>(3, 9, 11, 17), eOrientation2D::HORIZONTAL) << std::endl;
+    std::cout << *iv3 << std::endl;
 
-// }
-#include <opencv2/opencv.hpp>
-#include <iostream>
+    std::cout << (iv1 == *iv3) << std::endl;
 
-int main() {
-    Cord c1 = Cord(3, 5);
-    FCord c2(3.5, 7.5);
-    std::cout << c1 << std::endl;
-    std::cout << c2 << std::endl;
-    FCord c3(c1);
-    std::cout << (c1 >= c2) << std::endl;
-    std::cout << c3 << std::endl;
+    std::cout << boost::polygon::contains<Interval>(iv1, 2, true);
+    return 0;
 }
