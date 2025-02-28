@@ -33,7 +33,7 @@
 
 
 std::ostream &operator<<(std::ostream &os, const FCord &c) {
-    return os << "f'(" << c.x() << ", " << c.y() << ")";
+    return os << "f(" << c.x() << ", " << c.y() << ")";
 }
 
 size_t std::hash<FCord>::operator()(const FCord &key) const {

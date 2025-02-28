@@ -17,7 +17,7 @@ OPTFLAGS = -O3
 DEBUGFLAGS = -g
 LINKFLAGS = -lm $(OPENCV_LIBS)
 
-INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o  #line.o rectangle.o tile.o doughnutPolygon.o doughnutPolygonSet.o 
+INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o #tile.o doughnutPolygon.o doughnutPolygonSet.o 
 
 	
 PI_OBJS = eqCktExtractor.o
