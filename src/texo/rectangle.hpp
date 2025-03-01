@@ -62,11 +62,22 @@ namespace boost {
 namespace rec{
 
     inline len_t getWidth(const Rectangle &rec){
-        return boost::polygon::delta(boost::polygon::horizontal(rec));
+        // return boost::polygon::delta(boost::polygon::horizontal(rec));
+        return boost::polygon::delta(rec, boost::polygon::orientation_2d_enum::HORIZONTAL);
     }
 
     inline len_t getHeight(const Rectangle &rec){
-        return boost::polygon::delta(boost::polygon::vertical(rec));
+        // return boost::polygon::delta(boost::polygon::vertical(rec));
+        return boost::polygon::delta(rec, boost::polygon::orientation_2d_enum::VERTICAL);
+
+    }
+
+    inline len_t getHalfPerimeter(const Rectangle &rec){
+        return boost::polygon::half_perimeter(rec);
+    }
+
+    inline len_t getPerimeter(const Rectangle &rec){
+        return boost::polygon::perimeter(rec);
     }
 
     inline area_t getArea(const Rectangle &rec){
