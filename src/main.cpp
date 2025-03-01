@@ -19,28 +19,25 @@ int main(int argc, char const *argv[]){
     DoughnutPolygonSet dps;
     DoughnutPolygon dp;
 
-    dps += Rectangle(1, 12, 4, 17);
-    dps += Rectangle(4, 11, 8, 13);
-    dps += Rectangle(4, 15, 12, 19);
-    dps += Rectangle(8, 12, 10, 15);
-    dps += Rectangle(10, 11, 12, 13);
-    dps += Rectangle(12, 13, 13, 15);
-    dps += Rectangle(14, 17, 15, 19);
+    // dps += Rectangle(1, 12, 4, 17);
+    // dps += Rectangle(4, 11, 8, 13);
+    // dps += Rectangle(4, 15, 12, 19);
+    // dps += Rectangle(8, 12, 10, 15);
+    // dps += Rectangle(10, 11, 12, 13);
+    // dps += Rectangle(12, 13, 13, 15);
+    // dps += Rectangle(14, 17, 15, 19);
+
+    dps += Rectangle(2, 3, 7, 7);
+    dps += Rectangle(7, 5, 9, 8);
+    dps += Rectangle(9, 3, 12, 7);
 
 
-    std::cout << dps::getArea(dps) << std::endl;
-    std::cout << dps.size() << std::endl;
-    dp = dps[1];
-    std::cout << dp.size_holes() << std::endl;
 
+    std::cout << "Min inner width = " <<  dps::calMinInnerWidth(dps) << std::endl;
 
-    // std::cout << dps::getArea(dps) << std::endl;
-    // std::cout << dps::getBoundingBox(dps) << std::endl;
-    // std::cout << dps::getShapesCount(dps) << std::endl;
     
     std::vector<Rectangle> frag;
-    // dps::diceIntoRectangles(dps, frag);
-    // dou
+
     dps::diceIntoRectangles(dps, frag, eOrientation2D::HORIZONTAL);
 
 
@@ -48,12 +45,5 @@ int main(int argc, char const *argv[]){
         std::cout << rec << std::endl;
     }
 
-    dp = dps[0];
-
-    std::cout << dp::getEdgeCount(dp) << std::endl;
-    std::cout << dp::getPerimeter(dp) << std::endl;
-    std::cout << dp::getArea(dp) << std::endl;
-    std::cout << dp::getBoundingBox(dp) << std::endl;
-    std::cout << dp << std::endl;
 
 }

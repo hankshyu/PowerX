@@ -50,7 +50,8 @@ std::ostream &operator << (std::ostream &os, const doughnutPolygonSetIllegalType
     return os;
 }
 
-len_t rec::calMinInnerWidth(const DoughnutPolygonSet &dpSet){
+len_t dps::calMinInnerWidth(const DoughnutPolygonSet &dpSet){
+    
     len_t minInnerWidth = LEN_T_MAX;
     len_t tmpInnerWidth = LEN_T_MAX;
     
@@ -58,18 +59,21 @@ len_t rec::calMinInnerWidth(const DoughnutPolygonSet &dpSet){
 
     using namespace boost::polygon::operators;
     
-    // dice the rectangle vertically and measure the height
-    std::vector<Rectangle> verticalFragments;
-    boost::polygon::get_rectangles(verticalFragments, dpSet, eOrientation2D::VERTICAL);
-    for(const Rectangle &vrec : verticalFragments){
-        tmpInnerWidth = rec::getWidth(vrec);
-        if(tmpInnerWidth < minInnerWidth) minInnerWidth = 
+    // dice the rectangle horizontally and measure the width 
+    std::vector<Rectangle> fragments;
+    boost::polygon::get_rectangles(fragments, dpSet, eOrientation2D::HORIZONTAL);
+    for(const Rectangle &hrec : fragments){
+        tmpInnerWidth = rec::getWidth(hrec);
+        if(tmpInnerWidth < minInnerWidth) minInnerWidth = tmpInnerWidth;
     }
 
-    // dice the rectangle horizontally and measure the width
-    std::vector<Rectangle> horizontalFragments;
-    boost::polygon::get_rectangles(horizontalFragments, dpSet, eOrientation2D::HORIZONTAL);
-    for(const Rectangle &hrec : horizontalFragments){
-        if(rec::getWidth(hrec) < minInnerWidth) return false;
+    fragments.clear();
+    // dice the rectangle vertically and measure the height
+    boost::polygon::get_rectangles(fragments, dpSet, eOrientation2D::VERTICAL);
+    for(const Rectangle &vrec : fragments){
+        tmpInnerWidth = rec::getHeight(vrec);
+        if(tmpInnerWidth < minInnerWidth) minInnerWidth = tmpInnerWidth;
     }
+
+    return minInnerWidth;
 }
