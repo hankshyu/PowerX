@@ -5,46 +5,35 @@
 
 #include "boost/polygon/polygon.hpp"
 
-#include "isotropy.hpp"
-#include "rectangle.hpp"
-#include "tile.hpp"
-#include "rectilinear.hpp"
+// #include "isotropy.hpp"
+// #include "rectangle.hpp"
+// #include "tile.hpp"
+// #include "rectilinear.hpp"
+
+#include "line.hpp"
 
 // #include "doughnutPolygon.hpp"
 
 namespace gtl = boost::polygon;
 using namespace boost::polygon::operators;
 
-void print(const Tile &t){
-    std::cout << t << " " << t.rt << " " << t.tr << " " << t.bl << " " << t.lb << std::endl;
-
-}
-
 int main(int argc, char const *argv[]){
     
-    Tile *t1 = new Tile(tileType::BLOCK, Rectangle(3, 4, 7, 9));
-    Tile *t2 = new Tile(tileType::BLOCK, Rectangle(5, 3, 2, 1));
+    Line l1(Cord(3, 5), Cord(3, 7));
+    Line l2(Cord(3, 7), Cord(3, 5));
 
-    Tile *t3 = new Tile(tileType::OVERLAP, Rectangle(11, 2, 4, 7));
+    std::cout << l1 << std::endl;
+    std::cout << l2 << std::endl;
 
-    Rectilinear rt(15, "blues", rectilinearType::SOFT, Rectangle(11, 15, 100, 101), 0, 0, 1, 0);
-    rt.blockTiles.insert(t1);
-    rt.blockTiles.insert(t2);
+    Line l3 = l2;
+    std::cout << l3 << std::endl;
 
-    rt.overlapTiles.insert(t3);
+    Line l4(Line(Cord(4, 5), Cord(9, 5)));
+    std::cout << l4 << std::endl;
 
-    rectilinearIllegalType rit;
-    rt.isLegal(rit, 1);
-    std::cout << rit << std::endl;
-    
-    std::vector<Cord> winding;
-    rt.acquireWinding(winding, eDirection1D::COUNTERCLOCKWISE);
+    std::cout << (l4 == l3) << std::endl;
 
-    for(const Cord &c : winding){
-        std::cout << c << std::endl;
-    }
 
-    
-
+    Line l5(Cord(4, 7), Cord(11, 14));
 
 }
