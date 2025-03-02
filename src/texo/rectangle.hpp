@@ -131,10 +131,11 @@ namespace rec{
     }
 
     // Returns true if the point is contained inside the rectangle
-    // inline bool isContained(const Rectangle &rec, const Cord &point){
-    //     Rectangle actualRectangle =  Rectangle(getXL(rec), getYL(rec), getXH(rec) - 1, getYH(rec) - 1);
-    //     return boost::polygon::contains(actualRectangle, point, true);
-    // }
+    // if onlyLLCorners = true, each 1x1 block is represented by the Lower left coordinate
+    inline bool isContained(const Rectangle &rec, const Cord &point, bool onlyLLCorners){
+        Rectangle actualRectangle =  (onlyLLCorners)? Rectangle(getXL(rec), getYL(rec), getXH(rec) - 1, getYH(rec) - 1) : rec;
+        return boost::polygon::contains(actualRectangle, point, true);
+    }
 
     // Calculates the centre coordinate of the Rectangle, centre coordinate my be float number, stored with double data type
     inline FCord calculateCentre(const Rectangle &rec){

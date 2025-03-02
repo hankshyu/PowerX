@@ -59,6 +59,9 @@ public:
     Rectangle getRectangle() const;
 
     void setType(tileType type);
+    void setWidth(len_t width);
+    void setHeight(len_t height);
+    void setLowerLeft(const Cord &lowerLeft);
     void setRectangle(const Rectangle &rec);
 
     len_t getWidth() const;

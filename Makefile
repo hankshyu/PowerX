@@ -19,7 +19,7 @@ LINKFLAGS = -lm $(OPENCV_LIBS)
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o \
-			rectilinear.o
+			rectilinear.o cornerStitching.o
 
 	
 PI_OBJS = eqCktExtractor.o

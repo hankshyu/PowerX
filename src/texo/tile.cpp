@@ -83,6 +83,19 @@ void Tile::setType(tileType type) {
     this->mType = type;
 }
 
+void Tile::setWidth(len_t width) {
+    using namespace boost::polygon;
+    this->mRectangle = Rectangle(xl(mRectangle), yl(mRectangle), (xl(mRectangle) + width), yh(mRectangle));
+};
+void Tile::setHeight(len_t height) {
+    using namespace boost::polygon;
+    this->mRectangle = Rectangle(xl(mRectangle), yl(mRectangle), xh(mRectangle), (yl(mRectangle) + height));
+};
+
+void Tile::setLowerLeft(const Cord &lowerLeft) {
+    this->mRectangle = Rectangle(lowerLeft.x(), lowerLeft.y(), (lowerLeft.x() + getWidth()), (lowerLeft.y() + getHeight()));
+};
+
 void Tile::setRectangle(const Rectangle &rec) {
     this->mRectangle = rec;
 }
