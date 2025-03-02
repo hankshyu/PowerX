@@ -27,7 +27,6 @@
 #include <ostream>
 
 // 2. Boost Library:
-#include "boost/polygon/polygon.hpp"
 #include "boost/functional/hash.hpp"
 
 // 3. Texo Library:
