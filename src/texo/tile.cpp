@@ -20,6 +20,7 @@
 
 // Dependencies
 // 1. C++ STL:
+#include <ostream>
 
 // 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
