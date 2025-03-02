@@ -11,6 +11,8 @@
 // #include "rectilinear.hpp"
 
 #include "line.hpp"
+#include "tile.hpp"
+#include "lineTile.hpp"
 
 // #include "doughnutPolygon.hpp"
 
@@ -19,21 +21,14 @@ using namespace boost::polygon::operators;
 
 int main(int argc, char const *argv[]){
     
-    Line l1(Cord(3, 5), Cord(3, 7));
-    Line l2(Cord(3, 7), Cord(3, 5));
+    Tile *t1 = new Tile(tileType::BLOCK, Rectangle(3, 4, 11, 12));
+    Line l1(Cord(3, 12), Cord(5, 12));
 
+    LineTile lt(l1, t1);
     std::cout << l1 << std::endl;
-    std::cout << l2 << std::endl;
+    std::cout << *t1 << std::endl;
 
-    Line l3 = l2;
-    std::cout << l3 << std::endl;
+    std::cout << lt << std::endl;
 
-    Line l4(Line(Cord(4, 5), Cord(9, 5)));
-    std::cout << l4 << std::endl;
-
-    std::cout << (l4 == l3) << std::endl;
-
-
-    Line l5(Cord(4, 7), Cord(11, 14));
 
 }
