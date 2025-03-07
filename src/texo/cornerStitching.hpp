@@ -147,6 +147,8 @@ public:
     // self checking function, wrapper of debugBlankMerged(...) and debugPointerAttatched(...)
     bool conductSelfTest()const;
 
+    // write cornerStitching class (composed of Tiles) for presenting software (renderCornerStitching.py)
+
 };
 
 #endif // __CORNERSTITCHING_H__

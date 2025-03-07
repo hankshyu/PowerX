@@ -5,22 +5,17 @@ BINPATH = ./bin
 OBJPATH = ./obj
 BOOSTPATH = ./lib/boost_1_87_0/
 
-# OpenCV Paths
-OPENCV_INCLUDE = -I /opt/homebrew/opt/opencv/include/opencv4
-OPENCV_LIBS = -L /opt/homebrew/opt/opencv/lib -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_imgcodecs
-
 # CXX = /usr/bin/g++
 CXX = g++
 FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) $(OPENCV_INCLUDE)
 CFLAGS = -c
 OPTFLAGS = -O3
 DEBUGFLAGS = -g
-LINKFLAGS = -lm $(OPENCV_LIBS)
+LINKFLAGS = -lm 
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o \
-			rectilinear.o cornerStitching.o
-
+			rectilinear.o cornerStitching.o 
 	
 PI_OBJS = eqCktExtractor.o
 
