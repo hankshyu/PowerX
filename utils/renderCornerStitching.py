@@ -577,7 +577,7 @@ if __name__ == '__main__':
 
     # For using '-o' flag to save output file
     if args.outFile != None:
-        plt.savefig(args.outFile, dpi = 1200)
+        plt.savefig(args.outFile, dpi = 2000)
 
     # Create checkboxes to select/unselect certain Tile attributes
     rax = fig.add_axes([0.6, 0.05, 0.15, 0.15])

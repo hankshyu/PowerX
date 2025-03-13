@@ -7,7 +7,7 @@ BOOSTPATH = ./lib/boost_1_87_0/
 
 # CXX = /usr/bin/g++
 CXX = g++
-FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) $(OPENCV_INCLUDE)
+FLAGS = -std=c++17 -I $(TEXO_SRCPATH) -I $(PI_SRCPATH)
 CFLAGS = -c
 OPTFLAGS = -O3
 DEBUGFLAGS = -g
@@ -17,7 +17,7 @@ INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o do
 			tile.o line.o lineTile.o \
 			rectilinear.o cornerStitching.o 
 	
-PI_OBJS = eqCktExtractor.o
+PI_OBJS = technology.o eqCktExtractor.o bumpMap.o pinout.o
 
 _OBJS = main.o $(INF_OBJS) $(PI_OBJS)
 
@@ -37,7 +37,7 @@ $(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
 $(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(CFLAGS) $(OPTFLAGS) $< -o $@
+	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
 
 

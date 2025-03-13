@@ -9,7 +9,9 @@
 //  Thread model:       posix
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:        A len_t data type of boost::point_concept implementation
+//  Description:        A class that provides the vision of a canvas with rectilinear
+//                      entities. Provides easy to manipulate functions in order to 
+//                      conduct operations on rectilinears
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
@@ -55,15 +57,9 @@ private:
     int mSoftRectilinearCount;
     int mPreplacedRectilinearCount;
     int mPinRectilinearCount;
-
-    int mConnectionCount;
-
-    double mGlobalAspectRatioMin;
-    double mGlobalAspectRatioMax;
-    double mGlobalUtilizationMin;
     
     // function that places a rectilinear into the floorplan system. It automatically resolves overlaps by splittng and divide existing tiles
-    Rectilinear *placeRectilinear(std::string name, rectilinearType type, Rectangle placement, area_t legalArea, double aspectRatioMin, double aspectRatioMax, double mUtilizationMin);
+    Rectilinear *placeRectilinear(std::string name, rectilinearType type, Rectangle placement, area_t legalArea);
 
 public:
     CornerStitching *cs;
@@ -76,42 +72,30 @@ public:
 
     // pinRectilinears should only be used for HPWL calculation
     std::vector<Rectilinear *> pinRectilinears;
-
-    std::vector<Connection *> allConnections;
-    std::unordered_map<Rectilinear *, std::vector<Connection *>> connectionMap;
     
     std::unordered_map<Tile *, Rectilinear *> blockTilePayload;
     std::unordered_map<Tile *, std::vector<Rectilinear *>> overlapTilePayload;
 
 
     Floorplan();
-    Floorplan(const GlobalResult &gr, double aspectRatioMin, double aspectRatioMax, double utilizationMin);
-    Floorplan(const LegalResult &lr, double aspectRatioMin, double aspectRatioMax, double utilizationMin);
     Floorplan(const Floorplan &other);
     ~Floorplan();
-
-    Floorplan& operator = (const Floorplan &other);
 
     Rectangle getChipContour() const;
     int getAllRectilinearCount() const;
     int getSoftRectilinearCount() const;
     int getPreplacedRectilinearCount() const;
     int getPinRectilinearCount() const;
-    int getConnectionCount() const;
-    double getGlobalAspectRatioMin() const;
-    double getGlobalAspectRatioMax() const;
-    double getGlobalUtilizationMin() const;
 
-    void setGlobalAspectRatioMin(double globalAspectRatioMin);
-    void setGlobalAspectRatioMax(double globalAspectRatioMax);
-    void setGlobalUtilizationMin(double globalUtilizationMin);
 
     // insert a tleType::BLOCK tile at tilePosition into cornerStitching & rectilinear (*rt) system,
     // record rt as it's payload into floorplan system (into blockTilePayload) and return new tile's pointer
+    // User himself should make sure the block position has no other occupants, else error would emerge
     Tile *addBlockTile(const Rectangle &tilePosition, Rectilinear *rt);
 
     // insert a tleType::OVERLAP tile at tilePosition into cornerStitching & rectilinear (•rt) system,
     // record payload as it's payload into floorplan system (into overlapTilePayload) and return new tile's pointer
+    // User himself should make sure the block position has no other occupants, else error would emerge
     Tile *addOverlapTile(const Rectangle &tilePosition, const std::vector<Rectilinear*> &payload);
 
     // remove tile data payload at floorplan system, the rectilienar that records it and lastly remove from cornerStitching,
@@ -128,10 +112,12 @@ public:
     void reshapeRectilinear(Rectilinear *rt);
 
     // grow the shape toGrow to the Rectilinear
-    void growRectilinear(std::vector<DoughnutPolygon> &toGrow, Rectilinear *rect);
+    // User himself should make sure the block position has no other occupants, else error would emerge
 
+    void growRectilinear(const DoughnutPolygonSet &toGrow, Rectilinear *rect);
+    
     // take the shape toShrink off the Rectilinear
-    void shrinkRectilinear(std::vector<DoughnutPolygon> &toShrink, Rectilinear *rect);
+    void shrinkRectilinear(const DoughnutPolygonSet &toShrink, Rectilinear *rect);
 
     // Pass in the victim tile pointer through origTop, it will split the tile into two pieces:
     // 1. origTop represents the top portion of the split, with height (origTop.height - newDownHeight)
@@ -145,14 +131,8 @@ public:
     
     double calculateOverlapRatio() const;
 
-    // use area rounding residuals to remove certain easy to remove overlaps
-    // void removePrimitiveOvelaps(bool verbose);
-
-    // check if the floorplan is legal, return nullptr if floorplan legal, otherwise return first met faulty Rectilinear
-    Rectilinear *checkFloorplanLegal(rectilinearIllegalType &illegalType) const;
-
-    bool debugFloorplanLegal() const;
-
+    // write Floorplan class for presenting software (renderFloorplan.py)
+    void visualiseFloorplan(const std::string &outputFileName) const;
 };
 
 #endif // __FLOORPLAN_H__
