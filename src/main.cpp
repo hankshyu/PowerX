@@ -19,6 +19,7 @@
 #include "pinout.hpp"
 #include "bumpMap.hpp"
 #include "technology.hpp"
+#include "visualiser.hpp"
 
 
 // #include "doughnutPolygon.hpp"
@@ -48,9 +49,28 @@ int main(int argc, char const *argv[]){
     // of.close();
 
     // BumpMap bm("inputs/mc.csv");
+    // std::cout << bm.getName() << std::endl;
     // bm.exportBumpMap("outputs/mc.ballmap");
 
     Technology tch("inputs/standard.tch");
+    
+    BumpMap l2b("inputs/l2.csv");
+    BumpMap mcb("inputs/mc.csv");
+    BumpMap nocb("inputs/noc.csv");
+    BumpMap rocketb("inputs/rocket.csv");
+
+    visualiseBumpMap(l2b, tch, "outputs/l2.bumpmap");
+    visualiseBumpMap(mcb, tch, "outputs/mc.bumpmap");
+    visualiseBumpMap(nocb, tch, "outputs/noc.bumpmap");
+    visualiseBumpMap(rocketb, tch, "outputs/rocket.bumpmap");
+
+    Pinout microBump("inputs/rocket64_0808.pin");
+    visualisePinOut(microBump, tch, "outputs/rocket64_0808.pinout");
+
+
+
+
+
 
 
 }

@@ -34,6 +34,7 @@
 #include "units.hpp"
 #include "cord.hpp"
 #include "rectangle.hpp"
+#include "technology.hpp"
 
 typedef std::string bumpType;
 
@@ -58,9 +59,9 @@ public:
     int getWidth() const;
     int getHeight() const;
     const std::unordered_set<bumpType>& getBumpTypes() const;
-    const std::map<Cord, std::string>& getBumpMap() const;
+    const std::map<Cord, bumpType>& getBumpMap() const;
 
-    bool exportBumpMap(const std::string &filePath) const;
+    friend bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
     
 };
 

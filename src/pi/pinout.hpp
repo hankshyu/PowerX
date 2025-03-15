@@ -21,6 +21,7 @@
 
 // Dependencies
 // 1. C++ STL:
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -34,42 +35,42 @@
 #include "units.hpp"
 #include "cord.hpp"
 #include "rectangle.hpp"
+#include "technology.hpp"
+#include "bumpMap.hpp"
 
+typedef std::string chipletType;
 
 class Pinout{
 private:
     std::string m_name;
     Rectangle m_footprint;
-    Cord m_relativePositon;
     
-    std::unordered_set<std::string> m_allTypes;
-    std::unordered_map<std::string, std::unordered_set<Cord>> m_typeToCords;
-    std::unordered_map<Cord, std::string> m_cordToType;
+    std::map<chipletType, BumpMap> m_allChipletTypes;
+    std::map<std::string, chipletType> m_instanceToType;
+    std::map<std::string, Rectangle> m_instanceToBoundingBox;
+
+
+    std::unordered_set<bumpType> m_allPinTypes;
+    std::unordered_map<bumpType, std::set<Cord>> m_typeToCords;
+    std::unordered_map<Cord, bumpType> m_cordToType;
+
 public:
     
     Pinout();
     explicit Pinout(const len_t footprintWidth, const len_t footprintHeight);
     explicit Pinout(const Rectangle &footprint);
-    explicit Pinout(const Rectangle &footprint, const Cord &relativePosition);
-    
-    void setName(const std::string &name);
-    void setRelativePosition(const Cord &relativePosition);
+    explicit Pinout(const std::string &fileName);
 
     std::string getName() const;
     Rectangle getFootprint() const;
-    Cord getRelativePosition() const;
 
-    bool readFromPinoutFile(const std::string &pinoutFile);
-    void insertPin(const Cord &cord, const std::string &cordType);
+    chipletType getInstanceType(const std::string &chipletName) const;
+    bumpType getPinType(const Cord &c) const;
+    bool getAllPinsofType(const bumpType & pinType, std::set<Cord> &locations) const;
 
-    std::string getPinType(const Cord &c) const;
-    bool getAllPinsofType(const std::string & pinType, std::unordered_set<Cord> &pinsOfType) const;
-
-    bool exportPinOut(std::unordered_map<std::string, std::vector<Cord>> &allPinouts) const;
+    // bool exportPinOut(std::unordered_map<std::string, std::vector<Cord>> &allPinouts) const;
     
-    void visualizePinOut(std::ostream &os) const;
+    friend bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::string &filePath);
 
 };
-
-
 #endif // __PINOUT_H__

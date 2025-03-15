@@ -53,6 +53,7 @@ BumpMap::BumpMap(const std::string &filePath){
 
 bool BumpMap::importBumpMap(const std::string &filePath){
     std::ifstream file(filePath);
+    assert(file.is_open());
     if(!file.is_open()) return false;
     
     std::string buffer;
@@ -63,8 +64,8 @@ bool BumpMap::importBumpMap(const std::string &filePath){
     m_footprint = Rectangle(0, 0, chipletWidth, chipletHieght);
     
     std::string pinType;
-    for(int i = 0; i < chipletHieght; ++i){
-        for(int j = 0; j < chipletWidth; ++j){
+    for(int j = 0; j < chipletHieght; ++j){
+        for(int i = 0; i < chipletWidth; ++i){
 
             file >> buffer;
 
@@ -74,7 +75,7 @@ bool BumpMap::importBumpMap(const std::string &filePath){
             pinType = buffer.substr(position + 1);
 
             if(pinType != "SIG"){
-                Cord cord(chipletHieght - i - 1, j);
+                Cord cord(i, chipletHieght - j - 1);
                 if(m_allBumpTypes.find(pinType) == m_allBumpTypes.end()){
                     m_allBumpTypes.insert(pinType);
                 }
@@ -110,17 +111,4 @@ const std::unordered_set<bumpType> &BumpMap::getBumpTypes() const {
 
 const std::map<Cord, std::string> &BumpMap::getBumpMap() const{
     return this->m_bumpMap;
-}
-
-bool BumpMap::exportBumpMap(const std::string &filePath) const {
-
-    std::ofstream file(filePath);
-    if(!file.is_open()) return false;
-
-    file << m_name << " " << getWidth() << " " << getHeight() << '\n';
-    for (const std::pair<const Cord, std::string>& entry : m_bumpMap) {
-        file << entry.first << " " << entry.second << '\n';
-    }
-
-    return true;
 }

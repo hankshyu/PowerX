@@ -19,10 +19,12 @@
 // Dependencies
 // 1. C++ STL:
 #include <fstream>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 #include <string>
+#include <sstream>
 
 // 2. Boost Library:
 
@@ -33,30 +35,94 @@
 #include "rectangle.hpp"
 
 Pinout::Pinout()
-    :m_name(""), m_footprint(Rectangle(0, 0, 0, 0)), m_relativePositon(Cord(-1, -1)) {
+    :m_name(""), m_footprint(Rectangle(0, 0, 0, 0)) {
 }
 
 Pinout::Pinout(const len_t footprintWidth, const len_t footprintHeight)
-    :m_name(""), m_footprint(Rectangle(0, 0, footprintWidth, footprintHeight)), m_relativePositon(Cord(-1, -1)) {
+    :m_name(""), m_footprint(Rectangle(0, 0, footprintWidth, footprintHeight)) {
 
 }
 
 Pinout::Pinout(const Rectangle &footprint)
-    :m_name(""), m_footprint(footprint), m_relativePositon(Cord(-1, -1)) {
+    :m_name(""), m_footprint(footprint) {
 
 }
 
-Pinout::Pinout(const Rectangle &footprint, const Cord &relativePosition)
-    :m_name(""), m_footprint(footprint), m_relativePositon(relativePosition) {
+Pinout::Pinout(const std::string &fileName){
+    std::ifstream file(fileName);
+    assert(file.is_open());
 
-}
+    std::string buffer;
+    std::string lineBuffer;
+    while(std::getline(file, lineBuffer)){
+        if (lineBuffer.empty()|| lineBuffer.find("#") == 0) continue; // whole line comment
+        
+        size_t comment_pos = lineBuffer.find_first_of("#");
+        if (comment_pos != std::string::npos) {
+                lineBuffer = lineBuffer.substr(0, comment_pos);  // Remove everything after "#"
+        }
 
-void Pinout::setName(const std::string &name){
-    this->m_name = name;
-}
+        // process line
+        // std::cout << lineBuffer << std::endl;
+        
+        std::vector<std::string> splitLine;
+        std::istringstream stream(lineBuffer);
+        std::string wordBuffer;
+    
+        while (stream >> wordBuffer) { // Extract words by spaces and newlines
+            splitLine.push_back(wordBuffer);
+        }
 
-void Pinout::setRelativePosition(const Cord &relativePosition){
-    this->m_relativePositon = relativePosition;
+        if(splitLine[0] == "include"){
+            splitLine[1].erase(std::remove(splitLine[1].begin(), splitLine[1].end(), '"'), splitLine[1].end());
+            BumpMap bm(splitLine[1]);
+            
+            if(m_allChipletTypes.find(bm.getName()) == m_allChipletTypes.end()){
+                m_allChipletTypes[bm.getName()] = bm;
+            }else{
+                std::cout << "[PowerX:PinParser] Warning: Repeated ballout: " << bm.getName() << std::endl;
+            }
+            const std::unordered_set<bumpType> & chipletBumpTypes = bm.getBumpTypes();
+            for(const bumpType &bt : chipletBumpTypes){
+                if(m_allPinTypes.find(bt) == m_allPinTypes.end()){
+                    m_allPinTypes.insert(bt);
+                    m_typeToCords[bt] = {};
+                }
+            }
+
+        }else if(splitLine[0] == "INTERPOSER"){
+            m_name = splitLine[1];
+            m_footprint = Rectangle(0, 0, std::stoi(splitLine[2]), std::stoi(splitLine[3]));
+
+        }else if(splitLine[0] == "CHIPLET"){
+            if(m_allChipletTypes.find(splitLine[1]) == m_allChipletTypes.end()){
+                std::cout << "[PowerX:PinParser] Unknown chiplet " << lineBuffer << std::endl;
+            }
+
+            BumpMap &bm = m_allChipletTypes[splitLine[1]];
+            m_instanceToType[splitLine[2]] = bm.getName();
+            
+            splitLine[3].erase(std::remove(splitLine[3].begin(), splitLine[3].end(), '('), splitLine[3].end());
+            splitLine[3].erase(std::remove(splitLine[3].begin(), splitLine[3].end(), ','), splitLine[3].end());
+
+            splitLine[4].erase(std::remove(splitLine[4].begin(), splitLine[4].end(), ')'), splitLine[4].end());
+            len_t xDiff = std::stoi(splitLine[3]);
+            len_t yDiff = std::stoi(splitLine[4]);
+            
+            m_instanceToBoundingBox[splitLine[2]] = Rectangle(xDiff, yDiff, xDiff + bm.getWidth(), yDiff + bm.getHeight());
+
+            const std::map<Cord, bumpType>& bumpMappings = bm.getBumpMap();
+            for(std::map<Cord, bumpType>::const_iterator it = bumpMappings.begin(); it != bumpMappings.end(); it++){
+                Cord originalCord = it->first;
+                Cord transformedCord = Cord(originalCord.x() + xDiff, originalCord.y() + yDiff);
+                m_cordToType[transformedCord] = it->second;
+                m_typeToCords[it->second].insert(transformedCord);
+            }
+
+        }else{
+            std::cout << "[PowerX:PinParser] Unmatch string: " << lineBuffer << std::endl;
+        }
+    }
 }
 
 std::string Pinout::getName() const {
@@ -67,99 +133,22 @@ Rectangle Pinout::getFootprint() const {
     return this->m_footprint;
 }
 
-Cord Pinout::getRelativePosition() const {
-    return this->m_relativePositon;
+chipletType Pinout::getInstanceType(const std::string &chipletName) const {
+    std::map<std::string, chipletType>::const_iterator it = m_instanceToType.find(chipletName);
+    return (it == m_instanceToType.end())? "" : it->second;
 }
 
-bool Pinout::readFromPinoutFile(const std::string &pinoutFile){
-    std::ifstream file(pinoutFile);
-    if(!file.is_open()) return false;
-    
-    std::string buffer;
-    len_t chipletWidth, chipletHieght;
-
-    file >> buffer >> this->m_name >> chipletWidth >> chipletHieght;
-    
-    std::cout << buffer << std::endl;
-    std::cout << getName() << std::endl;
-    std::cout << chipletWidth << std::endl;
-    std::cout << chipletHieght << std::endl;
-
-    m_footprint = Rectangle(0, 0, chipletWidth - 1, chipletHieght -1);
-    
-    std::string pinType;
-    for(int i = 0; i < chipletHieght; ++i){
-        for(int j = 0; j < chipletWidth; ++j){
-
-            file >> buffer;
-
-            // parse the string, keep only substring after ','
-            size_t position = buffer.find(',');
-            assert(position != std::string::npos);
-            pinType = buffer.substr(position + 1);
-
-            if(pinType != "SIG"){
-                Cord cord(i, j);
-                if(m_allTypes.find(pinType) == m_allTypes.end()){
-                    m_allTypes.insert(pinType);
-                    m_typeToCords[pinType] = {cord};
-                    m_cordToType[cord] = pinType;
-                }else{
-                    m_typeToCords[pinType].insert(cord);
-                    m_cordToType[cord] = pinType; 
-                }
-            }
-
-        }
-    }
-
-    file >> buffer;
-    file.close();
-    return true;
-}
-
-void Pinout::insertPin(const Cord &cord, const std::string &cordType){
-    
-    assert(m_cordToType.find(cord) == m_cordToType.end());
-    
-    this->m_cordToType[cord] = cordType;
-    if(m_allTypes.find(cordType) != m_allTypes.end()){
-        // such type already exist
-        this->m_typeToCords[cordType].insert(cord);
-    }else{
-        // new type
-        this->m_allTypes.insert(cordType);
-    }
-}
-
-std::string Pinout::getPinType(const Cord &c) const {
-    std::unordered_map<Cord, std::string>::const_iterator it = m_cordToType.find(c);
+bumpType Pinout::getPinType(const Cord &c) const {
+    std::unordered_map<Cord, bumpType>::const_iterator it = m_cordToType.find(c);
     return (it == m_cordToType.end())? "" : it->second;
 }
 
-bool Pinout::getAllPinsofType(const std::string & pinType, std::unordered_set<Cord> &pinsOfType) const {
-    std::unordered_map<std::string, std::unordered_set<Cord>>::const_iterator it = m_typeToCords.find(pinType);
-    
+bool Pinout::getAllPinsofType(const bumpType & pinType, std::set<Cord> &locations) const{
+    std::unordered_map<bumpType, std::set<Cord>>::const_iterator it = m_typeToCords.find(pinType);
     if(it == m_typeToCords.end()) return false;
     else{
-        pinsOfType.insert(it->second.begin(), it->second.end());
+        locations.insert(it->second.begin(), it->second.end());
         return true;
     }
 }
 
-bool Pinout::exportPinOut(std::unordered_map<std::string, std::vector<Cord>> &allPinouts) const {
-    std::unordered_map<std::string, std::unordered_set<Cord>>::const_iterator it;
-
-    for(it = m_typeToCords.begin(); it != m_typeToCords.end(); ++it){
-        allPinouts[it->first] = std::vector<Cord>(it->second.begin(), it->second.end());
-    }
-}
-
-void Pinout::visualizePinOut(std::ostream &os) const{
-    
-    os << m_name << " " << (rec::getWidth(m_footprint) + 1) << " " << (rec::getHeight(m_footprint) + 1) << "\n";
-    std::map<Cord, std::string> sortedMap(m_cordToType.begin(), m_cordToType.end());
-    for (const std::pair<const Cord, std::string>& entry : sortedMap) {
-        os << entry.first << " " << entry.second << '\n';
-    }
-}
