@@ -53,6 +53,8 @@ const std::unordered_map<std::string, std::string> Technology::m_standardUnits =
 
     {"INTERPOSER_WIDTH", "um"},
     {"INTERPOSER_HEIGHT", "um"},
+    {"INTERPOSER_METAL_WIDTH", "um"},
+    {"INTERPOSER_METAL_PITCH", "um"},
     {"INTERPOSER_METAL_THICKNESS", "um"},
     {"INTERPOSER_DIELECTRIC_THICKNESS", "um"},
     {"INTERPOSER_SUBSTRATE_THICKNESS", "um"},
@@ -88,7 +90,8 @@ Technology::Technology():
     m_DieLocalWirePitch(160), m_DieLocalWireWidth(80), m_DieLocalWireThickness(144), m_DieDecapDensity(355),
     m_MicrobumpPitch(100), m_MicrobumpRadius(20), m_MicrobumpResistance(30.9), m_MicrobumpInductance(11.1),
     m_InterposerWidth(10800), m_InterposerHeight(10800), 
-    m_InterposerMetalThickness(1), m_InterposerDielectricThickness(1), m_InterposerSubstrateThickness(100),
+    m_InterposerMetalWidth(40), m_InterposerMetalPitch(100), m_InterposerMetalThickness(1),
+    m_InterposerDielectricThickness(1), m_InterposerSubstrateThickness(100),
     m_TsvPitch(40), m_TsvDepth(100), m_TsvResistance(54.2), m_TsvInductance(77.78),
     m_C4Radius(120), m_C4Resistance(14.3), m_C4Inductance(11),
     m_PCBInductance(21), m_PCBResistance(166), 
@@ -259,6 +262,20 @@ Technology::Technology(const std::string &filePath){
                 continue;
             }
             m_InterposerHeight = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
+
+        }else if(key == "INTERPOSER_METAL_WIDTH"){
+            if((stdUnit != unit) || (magnitude_map.find(magnitude) == magnitude_map.end())){
+                std::cout << "[PowerX:TchParser] Unmatch unit for INTERPOSER_METAL_WIDTH: " << magnitude << unit << std::endl;
+                continue;
+            }
+            m_InterposerMetalWidth = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
+
+        }else if(key == "INTERPOSER_METAL_PITCH"){
+            if((stdUnit != unit) || (magnitude_map.find(magnitude) == magnitude_map.end())){
+                std::cout << "[PowerX:TchParser] Unmatch unit for INTERPOSER_METAL_PITCH: " << magnitude << unit << std::endl;
+                continue;
+            }
+            m_InterposerMetalPitch = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
 
         }else if(key == "INTERPOSER_METAL_THICKNESS"){
             if((stdUnit != unit) || (magnitude_map.find(magnitude) == magnitude_map.end())){

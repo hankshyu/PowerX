@@ -19,6 +19,7 @@
 #include "pinout.hpp"
 #include "bumpMap.hpp"
 #include "technology.hpp"
+#include "eqCktExtractor.hpp"
 #include "visualiser.hpp"
 
 
@@ -53,19 +54,28 @@ int main(int argc, char const *argv[]){
     // bm.exportBumpMap("outputs/mc.ballmap");
 
     Technology tch("inputs/standard.tch");
-    
-    BumpMap l2b("inputs/l2.csv");
-    BumpMap mcb("inputs/mc.csv");
-    BumpMap nocb("inputs/noc.csv");
-    BumpMap rocketb("inputs/rocket.csv");
+    EqCktExtractor EqCktExtor (tch);
+    std::cout << EqCktExtor.getInterposerResistance() << std::endl; 
+    std::cout << EqCktExtor.getInterposerInductance() << std::endl; 
+    std::cout << EqCktExtor.getInterposerCapacitanceCenterCell() << std::endl; 
+    std::cout << EqCktExtor.getInterposerCapacitanceEdgeCell() << std::endl; 
+    std::cout << EqCktExtor.getInterposerCapacitanceCornerCell() << std::endl; 
+    std::cout << EqCktExtor.getInterposerConductance() << std::endl; 
+    std::cout << EqCktExtor.getInterposerViaResistance() << std::endl; 
+    std::cout << EqCktExtor.getInterposerViaInductance() << std::endl; 
 
-    visualiseBumpMap(l2b, tch, "outputs/l2.bumpmap");
-    visualiseBumpMap(mcb, tch, "outputs/mc.bumpmap");
-    visualiseBumpMap(nocb, tch, "outputs/noc.bumpmap");
-    visualiseBumpMap(rocketb, tch, "outputs/rocket.bumpmap");
+    // BumpMap l2b("inputs/l2.csv");
+    // BumpMap mcb("inputs/mc.csv");
+    // BumpMap nocb("inputs/noc.csv");
+    // BumpMap rocketb("inputs/rocket.csv");
 
-    Pinout microBump("inputs/rocket64_0808.pin");
-    visualisePinOut(microBump, tch, "outputs/rocket64_0808.pinout");
+    // visualiseBumpMap(l2b, tch, "outputs/l2.bumpmap");
+    // visualiseBumpMap(mcb, tch, "outputs/mc.bumpmap");
+    // visualiseBumpMap(nocb, tch, "outputs/noc.bumpmap");
+    // visualiseBumpMap(rocketb, tch, "outputs/rocket.bumpmap");
+
+    // Pinout microBump("inputs/rocket64_0808.pin");
+    // visualisePinOut(microBump, tch, "outputs/rocket64_0808.pinout");
 
 
 

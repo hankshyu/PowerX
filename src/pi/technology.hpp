@@ -51,6 +51,8 @@ private:
 
     int m_InterposerWidth; // um
     int m_InterposerHeight; // um
+    int m_InterposerMetalWidth; // um
+    int m_InterposerMetalPitch; // um
     int m_InterposerMetalThickness; // um
     int m_InterposerDielectricThickness; // um
     int m_InterposerSubstrateThickness; // um
@@ -98,6 +100,8 @@ private:
 
     inline int getInterposerWidth() const {return m_InterposerWidth;}
     inline int getInterposerHeight() const {return m_InterposerHeight;}
+    inline int getInterposerMetalWidth() const {return m_InterposerMetalWidth;}
+    inline int getInterposerMetalPitch() const {return m_InterposerMetalPitch;}
     inline int getInterposerMetalThickness() const {return m_InterposerMetalThickness;}
     inline int getInterposerDielectricThickness() const {return m_InterposerDielectricThickness;}
     inline int getInterposerSubstrateThickness() const {return m_InterposerSubstrateThickness;}
