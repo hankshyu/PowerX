@@ -41,31 +41,23 @@ typedef std::string bumpType;
 class BumpMap{
 private:
     std::string m_name;
-    Rectangle m_footprint;
+    int bumpCountWidth;
+    int bumpCountHeight;
     std::unordered_set<bumpType> m_allBumpTypes;
     std::map<Cord, bumpType> m_bumpMap;
+    std::map<bumpType, std::set<Cord>> m_TypeToCords;
 
 public:
     
-    BumpMap();
-    explicit BumpMap(const std::string &name, const len_t footprintWidth, const len_t footprintHeight);
-    explicit BumpMap(const std::string &name, const Rectangle &footprint);
+    BumpMap() = delete;
     explicit BumpMap(const std::string &filePath);
 
-    bool importBumpMap(const std::string &filePath);
-    
     std::string getName() const;
-    Rectangle getFootprint() const;
-    int getWidth() const;
-    int getHeight() const;
-    const std::unordered_set<bumpType>& getBumpTypes() const;
-    const std::map<Cord, bumpType>& getBumpMap() const;
+    int getbumpCountWidth() const;
+    int getbumpCountHeight() const;
 
     friend bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
     
 };
-
-
-
 
 #endif // __BUMPMAP_H__

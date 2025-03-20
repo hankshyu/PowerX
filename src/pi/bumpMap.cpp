@@ -21,6 +21,7 @@
 // 1. C++ STL:
 #include <string>
 #include <fstream>
+#include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -33,39 +34,18 @@
 #include "rectangle.hpp"
 #include "bumpMap.hpp"
 
-BumpMap::BumpMap()
-    :m_name(""), m_footprint(Rectangle(0, 0, 0, 0)) {
 
-}
-
-BumpMap::BumpMap(const std::string &name, const len_t footprintWidth, const len_t footprintHeight)
-    :m_name(name), m_footprint(Rectangle(0, 0, footprintWidth, footprintHeight)) {
-
-}
-
-BumpMap::BumpMap(const std::string &name, const Rectangle &footprint)
-    :m_name(name), m_footprint(Rectangle(footprint)) {
-
-}
 BumpMap::BumpMap(const std::string &filePath){
-    importBumpMap(filePath);
-}
-
-bool BumpMap::importBumpMap(const std::string &filePath){
     std::ifstream file(filePath);
     assert(file.is_open());
-    if(!file.is_open()) return false;
     
     std::string buffer;
-    len_t chipletWidth, chipletHieght;
 
-    file >> buffer >> this->m_name >> chipletWidth >> chipletHieght;
-    
-    m_footprint = Rectangle(0, 0, chipletWidth, chipletHieght);
-    
+    file >> buffer >> this->m_name >> this->bumpCountWidth >> this->bumpCountHeight;
+        
     std::string pinType;
-    for(int j = 0; j < chipletHieght; ++j){
-        for(int i = 0; i < chipletWidth; ++i){
+    for(int j = 0; j < this->bumpCountHeight; ++j){
+        for(int i = 0; i < this->bumpCountWidth; ++i){
 
             file >> buffer;
 
@@ -73,11 +53,14 @@ bool BumpMap::importBumpMap(const std::string &filePath){
             size_t position = buffer.find(',');
             assert(position != std::string::npos);
             pinType = buffer.substr(position + 1);
-
-            if(pinType != "SIG"){
-                Cord cord(i, chipletHieght - j - 1);
+            std::transform(pinType.begin(), pinType.end(), pinType.begin(), ::toupper);
+            if((pinType != "SIG") || (pinType != "SIGNAL")){
+                Cord cord(i, this->bumpCountHeight - j - 1);
                 if(m_allBumpTypes.find(pinType) == m_allBumpTypes.end()){
                     m_allBumpTypes.insert(pinType);
+                    m_TypeToCords[pinType] = {cord};
+                }else{
+                    m_TypeToCords[pinType].insert(cord);
                 }
 
                 m_bumpMap[cord] = pinType;
@@ -86,29 +69,16 @@ bool BumpMap::importBumpMap(const std::string &filePath){
     }
 
     file.close();
-    return true;
 }
 
 std::string BumpMap::getName() const {
     return this->m_name;
 }
 
-Rectangle BumpMap::getFootprint() const {
-    return this->m_footprint;
+int BumpMap::getbumpCountWidth() const {
+    return this->bumpCountWidth;
 }
 
-int BumpMap::getWidth() const {
-    return rec::getWidth(m_footprint);
-}
-
-int BumpMap::getHeight() const {
-    return rec::getHeight(m_footprint);
-}
-
-const std::unordered_set<bumpType> &BumpMap::getBumpTypes() const {
-    return this->m_allBumpTypes;
-}
-
-const std::map<Cord, std::string> &BumpMap::getBumpMap() const{
-    return this->m_bumpMap;
+int BumpMap::getbumpCountHeight() const {
+    return this->bumpCountHeight;
 }
