@@ -43,19 +43,23 @@ private:
     std::string m_name;
     int bumpCountWidth;
     int bumpCountHeight;
+
     std::unordered_set<bumpType> m_allBumpTypes;
     std::map<Cord, bumpType> m_bumpMap;
     std::map<bumpType, std::set<Cord>> m_TypeToCords;
 
 public:
     
-    BumpMap() = delete;
+    BumpMap();
     explicit BumpMap(const std::string &filePath);
 
-    std::string getName() const;
-    int getbumpCountWidth() const;
-    int getbumpCountHeight() const;
-
+    inline std::string getName() const {return this->m_name;}
+    inline int getBumpCountWidth() const {return this->bumpCountWidth;}
+    inline int getBumpCountHeight() const {return this->bumpCountHeight;}
+    
+    inline const std::unordered_set<bumpType> &getAllBumpTypes() const {return this->m_allBumpTypes;}
+    inline const std::map<Cord, bumpType> &getBumpMap() const {return this->m_bumpMap;}
+    
     friend bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
     
 };

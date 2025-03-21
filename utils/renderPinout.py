@@ -115,10 +115,6 @@ if __name__ == '__main__':
             FIG_SIZE = (12, 12)
 
 
-
-
-            
-
             # rendering Outermost contour (footprint)        
             fig, ax = plt.subplots(figsize=FIG_SIZE)
             if args.noLegend:

@@ -25,6 +25,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <cassert>
 
 // 2. Boost Library:
 
@@ -34,23 +35,16 @@
 #include "cord.hpp"
 #include "rectangle.hpp"
 
-Pinout::Pinout()
-    :m_name(""), m_footprint(Rectangle(0, 0, 0, 0)) {
-}
-
-Pinout::Pinout(const len_t footprintWidth, const len_t footprintHeight)
-    :m_name(""), m_footprint(Rectangle(0, 0, footprintWidth, footprintHeight)) {
-
-}
-
-Pinout::Pinout(const Rectangle &footprint)
-    :m_name(""), m_footprint(footprint) {
+Pinout::Pinout(): m_name(""), m_pinCountWidth(0), m_pinCountHeight(0) {
 
 }
 
 Pinout::Pinout(const std::string &fileName){
     std::ifstream file(fileName);
     assert(file.is_open());
+
+    bool readInterposer = false;
+    bool readMicrobump = false;
 
     std::string buffer;
     std::string lineBuffer;
@@ -62,15 +56,33 @@ Pinout::Pinout(const std::string &fileName){
                 lineBuffer = lineBuffer.substr(0, comment_pos);  // Remove everything after "#"
         }
 
-        // process line
-        // std::cout << lineBuffer << std::endl;
-        
+        // process line: std::cout << lineBuffer << std::endl;
         std::vector<std::string> splitLine;
         std::istringstream stream(lineBuffer);
         std::string wordBuffer;
     
         while (stream >> wordBuffer) { // Extract words by spaces and newlines
             splitLine.push_back(wordBuffer);
+        }
+
+        if(splitLine[0] == "INTERPOSER"){
+            this->m_name = splitLine[1];
+            this->m_pinCountWidth = std::stoi(splitLine[2]);
+            this->m_pinCountHeight = std::stoi(splitLine[3]);
+            readInterposer = true;
+        }
+
+        if(!readInterposer) continue;
+        
+        if(splitLine[0] == "MICROBUMP_START"){
+            readMicrobump = true;
+            continue;
+        }
+        if(!readMicrobump) continue;
+        
+        if(splitLine[0] == "MICROBUMP_END"){
+            file.close();
+            break;
         }
 
         if(splitLine[0] == "include"){
@@ -82,17 +94,13 @@ Pinout::Pinout(const std::string &fileName){
             }else{
                 std::cout << "[PowerX:PinParser] Warning: Repeated ballout: " << bm.getName() << std::endl;
             }
-            const std::unordered_set<bumpType> & chipletBumpTypes = bm.getBumpTypes();
+            const std::unordered_set<bumpType> & chipletBumpTypes = bm.getAllBumpTypes();
             for(const bumpType &bt : chipletBumpTypes){
                 if(m_allPinTypes.find(bt) == m_allPinTypes.end()){
                     m_allPinTypes.insert(bt);
                     m_typeToCords[bt] = {};
                 }
             }
-
-        }else if(splitLine[0] == "INTERPOSER"){
-            m_name = splitLine[1];
-            m_footprint = Rectangle(0, 0, std::stoi(splitLine[2]), std::stoi(splitLine[3]));
 
         }else if(splitLine[0] == "CHIPLET"){
             if(m_allChipletTypes.find(splitLine[1]) == m_allChipletTypes.end()){
@@ -109,8 +117,8 @@ Pinout::Pinout(const std::string &fileName){
             len_t xDiff = std::stoi(splitLine[3]);
             len_t yDiff = std::stoi(splitLine[4]);
             
-            m_instanceToBoundingBox[splitLine[2]] = Rectangle(xDiff, yDiff, xDiff + bm.getWidth(), yDiff + bm.getHeight());
-
+            // m_instanceToBoundingBox[splitLine[2]] = Rectangle(xDiff, yDiff, xDiff + bm.getWidth(), yDiff + bm.getHeight());
+            m_instanceToLL[splitLine[2]] = Cord(xDiff, yDiff);
             const std::map<Cord, bumpType>& bumpMappings = bm.getBumpMap();
             for(std::map<Cord, bumpType>::const_iterator it = bumpMappings.begin(); it != bumpMappings.end(); it++){
                 Cord originalCord = it->first;
@@ -125,13 +133,7 @@ Pinout::Pinout(const std::string &fileName){
     }
 }
 
-std::string Pinout::getName() const {
-    return this->m_name;
-}
 
-Rectangle Pinout::getFootprint() const {
-    return this->m_footprint;
-}
 
 chipletType Pinout::getInstanceType(const std::string &chipletName) const {
     std::map<std::string, chipletType>::const_iterator it = m_instanceToType.find(chipletName);
@@ -151,4 +153,3 @@ bool Pinout::getAllPinsofType(const bumpType & pinType, std::set<Cord> &location
         return true;
     }
 }
-

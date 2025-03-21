@@ -36,7 +36,10 @@
 bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
 
 // use "renderPinout.py" to render BumpMap data structure
-bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::string &filePath);
+bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath);
+
+// use "renderPinout.py" to render Ballout data structure
+bool visualiseBallout(const Ballout &pinout, const Technology &tch, const std::string &filePath);
 
 
 #endif // __VISUALIZER_H__

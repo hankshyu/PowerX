@@ -7,10 +7,6 @@
 
 #include "boost/polygon/polygon.hpp"
 
-// #include "isotropy.hpp"
-// #include "rectangle.hpp"
-// #include "tile.hpp"
-// #include "rectilinear.hpp"
 
 #include "line.hpp"
 #include "tile.hpp"
@@ -21,6 +17,7 @@
 #include "technology.hpp"
 #include "eqCktExtractor.hpp"
 #include "visualiser.hpp"
+#include "timeProfiler.hpp"
 
 
 // #include "doughnutPolygon.hpp"
@@ -53,7 +50,13 @@ int main(int argc, char const *argv[]){
     // std::cout << bm.getName() << std::endl;
     // bm.exportBumpMap("outputs/mc.ballmap");
 
+    TimeProfiler timeProfiler;
+    
+    timeProfiler.startTimer("Read tch");
     Technology tch("inputs/standard.tch");
+    timeProfiler.pauseTimer("Read tch");
+    
+    timeProfiler.startTimer("EqCkt Extractor");
     EqCktExtractor EqCktExtor (tch);
     std::cout << EqCktExtor.getInterposerResistance() << std::endl; 
     std::cout << EqCktExtor.getInterposerInductance() << std::endl; 
@@ -63,6 +66,9 @@ int main(int argc, char const *argv[]){
     std::cout << EqCktExtor.getInterposerConductance() << std::endl; 
     std::cout << EqCktExtor.getInterposerViaResistance() << std::endl; 
     std::cout << EqCktExtor.getInterposerViaInductance() << std::endl; 
+    timeProfiler.pauseTimer("EqCkt Extractor");
+
+    timeProfiler.printTimingReport();
 
     // BumpMap l2b("inputs/l2.csv");
     // BumpMap mcb("inputs/mc.csv");
@@ -78,7 +84,10 @@ int main(int argc, char const *argv[]){
     // visualisePinOut(microBump, tch, "outputs/rocket64_0808.pinout");
 
 
-
+    Rectangle rec(0, 0, 3, 4);
+    std::cout << rec::getWidth(rec) << std::endl;
+    std::cout << rec::getHeight(rec) << std::endl;
+    std::cout << rec::getUR(rec) << std::endl;
 
 
 

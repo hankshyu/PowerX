@@ -34,6 +34,9 @@
 #include "rectangle.hpp"
 #include "bumpMap.hpp"
 
+BumpMap::BumpMap(): m_name(""), bumpCountWidth(0), bumpCountHeight(0) {
+
+}
 
 BumpMap::BumpMap(const std::string &filePath){
     std::ifstream file(filePath);
@@ -71,14 +74,3 @@ BumpMap::BumpMap(const std::string &filePath){
     file.close();
 }
 
-std::string BumpMap::getName() const {
-    return this->m_name;
-}
-
-int BumpMap::getbumpCountWidth() const {
-    return this->bumpCountWidth;
-}
-
-int BumpMap::getbumpCountHeight() const {
-    return this->bumpCountHeight;
-}

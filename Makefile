@@ -19,7 +19,7 @@ INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o do
 	
 PI_OBJS = technology.o eqCktExtractor.o bumpMap.o pinout.o
 
-_OBJS = main.o visualiser.o $(INF_OBJS) $(PI_OBJS)
+_OBJS = main.o timeProfiler.o visualiser.o $(INF_OBJS) $(PI_OBJS)
 
 OBJS = $(patsubst %,$(OBJPATH)/%,$(_OBJS))
 DBG_OBJS = $(patsubst %.o, $(OBJPATH)/%_dbg.o, $(_OBJS))
@@ -34,6 +34,9 @@ $(OBJPATH)/main.o: $(SRCPATH)/main.cpp
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) -DCOMPILETIME="\"`date`\"" $^ -o $@
 
 $(OBJPATH)/visualiser.o: $(SRCPATH)/visualiser.cpp $(SRCPATH)/visualiser.hpp
+	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
+
+$(OBJPATH)/timeProfiler.o: $(SRCPATH)/timeProfiler.cpp $(SRCPATH)/timeProfiler.hpp
 	$(CXX) $(FLAGS) -I $(BOOSTPATH) $(CFLAGS) $(OPTFLAGS) $< -o $@
 
 $(OBJPATH)/%.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp

@@ -24,7 +24,6 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 #include <string>
 #include <ostream>
 
@@ -34,7 +33,6 @@
 // 3. Texo Library:
 #include "units.hpp"
 #include "cord.hpp"
-#include "rectangle.hpp"
 #include "technology.hpp"
 #include "bumpMap.hpp"
 
@@ -43,11 +41,12 @@ typedef std::string chipletType;
 class Pinout{
 private:
     std::string m_name;
-    Rectangle m_footprint;
+    int m_pinCountWidth;
+    int m_pinCountHeight;
     
     std::map<chipletType, BumpMap> m_allChipletTypes;
     std::map<std::string, chipletType> m_instanceToType;
-    std::map<std::string, Rectangle> m_instanceToBoundingBox;
+    std::map<std::string, Cord> m_instanceToLL;
 
 
     std::unordered_set<bumpType> m_allPinTypes;
@@ -57,20 +56,21 @@ private:
 public:
     
     Pinout();
-    explicit Pinout(const len_t footprintWidth, const len_t footprintHeight);
-    explicit Pinout(const Rectangle &footprint);
     explicit Pinout(const std::string &fileName);
 
-    std::string getName() const;
-    Rectangle getFootprint() const;
+    inline std::string getName() const {return this->m_name;}
+    inline int getPinCountWidth() const {return this->m_pinCountWidth;}
+    inline int getPinCountHeight() const {return this->m_pinCountHeight;}
 
     chipletType getInstanceType(const std::string &chipletName) const;
+    
+    // retur the bumpType related to the Cord, if unmatch return empty string
     bumpType getPinType(const Cord &c) const;
     bool getAllPinsofType(const bumpType & pinType, std::set<Cord> &locations) const;
 
     // bool exportPinOut(std::unordered_map<std::string, std::vector<Cord>> &allPinouts) const;
     
-    friend bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::string &filePath);
+    friend bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath);
 
 };
 #endif // __PINOUT_H__

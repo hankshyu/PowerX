@@ -40,8 +40,8 @@ bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = rec::getWidth(bumpMap.m_footprint);
-    len_t pinOutHeight = rec::getHeight(bumpMap.m_footprint);
+    len_t pinOutWidth = bumpMap.getBumpCountWidth();
+    len_t pinOutHeight = bumpMap.getBumpCountHeight();
     
     ofs << bumpMap.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
@@ -66,7 +66,7 @@ bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::
     return true;
 }
 
-bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::string &filePath){
+bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
     
@@ -77,8 +77,8 @@ bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::str
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = rec::getWidth(pinout.m_footprint);
-    len_t pinOutHeight = rec::getHeight(pinout.m_footprint);
+    len_t pinOutWidth = pinout.m_pinCountWidth;
+    len_t pinOutHeight = pinout.m_pinCountHeight;
 
 
     ofs << pinout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
@@ -86,11 +86,11 @@ bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::str
     ofs << "CHIPLETS" << " " << pinout.m_instanceToType.size() << std::endl;
     
     for(std::map<std::string, chipletType>::const_iterator it = pinout.m_instanceToType.begin(); it != pinout.m_instanceToType.end(); ++it){
-        Rectangle bbox = pinout.m_instanceToBoundingBox.at(it->first);
+        Cord instanceLL = pinout.m_instanceToLL.at(it->first);
         len_t llx = rec::getXL(bbox) * pitch;
         len_t lly = rec::getYL(bbox) * pitch;
-        len_t width = rec::getWidth(bbox) * pitch;
-        len_t height = rec::getHeight(bbox) * pitch;
+        len_t width = pinOutWidth * pitch;
+        len_t height = pinOutHeight * pitch;
         
         ofs << it->first << " " << it->second << " " << llx << " " << lly << " " << width << " " << height << std::endl;
     }
@@ -104,6 +104,47 @@ bool visualisePinOut(const Pinout &pinout, const Technology &tch, const std::str
             len_t centreY = pitch/2 + j*pitch;
             
             if(it == pinout.m_cordToType.end()){
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << "SIG" << std::endl;
+            }else{
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
+            }
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+
+bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::string &filePath){
+    
+    std::ofstream ofs(filePath, std::ios::out);
+    
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+    ofs << "BALLOUT VISUALISATION" << std::endl;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    len_t pinOutWidth = ballout.m_pinCountWidth;
+    len_t pinOutHeight = ballout.m_pinCountHeight;
+
+
+    ofs << pinout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
+    
+
+
+    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
+    std::unordered_map<Cord, ballType>::const_iterator it;
+    for(int j = 0; j < pinOutHeight; ++j){
+        for(int i = 0; i < pinOutWidth; ++i){
+            it = ballout.m_cordToBallType.find(Cord(i, j));
+            len_t centreX = pitch/2 + i*pitch;
+            len_t centreY = pitch/2 + j*pitch;
+            
+            if(it == ballout.m_cordToBallType.end()){
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << "SIG" << std::endl;
             }else{
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
