@@ -22,6 +22,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <ostream>
@@ -33,7 +34,6 @@
 #include "units.hpp"
 #include "cord.hpp"
 #include "technology.hpp"
-#include "visualiser.hpp"
 
 typedef std::string ballType;
 
@@ -70,9 +70,9 @@ private:
     int m_downBorder;
 
 
-    std::unordered_map<ballType, std::set<Cluster &>> m_ballTypeToClusters;
+    std::unordered_map<ballType, std::set<Cluster *>> m_ballTypeToClusters;
     std::unordered_map<Cord, ballType> m_cordToBallType;
-    std::unordered_map<Cord, Cluster&> m_cordToCluster;
+    std::unordered_map<Cord, Cluster *> m_cordToCluster;
 
     public:
 
@@ -87,10 +87,12 @@ private:
     inline int getBallWidth() const {return this->m_ballWidth;}
     inline int getBallHeight() const {return this->m_ballHeight;}
 
-    
+    inline int getPinCountWidth() const {return this->m_pinCountWidth;}
+    inline int getPinCountHeight() const {return this->m_pinCountHeight;}
+
     const Cluster &getCluster(const Cord &cord) const;
-    ballType getBallType(const cord &cord) const;
-    Cord getRepresentation(const cord &cord) const;
+    ballType getBallType(const Cord &cord) const;
+    Cord getRepresentation(const Cord &cord) const;
 
     friend bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::string &filePath);
 };

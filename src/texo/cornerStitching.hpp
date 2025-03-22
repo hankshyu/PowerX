@@ -62,6 +62,9 @@ public:
     ~CornerStitching();
 
     bool operator == (const CornerStitching &comp) const;
+    CornerStitching &operator=(CornerStitching other);
+
+    void swap(CornerStitching &other) noexcept;
 
     len_t getCanvasWidth() const;
     len_t getCanvasHeight() const;

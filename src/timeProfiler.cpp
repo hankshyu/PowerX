@@ -68,24 +68,24 @@ void TimeProfiler::printTimingReport() const {
         timeSpanToDuration[m_timeSpans[i]] = duration.count();
     }
 
-    printf("╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
-    printf("║ Stage                     │     Runtime (s)      |                                                                           ║\n");
-    printf("╟───────────────────────────│──────────────────────│───────────────────────────────────────────────────────────────────────────╢\n");
+    printf("╔═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
+    printf("║ Stage                        │     Runtime (s)      |                                                                           ║\n");
+    printf("╟──────────────────────────────│──────────────────────│───────────────────────────────────────────────────────────────────────────╢\n");
     for(int i = 0; i < m_timeSpans.size(); ++i){
         const timeSpan &ts = m_timeSpanMap.at(m_timeSpans[i]);
         std::string StageName = " " + m_timeSpans[i];
 
         double durationS = timeSpanToDuration[m_timeSpans[i]];
-        double durationPercentage = durationS / totalDuration;
+        double durationPercentage = 100*durationS / totalDuration;
         durationS = durationS / 1000.0;
         
 
-        printf("║%-27s│ %11.3lf (%5.2lf%%) │%75s║\n", StageName.c_str(), durationS, durationPercentage,  "");
+        printf("║%-30s│ %11.3lf (%5.2lf%%) │%75s║\n", StageName.c_str(), durationS, durationPercentage,  "");
 
     }
-    printf("╟───────────────────────────│──────────────────────│───────────────────────────────────────────────────────────────────────────╢\n");
-    printf("║ Summary                   │ %11.3lf          │%75s║\n", totalDuration/1000.0, "");
-    printf("╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
+    printf("╟──────────────────────────────│──────────────────────│───────────────────────────────────────────────────────────────────────────╢\n");
+    printf("║ Summary                      │ %11.3lf          │%75s║\n", totalDuration/1000.0, "");
+    printf("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
 
 }
  

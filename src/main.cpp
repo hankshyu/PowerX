@@ -1,23 +1,13 @@
 #include <iostream>
-#include <fstream>
-#include <assert.h>
-#include <unordered_map>
-#include <algorithm>
-#include "vector"
+#include <string>
 
-#include "boost/polygon/polygon.hpp"
-
-
-#include "line.hpp"
-#include "tile.hpp"
-#include "lineTile.hpp"
-#include "cornerStitching.hpp"
-#include "pinout.hpp"
-#include "bumpMap.hpp"
-#include "technology.hpp"
-#include "eqCktExtractor.hpp"
-#include "visualiser.hpp"
+#include "colours.hpp"
 #include "timeProfiler.hpp"
+#include "visualiser.hpp"
+
+#include "powerPlane.hpp"
+#include "eqCktExtractor.hpp"
+
 
 
 // #include "doughnutPolygon.hpp"
@@ -25,39 +15,36 @@
 namespace gtl = boost::polygon;
 using namespace boost::polygon::operators;
 
+
+std::string FILEPATH_TCH = "inputs/standard.tch";
+std::string FILEPATH_PINOUT = "inputs/rocket64_0808.pinout";
+
+const std::string TIMERTAG_READ_TCH = "Read Technology File";
+const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
+const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
+
 int main(int argc, char const *argv[]){
+
+    std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool" << colours::COLORRST << std::endl;
+    std::cout << std::endl;
     
-    // CornerStitching *cs = new CornerStitching(15, 10);
-
-    // cs->insertTile(Tile(tileType::BLOCK, Rectangle(3, 6, 10, 8)));
-    // // cs->insertTile(Tile(tileType::BLOCK, Rectangle(3, 4, 8, 6)));
-    // // cs->insertTile(Tile(tileType::OVERLAP, Rectangle(8, 4, 10, 6)));
-    // // cs->insertTile(Tile(tileType::BLOCK, Rectangle(10, 4, 12, 6)));
-    // // cs->insertTile(Tile(tileType::BLOCK, Rectangle(8, 2, 12, 4)));
-
-    // std::string outputFile =  "./outputs/cornerStitching.txt";
-    // cs->visualiseCornerStitching(outputFile);
-
-    // Pinout rocket;
-    // rocket.readFromPinoutFile("inputs/mc.txt");
-
-    // std::ofstream of("outputs/mc.txt");
-    // assert(of.is_open());
-    // rocket.visualizePinOut(of);
-    // of.close();
-
-    // BumpMap bm("inputs/mc.csv");
-    // std::cout << bm.getName() << std::endl;
-    // bm.exportBumpMap("outputs/mc.ballmap");
-
     TimeProfiler timeProfiler;
-    
-    timeProfiler.startTimer("Read tch");
-    Technology tch("inputs/standard.tch");
-    timeProfiler.pauseTimer("Read tch");
-    
-    timeProfiler.startTimer("EqCkt Extractor");
-    EqCktExtractor EqCktExtor (tch);
+
+    timeProfiler.startTimer(TIMERTAG_READ_TCH);
+    Technology technology(FILEPATH_TCH);
+    timeProfiler.pauseTimer(TIMERTAG_READ_TCH);
+
+    timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
+    PowerPlane powerPlane(FILEPATH_PINOUT);
+    timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
+
+
+    timeProfiler.startTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
+    EqCktExtractor EqCktExtor (technology);
+    timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
+
+
+
     std::cout << EqCktExtor.getInterposerResistance() << std::endl; 
     std::cout << EqCktExtor.getInterposerInductance() << std::endl; 
     std::cout << EqCktExtor.getInterposerCapacitanceCenterCell() << std::endl; 
@@ -66,28 +53,20 @@ int main(int argc, char const *argv[]){
     std::cout << EqCktExtor.getInterposerConductance() << std::endl; 
     std::cout << EqCktExtor.getInterposerViaResistance() << std::endl; 
     std::cout << EqCktExtor.getInterposerViaInductance() << std::endl; 
-    timeProfiler.pauseTimer("EqCkt Extractor");
 
+
+    // visualisation part
+    std::vector<BumpMap> allChipletBumpMap = powerPlane.uBump.getAllChipletTypes();
+    for(const BumpMap &bm : allChipletBumpMap){
+        visualiseBumpMap(bm, technology, "outputs/"+bm.getName()+".bm");
+    }
+
+    visualisePinout(powerPlane.uBump, technology, "outputs/"+powerPlane.uBump.getName()+".ubump");
+    visualiseBallout(powerPlane.c4, technology, "outputs/"+powerPlane.c4.getName()+".c4");
+
+    
     timeProfiler.printTimingReport();
-
-    // BumpMap l2b("inputs/l2.csv");
-    // BumpMap mcb("inputs/mc.csv");
-    // BumpMap nocb("inputs/noc.csv");
-    // BumpMap rocketb("inputs/rocket.csv");
-
-    // visualiseBumpMap(l2b, tch, "outputs/l2.bumpmap");
-    // visualiseBumpMap(mcb, tch, "outputs/mc.bumpmap");
-    // visualiseBumpMap(nocb, tch, "outputs/noc.bumpmap");
-    // visualiseBumpMap(rocketb, tch, "outputs/rocket.bumpmap");
-
-    // Pinout microBump("inputs/rocket64_0808.pin");
-    // visualisePinOut(microBump, tch, "outputs/rocket64_0808.pinout");
-
-
-    Rectangle rec(0, 0, 3, 4);
-    std::cout << rec::getWidth(rec) << std::endl;
-    std::cout << rec::getHeight(rec) << std::endl;
-    std::cout << rec::getUR(rec) << std::endl;
+    
 
 
 

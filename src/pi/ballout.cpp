@@ -93,9 +93,9 @@ m_leftBorder(-1), m_rightBorder(-1), m_upBorder(-1), m_downBorder(-1) {
             file.close();
             break;
         }
-        std::string initialWord;
-        std::transform(splitLine[0].begin(), splitLine[0].end(), initialWord.begin(), ::toupper);
-
+        std::string initialWord = splitLine[0];
+        std::transform(initialWord.begin(), initialWord.end(), initialWord.begin(), ::toupper);
+        
         if(initialWord == "C4_WIDTH"){
             this->m_ballWidth = stoi(splitLine[2]);
         }else if(initialWord == "C4_HEIGHT"){
@@ -111,7 +111,7 @@ m_leftBorder(-1), m_rightBorder(-1), m_upBorder(-1), m_downBorder(-1) {
         }else if(initialWord == "C4_LEFT_BORDER"){
             this->m_leftBorder = stoi(splitLine[2]);
         }else if(initialWord == "C4_RIGHT_BORDER"){
-            this>m_rightBorder = stoi(splitLine[2]);
+            this->m_rightBorder = stoi(splitLine[2]);
         }else if(initialWord == "C4_DOWN_BORDER"){
             this->m_downBorder = stoi(splitLine[2]);
         }else if(initialWord == "C4_UP_BORDER"){
@@ -191,9 +191,10 @@ m_leftBorder(-1), m_rightBorder(-1), m_upBorder(-1), m_downBorder(-1) {
         
             splitLine[1].erase(std::remove(splitLine[1].begin(), splitLine[1].end(), '"'), splitLine[1].end());
             BumpMap bm(splitLine[1]);
-            
-            assert(bm.getBumpCountWidth == this->m_ballCountWidth);
-            assert(bm.getBumpCountHeight == this->m_ballCountHeight);
+            std::cout << bm.getBumpCountWidth() << std::endl;
+            std::cout << this->m_ballCountWidth << std::endl;
+            assert(bm.getBumpCountWidth() == this->m_ballCountWidth);
+            assert(bm.getBumpCountHeight() == this->m_ballCountHeight);
             
             const std::map<Cord, bumpType> &bumpMap = bm.getBumpMap();
 
@@ -212,7 +213,7 @@ m_leftBorder(-1), m_rightBorder(-1), m_upBorder(-1), m_downBorder(-1) {
                     Cluster &c = m_ballMap[i][j];
 
                     ballType ballType = bumpMap.at(Cord(i, j));
-                    m_ballTypeToClusters[ballType].insert(c);
+                    m_ballTypeToClusters[ballType].insert(&(m_ballMap[i][j]));
 
                     c.ballMapX = i;
                     c.ballmapY = j;
@@ -225,7 +226,7 @@ m_leftBorder(-1), m_rightBorder(-1), m_upBorder(-1), m_downBorder(-1) {
                             Cord pin(LLX + m, LLY + n);
                             c.ballouts.insert(pin);
                             m_cordToBallType[pin] = ballType;
-                            m_cordToCluster[pin] = c;
+                            m_cordToCluster[pin] = &(m_ballMap[i][j]);
                         }
                     }
                     

@@ -87,8 +87,8 @@ bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::str
     
     for(std::map<std::string, chipletType>::const_iterator it = pinout.m_instanceToType.begin(); it != pinout.m_instanceToType.end(); ++it){
         Cord instanceLL = pinout.m_instanceToLL.at(it->first);
-        len_t llx = rec::getXL(bbox) * pitch;
-        len_t lly = rec::getYL(bbox) * pitch;
+        len_t llx = instanceLL.x() * pitch;
+        len_t lly = instanceLL.y() * pitch;
         len_t width = pinOutWidth * pitch;
         len_t height = pinOutHeight * pitch;
         
@@ -131,7 +131,7 @@ bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::
     len_t pinOutHeight = ballout.m_pinCountHeight;
 
 
-    ofs << pinout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << ballout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
     
 

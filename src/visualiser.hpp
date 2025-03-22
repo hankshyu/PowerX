@@ -31,6 +31,7 @@
 #include "technology.hpp"
 #include "bumpMap.hpp"
 #include "pinout.hpp"
+#include "ballout.hpp"
 
 // use "renderPinout.py" to render BumpMap data structure
 bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);

@@ -544,6 +544,18 @@ bool CornerStitching::operator == (const CornerStitching &other) const{
 	
 }
 
+CornerStitching &CornerStitching::operator=(CornerStitching other) {
+	swap(other);
+    return *this;
+}
+
+void CornerStitching::swap(CornerStitching &other) noexcept {
+	std::swap(mCanvasWidth, other.mCanvasWidth);
+	std::swap(mCanvasHeight, other.mCanvasHeight);
+	std::swap(mCanvasSizeBlankTile, other.mCanvasSizeBlankTile);
+	std::swap(mAllNonBlankTilesMap, other.mAllNonBlankTilesMap);
+}
+
 len_t CornerStitching::getCanvasWidth() const{
 	return this->mCanvasWidth;
 }

@@ -140,6 +140,15 @@ chipletType Pinout::getInstanceType(const std::string &chipletName) const {
     return (it == m_instanceToType.end())? "" : it->second;
 }
 
+std::vector<BumpMap> Pinout::getAllChipletTypes() const {
+    std::vector<BumpMap> vec;
+    std::map<chipletType, BumpMap>::const_iterator cit;
+    for(cit = m_allChipletTypes.begin(); cit != m_allChipletTypes.end(); ++cit){
+        vec.push_back(BumpMap(cit->second));
+    }
+    return vec;
+}
+
 bumpType Pinout::getPinType(const Cord &c) const {
     std::unordered_map<Cord, bumpType>::const_iterator it = m_cordToType.find(c);
     return (it == m_cordToType.end())? "" : it->second;

@@ -63,6 +63,7 @@ public:
     inline int getPinCountHeight() const {return this->m_pinCountHeight;}
 
     chipletType getInstanceType(const std::string &chipletName) const;
+    std::vector<BumpMap> getAllChipletTypes() const;
     
     // retur the bumpType related to the Cord, if unmatch return empty string
     bumpType getPinType(const Cord &c) const;

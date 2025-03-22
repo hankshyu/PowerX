@@ -90,7 +90,7 @@ if __name__ == '__main__':
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "PINOUT")) and (LineBuffer[1] == "VISUALISATION"):
+            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "PINOUT") or LineBuffer[0] == "BALLOUT") and (LineBuffer[1] == "VISUALISATION"):
                 renderMode = LineBuffer[0]
             else:
                 print(f"[RenderPinout]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
