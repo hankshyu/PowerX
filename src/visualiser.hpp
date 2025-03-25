@@ -29,18 +29,28 @@
 
 // 3. Texo Library:
 #include "technology.hpp"
-#include "bumpMap.hpp"
-#include "pinout.hpp"
-#include "ballout.hpp"
+
+
+#include "cornerStitching.hpp"
+#include "floorplan.hpp"
 
 // use "renderPinout.py" to render BumpMap data structure
-bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
+// bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath);
 
-// use "renderPinout.py" to render BumpMap data structure
-bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath);
+// // use "renderPinout.py" to render BumpMap data structure
+// bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath);
 
-// use "renderPinout.py" to render Ballout data structure
-bool visualiseBallout(const Ballout &pinout, const Technology &tch, const std::string &filePath);
+// // use "renderPinout.py" to render Ballout data structure
+// bool visualiseBallout(const Ballout &pinout, const Technology &tch, const std::string &filePath);
+
+// use "renderCornerStitching.py" tor render class cornerStitching, which composed of Tiles with pointers
+bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath);
+
+// use "renderFloorplan.py" for render class floorplan 
+bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath);
+
+
+
 
 
 #endif // __VISUALIZER_H__

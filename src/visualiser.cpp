@@ -29,6 +29,10 @@
 #include "cord.hpp"
 
 
+
+#include "cornerStitching.hpp"
+#include "tile.hpp"
+/*
 bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -80,20 +84,22 @@ bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::str
     len_t pinOutWidth = pinout.m_pinCountWidth;
     len_t pinOutHeight = pinout.m_pinCountHeight;
 
-
     ofs << pinout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
     ofs << "CHIPLETS" << " " << pinout.m_instanceToType.size() << std::endl;
-    
+
     for(std::map<std::string, chipletType>::const_iterator it = pinout.m_instanceToType.begin(); it != pinout.m_instanceToType.end(); ++it){
         Cord instanceLL = pinout.m_instanceToLL.at(it->first);
+        BumpMap bm = pinout.getBumpMap(it->second);
+
         len_t llx = instanceLL.x() * pitch;
         len_t lly = instanceLL.y() * pitch;
-        len_t width = pinOutWidth * pitch;
-        len_t height = pinOutHeight * pitch;
+        len_t width =  bm.getBumpCountWidth() * pitch;
+        len_t height = bm.getBumpCountHeight() * pitch;
         
         ofs << it->first << " " << it->second << " " << llx << " " << lly << " " << width << " " << height << std::endl;
     }
+
 
     ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
     std::unordered_map<Cord, bumpType>::const_iterator it;
@@ -115,7 +121,6 @@ bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::str
     return true;
 }
 
-
 bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
@@ -135,7 +140,6 @@ bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
     
 
-
     ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
     std::unordered_map<Cord, ballType>::const_iterator it;
     for(int j = 0; j < pinOutHeight; ++j){
@@ -151,6 +155,76 @@ bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::
             }
         }
     }
+
+    ofs.close();
+    return true;
+}
+*/
+bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath){
+    
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+	std::unordered_set<Tile *> allTiles;
+	cs.collectAllTiles(allTiles);
+
+	// write out the total tile numbers
+	ofs << allTiles.size() << std::endl;
+	// write the chip contour 
+	ofs << cs.mCanvasWidth << " " << cs.mCanvasHeight << std::endl;
+	// Then start to write info for each file
+	for(Tile *const &tile : allTiles){
+		unsigned long long tileHash;
+		ofs << *tile << std::endl;
+
+		Tile *rtTile = tile->rt;
+		ofs << "rt: ";
+		if(rtTile == nullptr){
+			ofs << "nullptr" << std::endl; 
+		}else{
+			ofs << *rtTile << std::endl;
+		}
+
+		Tile *trTile = tile->tr;
+		ofs << "tr: ";
+		if(trTile == nullptr){
+			ofs << "nullptr" << std::endl; 
+		}else{
+			ofs << *trTile << std::endl;
+		}
+
+		Tile *blTile = tile->bl;
+		ofs << "bl: ";
+		if(blTile == nullptr){
+			ofs << "nullptr" << std::endl; 
+		}else{
+			ofs << *blTile << std::endl;
+		}
+
+		Tile *lbTile = tile->lb;
+		ofs << "lb: ";
+		if(lbTile == nullptr){
+			ofs << "nullptr" << std::endl; 
+		}else{
+			ofs << *lbTile << std::endl;
+		}
+	}
+	ofs.close();
+    return true;
+}
+
+bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "CHIP " << rec::getWidth(fp.mChipContour) << " " << rec::getHeight(fp.mChipContour) << std::endl;
+    
+    
 
     ofs.close();
     return true;

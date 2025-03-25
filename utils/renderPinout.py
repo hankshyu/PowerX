@@ -22,12 +22,12 @@ MAGENTA     = "\u001b[35m"
 CYAN        = "\u001b[36m"
 WHITE       = "\u001b[37m"
 
-
 # Define a global mapping for pin colors
 PIN_COLORS = {
     "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
     "SIG": "none",  # Transparent
     "GROUND": "#5A773D",  # Muted Olive Green (Adjusted for better differentiation)
+    "OBSTACLE": "#00000060",
     "POWER_1": "#B04E3A",  # Muted Brick Red
     "POWER_2": "#3B6B8E",  # Steel Blue
     "POWER_3": "#9B8832",  # Desaturated Gold
@@ -63,6 +63,7 @@ if __name__ == '__main__':
         if args.dpi is None:
             print("Output Image dpi = ", GREEN, "400", COLORRST)
         else:
+            FIG_DPI = int(args.dpi)
             print("Output Image dpi = ", GREEN, FIG_DPI, COLORRST)
         
         if args.pinSize is None or float(args.pinSize) == 1.0 or float(args.pinSize) <= 0.0:
@@ -165,14 +166,18 @@ if __name__ == '__main__':
                 radius = int(LineBuffer[2]) * PIN_ENLARGEMENT
                 pin_definition = LineBuffer[3]
                 color = PIN_COLORS["SIG"] # Default to blue for unclassified signals
+                circle_edge_color = (0, 0, 0, 0.2)
+                
                 
                 pinColorLookUp = PIN_COLORS.get(pin_definition)
                 if pinColorLookUp is not None:
                     color = pinColorLookUp
+                    if pin_definition != "SIG" and pin_definition != "OBSTACLE":
+                        circle_edge_color = 'black'
                 else:
                     print(f"[RenderPinout]Warning: {pin_definition} is unseen pin type, set to default SIG")
-                    
-                circle = patches.Circle((centreX, centreY), radius, edgecolor='black', facecolor=color)
+                
+                circle = patches.Circle((centreX, centreY), radius, edgecolor=circle_edge_color, facecolor=color)
                 ax.add_patch(circle)
             
             

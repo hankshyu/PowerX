@@ -133,6 +133,8 @@ public:
 
     // write Floorplan class for presenting software (renderFloorplan.py)
     void visualiseFloorplan(const std::string &outputFileName) const;
+
+    friend bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath);
 };
 
 #endif // __FLOORPLAN_H__

@@ -5,70 +5,81 @@
 #include "timeProfiler.hpp"
 #include "visualiser.hpp"
 
-#include "powerPlane.hpp"
 #include "eqCktExtractor.hpp"
 
 
 
 // #include "doughnutPolygon.hpp"
 
-namespace gtl = boost::polygon;
-using namespace boost::polygon::operators;
-
-
 std::string FILEPATH_TCH = "inputs/standard.tch";
 std::string FILEPATH_PINOUT = "inputs/rocket64_0808.pinout";
 
 const std::string TIMERTAG_READ_TCH = "Read Technology File";
-const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
 const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
+const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
+const std::string TIMERTAG_MST = "Calculate MST";
+
+void printWelcomeBanner();
+void printExitBanner();
+
 
 int main(int argc, char const *argv[]){
 
-    std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool" << colours::COLORRST << std::endl;
-    std::cout << std::endl;
-    
+    printWelcomeBanner();
     TimeProfiler timeProfiler;
 
     timeProfiler.startTimer(TIMERTAG_READ_TCH);
     Technology technology(FILEPATH_TCH);
     timeProfiler.pauseTimer(TIMERTAG_READ_TCH);
 
-    timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
-    PowerPlane powerPlane(FILEPATH_PINOUT);
-    timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
-
-
     timeProfiler.startTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
     EqCktExtractor EqCktExtor (technology);
     timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
 
+    // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
+    // AStarBaseline AStarBaseline(FILEPATH_PINOUT);
+    // timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
+
+    // timeProfiler.startTimer(TIMERTAG_MST);
+    // AStarBaseline.calculateUBumpMST();
+    // timeProfiler.pauseTimer(TIMERTAG_MST);
 
 
-    std::cout << EqCktExtor.getInterposerResistance() << std::endl; 
-    std::cout << EqCktExtor.getInterposerInductance() << std::endl; 
-    std::cout << EqCktExtor.getInterposerCapacitanceCenterCell() << std::endl; 
-    std::cout << EqCktExtor.getInterposerCapacitanceEdgeCell() << std::endl; 
-    std::cout << EqCktExtor.getInterposerCapacitanceCornerCell() << std::endl; 
-    std::cout << EqCktExtor.getInterposerConductance() << std::endl; 
-    std::cout << EqCktExtor.getInterposerViaResistance() << std::endl; 
-    std::cout << EqCktExtor.getInterposerViaInductance() << std::endl; 
+    // PowerPlane pp(FILEPATH_PINOUT);
+    // std::cout << pp.c4.m_ballMap[2][3].representation << std::endl;
+    // for(const Cord &c : pp.c4.m_ballMap[2][3].ballouts){
+    //     std::cout << c << std::endl;
+    // }
+
+
+
 
 
     // visualisation part
-    std::vector<BumpMap> allChipletBumpMap = powerPlane.uBump.getAllChipletTypes();
-    for(const BumpMap &bm : allChipletBumpMap){
-        visualiseBumpMap(bm, technology, "outputs/"+bm.getName()+".bm");
-    }
+    // std::vector<BumpMap> allChipletBumpMap = powerPlane.uBump.getAllChipletTypes();
+    // for(const BumpMap &bm : allChipletBumpMap){
+    //     visualiseBumpMap(bm, technology, "outputs/"+bm.getName()+".bm");
+    // }
 
-    visualisePinout(powerPlane.uBump, technology, "outputs/"+powerPlane.uBump.getName()+".ubump");
-    visualiseBallout(powerPlane.c4, technology, "outputs/"+powerPlane.c4.getName()+".c4");
+    // visualisePinout(powerPlane.uBump, technology, "outputs/"+powerPlane.uBump.getName()+".ubump");
+    // visualiseBallout(powerPlane.c4, technology, "outputs/"+powerPlane.c4.getName()+".c4");
 
+    // BumpMap c4bm("inputs/c4.csv");
+    // visualiseBumpMap(c4bm, technology, "outputs/c4.bm");
+    
     
     timeProfiler.printTimingReport();
+    printExitBanner();
+
+
+}
+
+void printWelcomeBanner(){
+    std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool" << colours::COLORRST << std::endl;
+
+}
+
+void printExitBanner(){
+    std::cout << colours::YELLOW << "PowerX Exists Successfully" << colours::COLORRST << std::endl;
     
-
-
-
-
 }

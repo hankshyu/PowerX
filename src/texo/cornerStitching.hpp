@@ -138,6 +138,8 @@ public:
 
     // write cornerStitching class (composed of Tiles) for presenting software (renderCornerStitching.py)
     void visualiseCornerStitching(const std::string &ouputFileName) const;
+
+    friend bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath);
     
     // Check globally if any two tiles is mergable, returns true if no fails found, else return false and
     // two unmergable tiles is returned through tile1 and tile2
