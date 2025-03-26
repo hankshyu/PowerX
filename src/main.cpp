@@ -6,6 +6,7 @@
 #include "visualiser.hpp"
 
 #include "eqCktExtractor.hpp"
+#include "ballOut.hpp"
 
 
 
@@ -35,6 +36,35 @@ int main(int argc, char const *argv[]){
     timeProfiler.startTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
     EqCktExtractor EqCktExtor (technology);
     timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
+
+    BallOut b1 ("inputs/c4.csv");
+    for(int j = b1.getBallOutHeight() - 1; j >=0 ; --j){
+        for(int i = 0; i < b1.getBallOutWidth(); ++i){
+            ballTypeId id = b1.ballOutArray[i][j];
+            ballType type = b1.IdToBallTypeMap[id];
+            std::cout << type << "(" << int(id) << "), ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "name to id" << std::endl;
+
+    for(std::unordered_map<ballType, ballTypeId>::const_iterator cit = b1.ballTypeToIdMap.begin(); cit != b1.ballTypeToIdMap.end(); ++cit){
+        std::cout << cit->first << " -> " << int(cit->second) << std::endl;
+    }
+
+    for(std::unordered_map<ballTypeId, std::unordered_set<Cord>>::const_iterator cit = b1.IdToAllCords.begin(); cit != b1.IdToAllCords.end(); ++cit){
+        std::cout << b1.IdToBallTypeMap[cit->first] << " (" << int(cit->first) << ")" << std::endl;
+        for(const Cord &c : cit->second){
+            std::cout << c << ", ";
+        }
+        std::cout << std::endl;
+    }
+
+    for(ballType bt : b1.getAllBallTypes()){
+        std::cout << bt << std::endl;
+    }
+
 
     // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
     // AStarBaseline AStarBaseline(FILEPATH_PINOUT);
