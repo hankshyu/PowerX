@@ -25,9 +25,8 @@ WHITE       = "\u001b[37m"
 # Define a global mapping for pin colors
 PIN_COLORS = {
     "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
-    "SIG": "none",  # Transparent
+    "SIG": "#A0A0A0",  # Transparent
     "GROUND": "#5A773D",  # Muted Olive Green (Adjusted for better differentiation)
-    "OBSTACLE": "#00000060",
     "POWER_1": "#B04E3A",  # Muted Brick Red
     "POWER_2": "#3B6B8E",  # Steel Blue
     "POWER_3": "#9B8832",  # Desaturated Gold

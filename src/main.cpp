@@ -37,7 +37,19 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor (technology);
     timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
 
-    BallOut b1 ("inputs/c4.csv");
+    BallOut b0 ("inputs/c4.csv");
+    visualiseBallOut(b0, technology, "outputs/c4_0.ballout");
+
+    BallOut b1(b0, BallOutRotation::R90);
+    visualiseBallOut(b1, technology, "outputs/c4_90.ballout");
+    
+    BallOut b2(b0, BallOutRotation::R180);
+    visualiseBallOut(b2, technology, "outputs/c4_180.ballout");
+
+    BallOut b3(b0, BallOutRotation::R270);
+    visualiseBallOut(b3, technology, "outputs/c4_270.ballout");
+
+
     for(int j = b1.getBallOutHeight() - 1; j >=0 ; --j){
         for(int i = 0; i < b1.getBallOutWidth(); ++i){
             ballTypeId id = b1.ballOutArray[i][j];
@@ -52,19 +64,29 @@ int main(int argc, char const *argv[]){
     for(std::unordered_map<ballType, ballTypeId>::const_iterator cit = b1.ballTypeToIdMap.begin(); cit != b1.ballTypeToIdMap.end(); ++cit){
         std::cout << cit->first << " -> " << int(cit->second) << std::endl;
     }
+    std::cout << "id to name" << std::endl;
 
-    for(std::unordered_map<ballTypeId, std::unordered_set<Cord>>::const_iterator cit = b1.IdToAllCords.begin(); cit != b1.IdToAllCords.end(); ++cit){
-        std::cout << b1.IdToBallTypeMap[cit->first] << " (" << int(cit->first) << ")" << std::endl;
-        for(const Cord &c : cit->second){
-            std::cout << c << ", ";
-        }
-        std::cout << std::endl;
+    for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = b1.IdToBallTypeMap.begin(); cit != b1.IdToBallTypeMap.end(); ++cit){
+        std::cout << int(cit->first) << " -> " << cit->second << std::endl;
     }
 
-    for(ballType bt : b1.getAllBallTypes()){
-        std::cout << bt << std::endl;
-    }
+    visualiseBallOut(b1, technology, "c4_0.ballout");
+    
 
+
+    
+
+    // for(std::unordered_map<ballTypeId, std::unordered_set<Cord>>::const_iterator cit = b1.IdToAllCords.begin(); cit != b1.IdToAllCords.end(); ++cit){
+    //     std::cout << b1.IdToBallTypeMap[cit->first] << " (" << int(cit->first) << ")" << std::endl;
+    //     for(const Cord &c : cit->second){
+    //         std::cout << c << ", ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    // for(ballType bt : b1.getAllBallTypes()){
+    //     std::cout << bt << std::endl;
+    // }
 
     // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
     // AStarBaseline AStarBaseline(FILEPATH_PINOUT);

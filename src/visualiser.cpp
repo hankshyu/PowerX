@@ -28,12 +28,11 @@
 #include "visualiser.hpp"
 #include "cord.hpp"
 
-
-
 #include "cornerStitching.hpp"
 #include "tile.hpp"
-/*
-bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::string &filePath){
+
+
+bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
 
@@ -44,31 +43,27 @@ bool visualiseBumpMap(const BumpMap &bumpMap, const Technology &tch, const std::
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = bumpMap.getBumpCountWidth();
-    len_t pinOutHeight = bumpMap.getBumpCountHeight();
+    len_t ballOutWidth = ballOut.m_ballOutWidth;
+    len_t ballOutHeight = ballOut.m_ballOutHeight;
     
-    ofs << bumpMap.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
-    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
+    ofs << ballOut.m_name << " " << ballOutWidth << " " << ballOutHeight << std::endl;
+    ofs << ballOutWidth * pitch << " " <<  ballOutHeight * pitch << std::endl;
 
-    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::map<Cord, bumpType>::const_iterator it;
-    for(int j = 0; j < pinOutHeight; ++j){
-        for(int i = 0; i < pinOutWidth; ++i){
-            it = bumpMap.m_bumpMap.find(Cord(i, j));
+    ofs << "PINS" << " " << ballOutWidth * ballOutHeight << std::endl;
+    for(int j = 0; j < ballOutHeight; ++j){
+        for(int i = 0; i < ballOutWidth; ++i){
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            if(it == bumpMap.m_bumpMap.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "SIG" << std::endl;
-            }else{
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
-            }
+            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.IdToBallTypeMap.at(ballOut.ballOutArray[i][j]) << std::endl;
         }
     }
 
     ofs.close();
     return true;
 }
+
+/*
 
 bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath){
     

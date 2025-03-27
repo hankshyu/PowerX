@@ -15,7 +15,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
 //  2025/03/26          Change name from bumpMap to ballOut. Reconstruct class
-//
+//  2025/03/27          Add rotations to class
 /////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __BALLOUT_H__
@@ -39,11 +39,17 @@
 typedef std::string ballType;
 typedef unsigned char ballTypeId;
 
+enum class BallOutRotation{ 
+    R0, R90, R180, R270 // clockwise rotations
+};
+
 class BallOut{
 private:
     std::string m_name;
     int m_ballOutWidth;
     int m_ballOutHeight;
+    BallOutRotation m_rotation;
+
     int m_ballTypeIdCounter;
 
 public:
@@ -54,10 +60,9 @@ public:
 
     std::unordered_map<ballTypeId, std::unordered_set<Cord>> IdToAllCords;
 
-
-    
     BallOut();
     explicit BallOut(const std::string &filePath);
+    explicit BallOut(const BallOut &ref, enum BallOutRotation rotation);
 
     inline std::string getName() const {return this->m_name;}
     inline int getBallOutWidth() const {return this->m_ballOutWidth;}

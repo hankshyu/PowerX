@@ -38,11 +38,11 @@
 #include "cord.hpp"
 #include "ballOut.hpp"
 
-BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0), m_ballTypeIdCounter(0) {
+BallOut::BallOut(): m_name(""), m_rotation(BallOutRotation::R0), m_ballOutWidth(0), m_ballOutHeight(0), m_ballTypeIdCounter(0) {
 
 }
 
-BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0) {
+BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0), m_rotation(BallOutRotation::R0) {
     
     std::ifstream file(filePath);
     assert(file.is_open());
@@ -90,6 +90,84 @@ BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0) {
     }
 
     file.close();
+}
+
+BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_rotation(rotation), m_ballTypeIdCounter(ref.m_ballTypeIdCounter),
+    ballTypeToIdMap(ref.ballTypeToIdMap), IdToBallTypeMap(ref.IdToBallTypeMap) {
+
+    switch (rotation) {
+        case BallOutRotation::R90:{
+            this->m_ballOutWidth = ref.m_ballOutHeight;
+            this->m_ballOutHeight = ref.m_ballOutWidth;
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
+            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
+                this->IdToAllCords[cit->first] = {};
+            }
+            for(int j = 0; j < this->m_ballOutHeight; ++j){
+                for(int i = 0; i < this->m_ballOutWidth; ++i){
+                    ballTypeId ballid = ref.ballOutArray[this->m_ballOutHeight - j - 1][i];
+                    this->ballOutArray[i][j] = ballid;
+                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                }
+            }
+
+            break;
+        }
+
+        case BallOutRotation::R180:{
+            this->m_ballOutWidth = ref.m_ballOutWidth;
+            this->m_ballOutHeight = ref.m_ballOutHeight;
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
+            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
+                this->IdToAllCords[cit->first] = {};
+            }
+            for(int j = 0; j < this->m_ballOutHeight; ++j){
+                for(int i = 0; i < this->m_ballOutWidth; ++i){
+                    ballTypeId ballid = ref.ballOutArray[i][this->m_ballOutHeight - j - 1];
+                    this->ballOutArray[i][j] = ballid;
+                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                }
+            }
+            break;
+
+        }
+
+        case BallOutRotation::R270:{
+            this->m_ballOutWidth = ref.m_ballOutHeight;
+            this->m_ballOutHeight = ref.m_ballOutWidth;
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
+            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
+                this->IdToAllCords[cit->first] = {};
+            }
+            for(int j = 0; j < this->m_ballOutHeight; ++j){
+                for(int i = 0; i < this->m_ballOutWidth; ++i){
+                    ballTypeId ballid = ref.ballOutArray[j][this->m_ballOutWidth - i - 1];
+                    this->ballOutArray[i][j] = ballid;
+                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                }
+            }
+            break;
+
+        }
+
+        default:{ // case BallOutRotation::R0:
+            this->m_ballOutWidth = ref.m_ballOutWidth;
+            this->m_ballOutHeight = ref.m_ballOutHeight;
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
+            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
+                this->IdToAllCords[cit->first] = {};
+            }
+            for(int j = 0; j < this->m_ballOutHeight; ++j){
+                for(int i = 0; i < this->m_ballOutWidth; ++i){
+                    ballTypeId ballid = ref.ballOutArray[i][j];
+                    this->ballOutArray[i][j] = ballid;
+                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                }
+            }
+            break;
+
+        }
+    }
 }
 
 Cord CSVCellToCord(const std::string &CSVCell){
