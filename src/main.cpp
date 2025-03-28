@@ -7,6 +7,7 @@
 
 #include "eqCktExtractor.hpp"
 #include "ballOut.hpp"
+#include "signalType.hpp"
 
 
 
@@ -48,33 +49,6 @@ int main(int argc, char const *argv[]){
 
     BallOut b3(b0, BallOutRotation::R270);
     visualiseBallOut(b3, technology, "outputs/c4_270.ballout");
-
-
-    for(int j = b1.getBallOutHeight() - 1; j >=0 ; --j){
-        for(int i = 0; i < b1.getBallOutWidth(); ++i){
-            ballTypeId id = b1.ballOutArray[i][j];
-            ballType type = b1.IdToBallTypeMap[id];
-            std::cout << type << "(" << int(id) << "), ";
-        }
-        std::cout << std::endl;
-    }
-
-    std::cout << "name to id" << std::endl;
-
-    for(std::unordered_map<ballType, ballTypeId>::const_iterator cit = b1.ballTypeToIdMap.begin(); cit != b1.ballTypeToIdMap.end(); ++cit){
-        std::cout << cit->first << " -> " << int(cit->second) << std::endl;
-    }
-    std::cout << "id to name" << std::endl;
-
-    for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = b1.IdToBallTypeMap.begin(); cit != b1.IdToBallTypeMap.end(); ++cit){
-        std::cout << int(cit->first) << " -> " << cit->second << std::endl;
-    }
-
-    visualiseBallOut(b1, technology, "c4_0.ballout");
-    
-
-
-    
 
     // for(std::unordered_map<ballTypeId, std::unordered_set<Cord>>::const_iterator cit = b1.IdToAllCords.begin(); cit != b1.IdToAllCords.end(); ++cit){
     //     std::cout << b1.IdToBallTypeMap[cit->first] << " (" << int(cit->first) << ")" << std::endl;

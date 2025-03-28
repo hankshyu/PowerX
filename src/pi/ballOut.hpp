@@ -24,6 +24,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <string>
+
 #include <ostream>
 #include <vector>
 #include <unordered_map>
@@ -34,31 +35,49 @@
 
 // 3. Texo Library:
 #include "cord.hpp"
+#include "rectangle.hpp"
 #include "technology.hpp"
+#include "signalType.hpp"
 
-typedef std::string ballType;
-typedef unsigned char ballTypeId;
-
-enum class BallOutRotation{ 
-    R0, R90, R180, R270 // clockwise rotations
+enum BallOutRotation : uint8_t{
+    EMPTY = 0x00,
+    R0 = 0x01,
+    R90 = 0x02, 
+    R180 = 0x04, 
+    R270 = 0x08,
+    UNKNOWN = 0xFF,
 };
+static const size_t BALLOUT_ROTATION_COUNT = 4;
+
+constexpr inline const char* to_string(BallOutRotation bor) {
+    switch (bor) {
+        case BallOutRotation::EMPTY:    return "EMPTY";
+        case BallOutRotation::R0:       return "R0";
+        case BallOutRotation::R90:      return "R90";
+        case BallOutRotation::R180:     return "R180";
+        case BallOutRotation::R270:     return "R270";
+        case BallOutRotation::UNKNOWN:  return "UNKNOWN";
+        default:                        return "UNKNOWN";
+    }
+};
+
+std::ostream& operator<<(std::ostream& os, BallOutRotation bor);
+BallOutRotation convertToBallOutRotation (const std::string &str);
+
+
 
 class BallOut{
 private:
     std::string m_name;
     int m_ballOutWidth;
     int m_ballOutHeight;
-    BallOutRotation m_rotation;
-
-    int m_ballTypeIdCounter;
+    enum BallOutRotation m_rotation;
 
 public:
-    std::vector<std::vector<ballTypeId>> ballOutArray;
+    std::unordered_set<SignalType> allSignalTypes;
+    std::vector<std::vector<SignalType>> ballOutArray;
+    std::unordered_map<SignalType, std::unordered_set<Cord>> SignalTypeToAllCords;
 
-    std::unordered_map<ballType, ballTypeId> ballTypeToIdMap;
-    std::unordered_map<ballTypeId, ballType> IdToBallTypeMap;
-
-    std::unordered_map<ballTypeId, std::unordered_set<Cord>> IdToAllCords;
 
     BallOut();
     explicit BallOut(const std::string &filePath);
@@ -67,8 +86,9 @@ public:
     inline std::string getName() const {return this->m_name;}
     inline int getBallOutWidth() const {return this->m_ballOutWidth;}
     inline int getBallOutHeight() const {return this->m_ballOutHeight;}
-
-    std::vector<ballType> getAllBallTypes() const;
+    inline Rectangle getBallOutSizeRectangle() const {return Rectangle(0, 0, (m_ballOutWidth > 1)? m_ballOutWidth-1 : 0, (m_ballOutHeight > 1)? m_ballOutHeight-1 : 0);}
+    inline BallOutRotation getRotation() const {return this->m_rotation;}
+    inline std::vector<SignalType> getAllSignalTypes() const {return std::vector<SignalType>(allSignalTypes.begin(), allSignalTypes.end());}
     
     friend bool visualiseBallOut(const BallOut &bumpMap, const Technology &tch, const std::string &filePath);
     

@@ -25,7 +25,8 @@ WHITE       = "\u001b[37m"
 # Define a global mapping for pin colors
 PIN_COLORS = {
     "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
-    "SIG": "#A0A0A0",  # Transparent
+    "EMPTY": "none",
+    "SIGNAL": "#A0A0A0",  # Gray
     "GROUND": "#5A773D",  # Muted Olive Green (Adjusted for better differentiation)
     "POWER_1": "#B04E3A",  # Muted Brick Red
     "POWER_2": "#3B6B8E",  # Steel Blue
@@ -51,7 +52,7 @@ if __name__ == '__main__':
     PIN_ENLARGEMENT = 1.0
     
     if args.verbose:
-        print(CYAN,"IRISLAB PinOut Rendering Program ", COLORRST)
+        print(CYAN,"IRISLAB PinMap Rendering Program ", COLORRST)
         print("Input File: ", GREEN, args.input, COLORRST)
         
         if args.output is None:
@@ -93,7 +94,7 @@ if __name__ == '__main__':
             if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "PINOUT") or LineBuffer[0] == "BALLOUT") and (LineBuffer[1] == "VISUALISATION"):
                 renderMode = LineBuffer[0]
             else:
-                print(f"[RenderPinout]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
+                print(f"[RenderPinMap]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
                 sys.exit()
             
             # Read the second line to get chiplet name and dimensions
@@ -139,7 +140,7 @@ if __name__ == '__main__':
             if renderMode == "PINOUT":
                 LineBuffer = filein.readline().strip().split()
                 if(LineBuffer[0] != "CHIPLETS"):
-                    print(f"[RenderPinout]Error: No CHIPLET section present")
+                    print(f"[RenderPinMap]Error: No CHIPLET section present")
                     exit()
 
                 chiplets = int(LineBuffer[1])
@@ -155,7 +156,7 @@ if __name__ == '__main__':
             # Draw the pins 
             LineBuffer = filein.readline().strip().split()
             if(LineBuffer[0] != "PINS"):
-                print(f"[RenderPinout]Error: No PINS section present")
+                print(f"[RenderPinMap]Error: No PINS section present")
                 exit()
             pinCount = int(LineBuffer[1])
             for i in range(pinCount):
@@ -164,17 +165,17 @@ if __name__ == '__main__':
                 centreY = int(LineBuffer[1])
                 radius = int(LineBuffer[2]) * PIN_ENLARGEMENT
                 pin_definition = LineBuffer[3]
-                color = PIN_COLORS["SIG"] # Default to blue for unclassified signals
+                color = PIN_COLORS["EMPTY"] # Default to blue for unclassified signals
                 circle_edge_color = (0, 0, 0, 0.2)
                 
                 
                 pinColorLookUp = PIN_COLORS.get(pin_definition)
                 if pinColorLookUp is not None:
                     color = pinColorLookUp
-                    if pin_definition != "SIG" and pin_definition != "OBSTACLE":
+                    if pin_definition != "SIGNAL" and pin_definition != "OBSTACLE":
                         circle_edge_color = 'black'
                 else:
-                    print(f"[RenderPinout]Warning: {pin_definition} is unseen pin type, set to default SIG")
+                    print(f"[RenderPinMap]Warning: {pin_definition} is unseen pin type, set to unknown")
                 
                 circle = patches.Circle((centreX, centreY), radius, edgecolor=circle_edge_color, facecolor=color)
                 ax.add_patch(circle)
@@ -212,10 +213,10 @@ if __name__ == '__main__':
             plt.close()
                 
     except FileNotFoundError:
-        print(f"[RenderPinout]Error: File \"{args.input}\" not found")
+        print(f"[RenderPinMap]Error: File \"{args.input}\" not found")
         sys.exit()
     except PermissionError:
-        print(f"[RenderPinout]Error: Permission denied when accessing \"{args.input}\"")
+        print(f"[RenderPinMap]Error: Permission denied when accessing \"{args.input}\"")
         sys.exit()
 
         

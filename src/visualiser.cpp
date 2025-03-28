@@ -55,7 +55,7 @@ bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.IdToBallTypeMap.at(ballOut.ballOutArray[i][j]) << std::endl;
+            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.ballOutArray[i][j] << std::endl;
         }
     }
 

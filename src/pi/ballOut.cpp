@@ -22,15 +22,12 @@
 // 1. C++ STL:
 #include <cassert>
 #include <string>
-#include <iostream>
+#include <ostream>
 #include <fstream>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
-#include <cctype>
-#include <climits>
-
 
 // 2. Boost Library:
 
@@ -38,11 +35,49 @@
 #include "cord.hpp"
 #include "ballOut.hpp"
 
-BallOut::BallOut(): m_name(""), m_rotation(BallOutRotation::R0), m_ballOutWidth(0), m_ballOutHeight(0), m_ballTypeIdCounter(0) {
+std::ostream& operator<<(std::ostream& os, BallOutRotation bor) {
+    return os << to_string(bor);
+}
+
+
+inline BallOutRotation convertToBallOutRotation(const std::string& str) {
+    std::string input = str;
+    std::transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
+
+    // Remove optional prefix
+    const std::string prefix1 = "ROTATION::";
+    const std::string prefix2 = "ROTATION_";
+    const std::string prefix3 = "BALLOUT_ROTATION::";
+    const std::string prefix4 = "BALLOUT_ROTATION_";
+
+    if(input.rfind(prefix1, 0) == 0){
+        input = input.substr(prefix1.length());
+    }else if(input.rfind(prefix2, 0) == 0){
+        input = input.substr(prefix2.length());
+    }else if(input.rfind(prefix3, 0) == 0){
+        input = input.substr(prefix3.length());
+    }else if(input.rfind(prefix4, 0) == 0){
+        input = input.substr(prefix4.length());
+    }
+
+    static const std::unordered_map<std::string, BallOutRotation> strToRotationMap = {
+        {"EMPTY", BallOutRotation::EMPTY},
+        {"R0", BallOutRotation::R0}, {"0", BallOutRotation::R0},
+        {"R90", BallOutRotation::R90}, {"90", BallOutRotation::R90},
+        {"R180", BallOutRotation::R180}, {"180", BallOutRotation::R180},
+        {"R270", BallOutRotation::R270}, {"270", BallOutRotation::R270},
+        {"UNKNOWN", BallOutRotation::UNKNOWN}
+    };
+
+    std::unordered_map<std::string, BallOutRotation>::const_iterator cit = strToRotationMap.find(input);
+    return (cit != strToRotationMap.end()) ? cit->second : BallOutRotation::UNKNOWN;  // fallback default
+}
+
+BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0), m_rotation(BallOutRotation::EMPTY) {
 
 }
 
-BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0), m_rotation(BallOutRotation::R0) {
+BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
     
     std::ifstream file(filePath);
     assert(file.is_open());
@@ -50,7 +85,7 @@ BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0), m_rotatio
     std::string buffer;
 
     file >> buffer >> this->m_name >> this->m_ballOutWidth >> this->m_ballOutHeight;
-    ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
+    ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
         
     for(int j = 0; j < this->m_ballOutHeight; ++j){
         for(int i = 0; i < this->m_ballOutWidth; ++i){
@@ -62,29 +97,35 @@ BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0), m_rotatio
             assert(position != std::string::npos);
             
             Cord pinLocation = CSVCellToCord(buffer.substr(0, position));
-            if(pinLocation != Cord(i, j)){
-                std::cout << "[PowerX:BallOutParser] Error: Discontinuous CSV Cell position value: " << buffer.substr(0, position)  << std::endl;
-                std::cout << pinLocation << std::endl;
-                assert(pinLocation == Cord(i, j));
 
-            }
-            
-            ballType balltp = buffer.substr(position + 1);
+            #ifndef NDEBUG
+                if(pinLocation != Cord(i, j)){
+                    std::cout << "[PowerX:BallOutParser] Error: Discontinuous CSV Cell position value: " << buffer.substr(0, position)  << std::endl;
+                    abort();
+
+                }
+            #endif
+
+
+            SignalType signaltp = convertToSignalType(buffer.substr(position + 1));
+
+            #ifndef NDEBUG
+                if((signaltp == SignalType::EMPTY) || ((signaltp == SignalType::UNKNOWN))){
+                    std::cout << "[PowerX:BallOutParser] Error: Unknown Signal Type: " << buffer.substr(position + 1)  << std::endl;
+                    abort();
+                }
+            #endif
+
             pinLocation.y(this->m_ballOutHeight - pinLocation.y() - 1);
+            ballOutArray[pinLocation.x()][pinLocation.y()] = signaltp;
             // Cord(i, this->m_ballOutHeight - j - 1)
-            std::unordered_map<ballType, ballTypeId>::const_iterator cit = ballTypeToIdMap.find(balltp);
+            std::unordered_set<SignalType>::const_iterator cit = allSignalTypes.find(signaltp);
             
-            if(cit == ballTypeToIdMap.end()){
-                ballOutArray[pinLocation.x()][pinLocation.y()] = m_ballTypeIdCounter;
-                ballTypeToIdMap[balltp] = m_ballTypeIdCounter;
-                IdToBallTypeMap[m_ballTypeIdCounter] = balltp;
-                IdToAllCords[m_ballTypeIdCounter] = {pinLocation};
-                m_ballTypeIdCounter++;
+            if(cit == allSignalTypes.end()){
+                allSignalTypes.insert(signaltp);
+                SignalTypeToAllCords[signaltp] = {pinLocation};
             }else{
-                ballTypeId id = cit->second;
-                ballOutArray[pinLocation.x()][pinLocation.y()] = id;
-
-                IdToAllCords[id].insert(pinLocation);
+                SignalTypeToAllCords[signaltp].insert(pinLocation);
             }
         }
     }
@@ -92,22 +133,23 @@ BallOut::BallOut(const std::string &filePath): m_ballTypeIdCounter(0), m_rotatio
     file.close();
 }
 
-BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_rotation(rotation), m_ballTypeIdCounter(ref.m_ballTypeIdCounter),
-    ballTypeToIdMap(ref.ballTypeToIdMap), IdToBallTypeMap(ref.IdToBallTypeMap) {
+BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_rotation(rotation), allSignalTypes(ref.allSignalTypes) {
+
+    for(const SignalType &st : this->allSignalTypes){
+        this->SignalTypeToAllCords[st] = {};
+    }
 
     switch (rotation) {
         case BallOutRotation::R90:{
             this->m_ballOutWidth = ref.m_ballOutHeight;
             this->m_ballOutHeight = ref.m_ballOutWidth;
-            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
-            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
-                this->IdToAllCords[cit->first] = {};
-            }
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
+
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    ballTypeId ballid = ref.ballOutArray[this->m_ballOutHeight - j - 1][i];
-                    this->ballOutArray[i][j] = ballid;
-                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                    SignalType sid = ref.ballOutArray[this->m_ballOutHeight - j - 1][i];
+                    this->ballOutArray[i][j] = sid;
+                    this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
 
@@ -117,15 +159,13 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
         case BallOutRotation::R180:{
             this->m_ballOutWidth = ref.m_ballOutWidth;
             this->m_ballOutHeight = ref.m_ballOutHeight;
-            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
-            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
-                this->IdToAllCords[cit->first] = {};
-            }
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
+
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    ballTypeId ballid = ref.ballOutArray[i][this->m_ballOutHeight - j - 1];
-                    this->ballOutArray[i][j] = ballid;
-                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                    SignalType sid = ref.ballOutArray[i][this->m_ballOutHeight - j - 1];
+                    this->ballOutArray[i][j] = sid;
+                    this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
             break;
@@ -135,15 +175,13 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
         case BallOutRotation::R270:{
             this->m_ballOutWidth = ref.m_ballOutHeight;
             this->m_ballOutHeight = ref.m_ballOutWidth;
-            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
-            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
-                this->IdToAllCords[cit->first] = {};
-            }
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
+
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    ballTypeId ballid = ref.ballOutArray[j][this->m_ballOutWidth - i - 1];
-                    this->ballOutArray[i][j] = ballid;
-                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                    SignalType sid = ref.ballOutArray[j][this->m_ballOutWidth - i - 1];
+                    this->ballOutArray[i][j] = sid;
+                    this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
             break;
@@ -153,15 +191,13 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
         default:{ // case BallOutRotation::R0:
             this->m_ballOutWidth = ref.m_ballOutWidth;
             this->m_ballOutHeight = ref.m_ballOutHeight;
-            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<ballTypeId>(this->m_ballOutWidth, UCHAR_MAX));
-            for(std::unordered_map<ballTypeId, ballType>::const_iterator cit = ref.IdToBallTypeMap.begin(); cit != ref.IdToBallTypeMap.end(); ++cit){
-                this->IdToAllCords[cit->first] = {};
-            }
+            this->ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
+
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    ballTypeId ballid = ref.ballOutArray[i][j];
-                    this->ballOutArray[i][j] = ballid;
-                    this->IdToAllCords[ballid].insert(Cord(i, j));
+                    SignalType sid = ref.ballOutArray[i][j];
+                    this->ballOutArray[i][j] = sid;
+                    this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
             break;
@@ -196,12 +232,4 @@ Cord CSVCellToCord(const std::string &CSVCell){
     std::cout << "[PowerX:BallOutParser] Error: Unknown CSV Cell position value: " << CSVCell << "" << std::endl;
     return Cord(-1, -1);
 
-}
-
-std::vector<ballType> BallOut::getAllBallTypes() const {
-    std::vector<ballType> allBallTypes;
-    for(std::unordered_map<ballType, ballTypeId>::const_iterator cit = ballTypeToIdMap.begin(); cit != ballTypeToIdMap.end(); ++cit){
-        allBallTypes.push_back(cit->first);
-    }
-    return allBallTypes;
 }

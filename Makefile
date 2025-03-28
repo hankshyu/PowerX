@@ -16,7 +16,7 @@ INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o do
 			tile.o line.o lineTile.o \
 			rectilinear.o cornerStitching.o 
 	
-PI_OBJS = technology.o eqCktExtractor.o ballOut.o
+PI_OBJS = technology.o eqCktExtractor.o signalType.o ballOut.o
 
 _OBJS = main.o timeProfiler.o visualiser.o $(INF_OBJS) $(PI_OBJS)
 
