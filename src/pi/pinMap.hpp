@@ -18,6 +18,9 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+#ifndef __PINMAP_H__
+#define __PINMAP_H__
+
 // Dependencies
 // 1. C++ STL:
 #include <string>
@@ -52,3 +55,5 @@ public:
     std::unordered_map<SignalType, std::unordered_set<Cord>> signalTypeToAllCords;
 
 };
+
+#endif // __PINMAP_H__
