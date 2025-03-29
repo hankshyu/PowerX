@@ -9,9 +9,7 @@
 //  Thread model:       posix
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:        A data structure of storing micro Bump on interposers.
-//                      Support grid data structure in pinMap for neighbor finding 
-//                      and instance look-ups
+//  Description:        A data structure of storing micro Bump on interposers
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
