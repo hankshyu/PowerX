@@ -32,13 +32,13 @@
 #include "technology.hpp"
 #include "ballOut.hpp"
 #include "pinMap.hpp"
-#include "uBump.hpp"
+#include "microBump.hpp"
 
-UBump::UBump(): PinMap("", 0, 0), m_InterposerSizeRectangle(Rectangle(0, 0, 0, 0)) {
+MicroBump::MicroBump(): PinMap("", 0, 0), m_interposerSizeRectangle(Rectangle(0, 0, 0, 0)) {
 
 }
 
-UBump::UBump(const std::string &fileName) {
+MicroBump::MicroBump(const std::string &fileName) {
     std::ifstream file(fileName);
     assert(file.is_open());
 
@@ -70,7 +70,7 @@ UBump::UBump(const std::string &fileName) {
             this->m_pinMapWidth = std::stoi(splitLine[2]);
             this->m_pinMapHeight = std::stoi(splitLine[3]);
             
-            m_InterposerSizeRectangle = Rectangle(0, 0,((m_pinMapWidth > 1)? m_pinMapWidth-1 : 0), ((m_pinMapHeight > 1)? m_pinMapHeight-1 : 0));
+            m_interposerSizeRectangle = Rectangle(0, 0,((m_pinMapWidth > 1)? m_pinMapWidth-1 : 0), ((m_pinMapHeight > 1)? m_pinMapHeight-1 : 0));
             
             readInterposer = true;
         }
@@ -147,7 +147,7 @@ UBump::UBump(const std::string &fileName) {
             len_t instRectWidth = (prototype->getBallOutWidth() > 1)? prototype->getBallOutWidth() - 1 : 0;
             len_t instRectHeight = (prototype->getBallOutHeight() > 1) ? prototype->getBallOutHeight() - 1 : 0;
             Rectangle instanceRect(xDiff, yDiff, xDiff + instRectWidth, yDiff + instRectHeight);
-            assert(rec::isContained(this->m_InterposerSizeRectangle, instanceRect));
+            assert(rec::isContained(this->m_interposerSizeRectangle, instanceRect));
 
             instanceToRectangleMap[splitLine[2]] = instanceRect;
             instanceToBallOutMap[splitLine[2]] = prototype;
@@ -169,7 +169,7 @@ UBump::UBump(const std::string &fileName) {
     }
 }
 
-UBump::~UBump(){
+MicroBump::~MicroBump(){
 
     for(int i = 0; i < BALLOUT_ROTATION_COUNT; ++i){
         for(int j = 0; j < m_allBallouts[i].size(); ++j){

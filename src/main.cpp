@@ -8,7 +8,8 @@
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
 #include "ballOut.hpp"
-#include "uBump.hpp"
+#include "microBump.hpp"
+#include "c4Bump.hpp"
 
 
 
@@ -41,18 +42,13 @@ int main(int argc, char const *argv[]){
 
 
 
-    UBump ub(FILEPATH_UBUMP);
-    for(auto &it : ub.instanceToRectangleMap){
-        std::cout << it.first << " -> " << it.second << std::endl;
-    }
-    for(auto &it : ub.instanceToBallOutMap){
-        std::cout << it.first << " -> " << it.second->getName() << std::endl;
-    }
-    for(auto &it : ub.instanceToRotationMap){
-        std::cout << it.first << " -> " << it.second << std::endl;
-    }
-    visualiseUBump(ub, technology, "outputs/rocket64_0808.ubump");
-    
+    MicroBump ub(FILEPATH_UBUMP);
+    visualiseMicroBump(ub, technology, "outputs/rocket64_0808.ubump");
+
+
+    C4Bump c4(FILEPATH_UBUMP);
+    visualiseC4Bump(c4, technology, "outputs/rocket64_0808.c4");
+
 
 
     // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);

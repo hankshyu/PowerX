@@ -91,7 +91,7 @@ if __name__ == '__main__':
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "UBUMP") or LineBuffer[0] == "BALLOUT") and (LineBuffer[1] == "VISUALISATION"):
+            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "MICROBUMP") or LineBuffer[0] == "C4") and (LineBuffer[1] == "VISUALISATION"):
                 renderMode = LineBuffer[0]
             else:
                 print(f"[RenderPinMap]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
@@ -137,7 +137,7 @@ if __name__ == '__main__':
             ax.add_patch(rect)
             
             # render chiplets if in uBump mode
-            if renderMode == "UBUMP":
+            if renderMode == "MICROBUMP":
                 LineBuffer = filein.readline().strip().split()
                 if(LineBuffer[0] != "CHIPLETS"):
                     print(f"[RenderPinMap]Error: No CHIPLET section present")

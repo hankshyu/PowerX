@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
 //  Create Date:        03/27/2025 09:47:32
-//  Module Name:        uBump.hpp
+//  Module Name:        microBump.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -13,11 +13,12 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
+//  03/29/2025          Rename from uBump to microBump
 //
 /////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __UBUMP_H__
-#define __UBUMP_H__
+#ifndef __MICROBUMP_H__
+#define __MICROBUMP_H__
 
 // Dependencies
 // 1. C++ STL:
@@ -36,9 +37,9 @@
 
 
 
-class UBump: public PinMap{
+class MicroBump: public PinMap{
 private:
-    Rectangle m_InterposerSizeRectangle;
+    Rectangle m_interposerSizeRectangle;
     std::vector<BallOut *> m_allBallouts[BALLOUT_ROTATION_COUNT];
 
 public:
@@ -47,12 +48,12 @@ public:
     std::unordered_map<std::string, BallOutRotation> instanceToRotationMap;
 
 
-    UBump();
-    explicit UBump(const std::string &fileName);
-    ~UBump();
+    MicroBump();
+    explicit MicroBump(const std::string &fileName);
+    ~MicroBump();
 
-    friend bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string &filePath);
+    friend bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath);
 
 };
 
-#endif // __UBUMP_H__
+#endif // __MICROBUMP_H__

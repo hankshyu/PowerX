@@ -42,7 +42,7 @@ std::ostream& operator<<(std::ostream& os, BallOutRotation bor) {
 
 BallOutRotation convertToBallOutRotation(const std::string& str) {
     std::string input = str;
-    std::transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
+    std::transform(input.begin(), input.end(), input.begin(), ::toupper);
 
     // Remove optional prefix
     const std::string prefix1 = "ROTATION::";

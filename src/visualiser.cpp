@@ -30,6 +30,9 @@
 
 #include "cornerStitching.hpp"
 #include "tile.hpp"
+#include "ballOut.hpp"
+#include "microBump.hpp"
+#include "c4Bump.hpp"
 
 
 bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
@@ -64,28 +67,28 @@ bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::
 }
 
 
-bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string &filePath){
+bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
     
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
-    ofs << "UBUMP VISUALISATION" << std::endl;
+    ofs << "MICROBUMP VISUALISATION" << std::endl;
 
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = uBump.m_pinMapWidth;
-    len_t pinOutHeight = uBump.m_pinMapHeight;
+    len_t pinOutWidth = microBump.m_pinMapWidth;
+    len_t pinOutHeight = microBump.m_pinMapHeight;
 
-    ofs << uBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << microBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
     
-    ofs << "CHIPLETS" << " " << uBump.instanceToRectangleMap.size() << std::endl;
+    ofs << "CHIPLETS" << " " << microBump.instanceToRectangleMap.size() << std::endl;
 
-    for(std::unordered_map<std::string, Rectangle>::const_iterator cit = uBump.instanceToRectangleMap.begin(); cit!= uBump.instanceToRectangleMap.end(); ++cit){
+    for(std::unordered_map<std::string, Rectangle>::const_iterator cit = microBump.instanceToRectangleMap.begin(); cit!= microBump.instanceToRectangleMap.end(); ++cit){
         Rectangle chipletBB = cit->second;
-        ofs << cit->first << " " << uBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
+        ofs << cit->first << " " << microBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
         ofs << pitch*rec::getXL(chipletBB) << " " << pitch*rec::getYL(chipletBB) << " ";
         ofs << pitch*(rec::getWidth(chipletBB) + 1)<< " " << pitch*(rec::getHeight(chipletBB) + 1) << std::endl;
     }
@@ -95,11 +98,11 @@ bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string
     std::unordered_map<Cord, SignalType>::const_iterator it;
     for(int j = 0; j < pinOutHeight; ++j){
         for(int i = 0; i < pinOutWidth; ++i){
-            it = uBump.cordToSignalTypeMap.find(Cord(i, j));
+            it = microBump.cordToSignalTypeMap.find(Cord(i, j));
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            if(it == uBump.cordToSignalTypeMap.end()){
+            if(it == microBump.cordToSignalTypeMap.end()){
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
             }else{
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
@@ -111,37 +114,35 @@ bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string
     return true;
 }
 
-/*
-
-bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::string &filePath){
+bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
     
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
-    ofs << "BALLOUT VISUALISATION" << std::endl;
+    ofs << "C4 VISUALISATION" << std::endl;
 
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = ballout.m_pinCountWidth;
-    len_t pinOutHeight = ballout.m_pinCountHeight;
+    len_t pinOutWidth = c4.m_pinMapWidth;
+    len_t pinOutHeight = c4.m_pinMapHeight;
 
 
-    ofs << ballout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << c4.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
     
 
     ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, ballType>::const_iterator it;
+    std::unordered_map<Cord, SignalType>::const_iterator it;
     for(int j = 0; j < pinOutHeight; ++j){
         for(int i = 0; i < pinOutWidth; ++i){
-            it = ballout.m_cordToBallType.find(Cord(i, j));
+            it = c4.cordToSignalTypeMap.find(Cord(i, j));
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            if(it == ballout.m_cordToBallType.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "SIG" << std::endl;
+            if(it == c4.cordToSignalTypeMap.end()){
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
             }else{
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
             }
@@ -151,7 +152,7 @@ bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::
     ofs.close();
     return true;
 }
-*/
+
 bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
