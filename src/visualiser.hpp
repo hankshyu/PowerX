@@ -29,8 +29,8 @@
 
 // 3. Texo Library:
 #include "technology.hpp"
-
 #include "ballOut.hpp"
+#include "uBump.hpp"
 #include "cornerStitching.hpp"
 #include "floorplan.hpp"
 
@@ -38,8 +38,8 @@
 // use "renderPinMap.py" to render ballOut data structure
 bool visualiseBallOut(const BallOut &bumpMap, const Technology &tch, const std::string &filePath);
 
-// // use "renderPinout.py" to render BumpMap data structure
-// bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath);
+// use "renderPinout.py" to render UBump data structure
+bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string &filePath);
 
 // // use "renderPinout.py" to render Ballout data structure
 // bool visualiseBallout(const Ballout &pinout, const Technology &tch, const std::string &filePath);

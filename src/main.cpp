@@ -6,15 +6,16 @@
 #include "visualiser.hpp"
 
 #include "eqCktExtractor.hpp"
-#include "ballOut.hpp"
 #include "signalType.hpp"
+#include "ballOut.hpp"
+#include "uBump.hpp"
 
 
 
 // #include "doughnutPolygon.hpp"
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
-std::string FILEPATH_PINOUT = "inputs/rocket64_0808.pinout";
+std::string FILEPATH_UBUMP = "inputs/rocket64_0808.pinout";
 
 const std::string TIMERTAG_READ_TCH = "Read Technology File";
 const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
@@ -38,29 +39,21 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor (technology);
     timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
 
-    BallOut b0 ("inputs/c4.csv");
-    visualiseBallOut(b0, technology, "outputs/c4_0.ballout");
 
-    BallOut b1(b0, BallOutRotation::R90);
-    visualiseBallOut(b1, technology, "outputs/c4_90.ballout");
+
+    UBump ub(FILEPATH_UBUMP);
+    for(auto &it : ub.instanceToRectangleMap){
+        std::cout << it.first << " -> " << it.second << std::endl;
+    }
+    for(auto &it : ub.instanceToBallOutMap){
+        std::cout << it.first << " -> " << it.second->getName() << std::endl;
+    }
+    for(auto &it : ub.instanceToRotationMap){
+        std::cout << it.first << " -> " << it.second << std::endl;
+    }
+    visualiseUBump(ub, technology, "outputs/rocket64_0808.ubump");
     
-    BallOut b2(b0, BallOutRotation::R180);
-    visualiseBallOut(b2, technology, "outputs/c4_180.ballout");
 
-    BallOut b3(b0, BallOutRotation::R270);
-    visualiseBallOut(b3, technology, "outputs/c4_270.ballout");
-
-    // for(std::unordered_map<ballTypeId, std::unordered_set<Cord>>::const_iterator cit = b1.IdToAllCords.begin(); cit != b1.IdToAllCords.end(); ++cit){
-    //     std::cout << b1.IdToBallTypeMap[cit->first] << " (" << int(cit->first) << ")" << std::endl;
-    //     for(const Cord &c : cit->second){
-    //         std::cout << c << ", ";
-    //     }
-    //     std::cout << std::endl;
-    // }
-
-    // for(ballType bt : b1.getAllBallTypes()){
-    //     std::cout << bt << std::endl;
-    // }
 
     // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
     // AStarBaseline AStarBaseline(FILEPATH_PINOUT);

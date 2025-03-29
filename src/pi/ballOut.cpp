@@ -40,7 +40,7 @@ std::ostream& operator<<(std::ostream& os, BallOutRotation bor) {
 }
 
 
-inline BallOutRotation convertToBallOutRotation(const std::string& str) {
+BallOutRotation convertToBallOutRotation(const std::string& str) {
     std::string input = str;
     std::transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
 
@@ -98,32 +98,29 @@ BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
             
             Cord pinLocation = CSVCellToCord(buffer.substr(0, position));
 
-            #ifndef NDEBUG
-                if(pinLocation != Cord(i, j)){
-                    std::cout << "[PowerX:BallOutParser] Error: Discontinuous CSV Cell position value: " << buffer.substr(0, position)  << std::endl;
-                    abort();
+            if(pinLocation != Cord(i, j)){
+                std::cout << "[PowerX:BallOutParser] Error: Discontinuous CSV Cell position value: " << buffer.substr(0, position)  << std::endl;
+                abort();
 
-                }
-            #endif
+            }
 
 
             SignalType signaltp = convertToSignalType(buffer.substr(position + 1));
 
-            #ifndef NDEBUG
-                if((signaltp == SignalType::EMPTY) || ((signaltp == SignalType::UNKNOWN))){
-                    std::cout << "[PowerX:BallOutParser] Error: Unknown Signal Type: " << buffer.substr(position + 1)  << std::endl;
-                    abort();
-                }
-            #endif
+            if((signaltp == SignalType::EMPTY) || ((signaltp == SignalType::UNKNOWN))){
+                std::cout << "[PowerX:BallOutParser] Error: Unknown Signal Type: " << buffer.substr(position + 1)  << std::endl;
+                abort();
+            }
 
             pinLocation.y(this->m_ballOutHeight - pinLocation.y() - 1);
-            ballOutArray[pinLocation.x()][pinLocation.y()] = signaltp;
+            ballOutArray[pinLocation.y()][pinLocation.x()] = signaltp;
             // Cord(i, this->m_ballOutHeight - j - 1)
             std::unordered_set<SignalType>::const_iterator cit = allSignalTypes.find(signaltp);
             
             if(cit == allSignalTypes.end()){
                 allSignalTypes.insert(signaltp);
                 SignalTypeToAllCords[signaltp] = {pinLocation};
+
             }else{
                 SignalTypeToAllCords[signaltp].insert(pinLocation);
             }
@@ -147,8 +144,8 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
 
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    SignalType sid = ref.ballOutArray[this->m_ballOutHeight - j - 1][i];
-                    this->ballOutArray[i][j] = sid;
+                    SignalType sid = ref.ballOutArray[i][this->m_ballOutHeight - j - 1];
+                    this->ballOutArray[j][i] = sid;
                     this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
@@ -163,8 +160,8 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
 
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    SignalType sid = ref.ballOutArray[i][this->m_ballOutHeight - j - 1];
-                    this->ballOutArray[i][j] = sid;
+                    SignalType sid = ref.ballOutArray[this->m_ballOutHeight - j - 1][this->m_ballOutWidth - i - 1];
+                    this->ballOutArray[j][i] = sid;
                     this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
@@ -179,8 +176,8 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
 
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    SignalType sid = ref.ballOutArray[j][this->m_ballOutWidth - i - 1];
-                    this->ballOutArray[i][j] = sid;
+                    SignalType sid = ref.ballOutArray[this->m_ballOutWidth - i - 1][j];
+                    this->ballOutArray[j][i] = sid;
                     this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }
@@ -195,8 +192,8 @@ BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.
 
             for(int j = 0; j < this->m_ballOutHeight; ++j){
                 for(int i = 0; i < this->m_ballOutWidth; ++i){
-                    SignalType sid = ref.ballOutArray[i][j];
-                    this->ballOutArray[i][j] = sid;
+                    SignalType sid = ref.ballOutArray[j][i];
+                    this->ballOutArray[j][i] = sid;
                     this->SignalTypeToAllCords[sid].insert(Cord(i, j));
                 }
             }

@@ -40,12 +40,13 @@
 #include "signalType.hpp"
 
 enum BallOutRotation : uint8_t{
-    EMPTY = 0x00,
-    R0 = 0x01,
-    R90 = 0x02, 
-    R180 = 0x04, 
-    R270 = 0x08,
-    UNKNOWN = 0xFF,
+
+    R0 = 0,
+    R90 = 1, 
+    R180 = 2, 
+    R270 = 3,
+    EMPTY = 4,
+    UNKNOWN = 5,
 };
 static const size_t BALLOUT_ROTATION_COUNT = 4;
 

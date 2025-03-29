@@ -55,7 +55,7 @@ bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.ballOutArray[i][j] << std::endl;
+            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.ballOutArray[j][i] << std::endl;
         }
     }
 
@@ -63,49 +63,44 @@ bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::
     return true;
 }
 
-/*
 
-bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::string &filePath){
+bool visualiseUBump(const UBump &uBump, const Technology &tch, const std::string &filePath){
     
     std::ofstream ofs(filePath, std::ios::out);
     
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
-    ofs << "PINOUT VISUALISATION" << std::endl;
+    ofs << "UBUMP VISUALISATION" << std::endl;
 
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = pinout.m_pinCountWidth;
-    len_t pinOutHeight = pinout.m_pinCountHeight;
+    len_t pinOutWidth = uBump.m_pinMapWidth;
+    len_t pinOutHeight = uBump.m_pinMapHeight;
 
-    ofs << pinout.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << uBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
     ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
-    ofs << "CHIPLETS" << " " << pinout.m_instanceToType.size() << std::endl;
+    
+    ofs << "CHIPLETS" << " " << uBump.instanceToRectangleMap.size() << std::endl;
 
-    for(std::map<std::string, chipletType>::const_iterator it = pinout.m_instanceToType.begin(); it != pinout.m_instanceToType.end(); ++it){
-        Cord instanceLL = pinout.m_instanceToLL.at(it->first);
-        BumpMap bm = pinout.getBumpMap(it->second);
-
-        len_t llx = instanceLL.x() * pitch;
-        len_t lly = instanceLL.y() * pitch;
-        len_t width =  bm.getBumpCountWidth() * pitch;
-        len_t height = bm.getBumpCountHeight() * pitch;
-        
-        ofs << it->first << " " << it->second << " " << llx << " " << lly << " " << width << " " << height << std::endl;
+    for(std::unordered_map<std::string, Rectangle>::const_iterator cit = uBump.instanceToRectangleMap.begin(); cit!= uBump.instanceToRectangleMap.end(); ++cit){
+        Rectangle chipletBB = cit->second;
+        ofs << cit->first << " " << uBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
+        ofs << pitch*rec::getXL(chipletBB) << " " << pitch*rec::getYL(chipletBB) << " ";
+        ofs << pitch*(rec::getWidth(chipletBB) + 1)<< " " << pitch*(rec::getHeight(chipletBB) + 1) << std::endl;
     }
 
 
     ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, bumpType>::const_iterator it;
+    std::unordered_map<Cord, SignalType>::const_iterator it;
     for(int j = 0; j < pinOutHeight; ++j){
         for(int i = 0; i < pinOutWidth; ++i){
-            it = pinout.m_cordToType.find(Cord(i, j));
+            it = uBump.cordToSignalTypeMap.find(Cord(i, j));
             len_t centreX = pitch/2 + i*pitch;
             len_t centreY = pitch/2 + j*pitch;
             
-            if(it == pinout.m_cordToType.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "SIG" << std::endl;
+            if(it == uBump.cordToSignalTypeMap.end()){
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
             }else{
                 ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
             }
@@ -115,6 +110,8 @@ bool visualisePinout(const Pinout &pinout, const Technology &tch, const std::str
     ofs.close();
     return true;
 }
+
+/*
 
 bool visualiseBallout(const Ballout &ballout, const Technology &tch, const std::string &filePath){
     

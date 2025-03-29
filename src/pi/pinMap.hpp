@@ -51,6 +51,7 @@ public:
     inline int getPinMapWidth() const {return this->m_pinMapWidth;}
     inline int getPinMapHeight() const {return this->m_pinMapHeight;}
 
+    std::unordered_set<SignalType> allSignalTypes;
     std::unordered_map<Cord, SignalType> cordToSignalTypeMap;
     std::unordered_map<SignalType, std::unordered_set<Cord>> signalTypeToAllCords;
 

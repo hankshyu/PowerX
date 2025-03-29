@@ -36,7 +36,7 @@ PIN_COLORS = {
 
 if __name__ == '__main__':
     
-    parser = ArgumentParser(description="visualise pinout files (bumpmap or Pinout)")
+    parser = ArgumentParser(description="visualise pinout files (bumpmap or Pinouts, uBumps and C4)")
     
     parser.add_argument("-i", "--input", required=True, help="Input chiplet file path")
     parser.add_argument("-o", "--output", required=False, help="Output image file path")
@@ -91,7 +91,7 @@ if __name__ == '__main__':
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "PINOUT") or LineBuffer[0] == "BALLOUT") and (LineBuffer[1] == "VISUALISATION"):
+            if((LineBuffer[0] == "BUMPMAP") or (LineBuffer[0] == "UBUMP") or LineBuffer[0] == "BALLOUT") and (LineBuffer[1] == "VISUALISATION"):
                 renderMode = LineBuffer[0]
             else:
                 print(f"[RenderPinMap]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
@@ -136,8 +136,8 @@ if __name__ == '__main__':
             rect = patches.Rectangle((0, 0), Interposer_width, Interposer_height, linewidth=1, edgecolor='black', facecolor=PIN_COLORS["CHIPLET"])
             ax.add_patch(rect)
             
-            # render chiplets if in pinout mode
-            if renderMode == "PINOUT":
+            # render chiplets if in uBump mode
+            if renderMode == "UBUMP":
                 LineBuffer = filein.readline().strip().split()
                 if(LineBuffer[0] != "CHIPLETS"):
                     print(f"[RenderPinMap]Error: No CHIPLET section present")
@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 pinColorLookUp = PIN_COLORS.get(pin_definition)
                 if pinColorLookUp is not None:
                     color = pinColorLookUp
-                    if pin_definition != "SIGNAL" and pin_definition != "OBSTACLE":
+                    if pin_definition != "SIGNAL" and pin_definition != "OBSTACLE" and pin_definition != "EMPTY":
                         circle_edge_color = 'black'
                 else:
                     print(f"[RenderPinMap]Warning: {pin_definition} is unseen pin type, set to unknown")
