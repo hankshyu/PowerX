@@ -61,10 +61,10 @@ if __name__ == '__main__':
             print("Output File: ", GREEN, args.output, COLORRST)
         
         if args.dpi is None:
-            print("Output Image dpi = ", GREEN, "400", COLORRST)
+            print("Output Image dpi: ", GREEN, "400", COLORRST)
         else:
             FIG_DPI = int(args.dpi)
-            print("Output Image dpi = ", GREEN, FIG_DPI, COLORRST)
+            print("Output Image dpi: ", GREEN, FIG_DPI, COLORRST)
         
         if args.pinSize is None or float(args.pinSize) == 1.0 or float(args.pinSize) <= 0.0:
             PIN_ENLARGEMENT = 1.0

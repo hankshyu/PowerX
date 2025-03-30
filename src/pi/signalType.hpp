@@ -42,10 +42,10 @@ enum class SignalType : uint8_t{
     POWER_8 = 8, PWR_8 = 8, P8 = 8,
     POWER_9 = 9, PWR_9 = 9, P9 = 9,
     POWER_10 = 10, PWR_10 = 10, P10 = 10,
-    POWER_11 = 11, PWR_11 = 11, P11 = 11,
-    GROUND = 12, GND = 12,
-    SIGNAL = 13, SIG = 13,
-    OBSTACLE = 14, OBSTACLES = 14, OBST = 14,
+    GROUND = 11, GND = 11,
+    SIGNAL = 12, SIG = 12,
+    OBSTACLE = 13, OBSTACLES = 13, OBST = 13,
+    OVERLAP = 14,
     UNKNOWN = 15,
 };
 
@@ -62,10 +62,10 @@ constexpr inline const char* to_string(SignalType st) {
         case SignalType::POWER_8:   return "POWER_8";
         case SignalType::POWER_9:   return "POWER_9";
         case SignalType::POWER_10:  return "POWER_10";
-        case SignalType::POWER_11:  return "POWER_11";
         case SignalType::GROUND:    return "GROUND";
         case SignalType::SIGNAL:    return "SIGNAL";
         case SignalType::OBSTACLE:  return "OBSTACLE";
+        case SignalType::OVERLAP:   return "OVERLAP";
         case SignalType::UNKNOWN:   return "UNKNOWN";
         default:                    return "UNKNOWN";
     }

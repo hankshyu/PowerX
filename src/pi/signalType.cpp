@@ -61,10 +61,10 @@ SignalType convertToSignalType (const std::string &str){
         {"POWER_8", SignalType::POWER_8}, {"PWR_8", SignalType::PWR_8}, {"P8", SignalType::P8},
         {"POWER_9", SignalType::POWER_9}, {"PWR_9", SignalType::PWR_9}, {"P9", SignalType::P9},
         {"POWER_10", SignalType::POWER_10}, {"PWR_10", SignalType::PWR_10}, {"P10", SignalType::P10},
-        {"POWER_11", SignalType::POWER_11}, {"PWR_11", SignalType::PWR_11}, {"P11", SignalType::P11},
         {"GROUND", SignalType::GROUND}, {"GND", SignalType::GND},
         {"SIGNAL", SignalType::SIGNAL}, {"SIG", SignalType::SIG},
         {"OBSTACLE", SignalType::OBSTACLE}, {"OBSTACLES", SignalType::OBSTACLES}, {"OBST", SignalType::OBST},
+        {"OVERLAP", SignalType::OVERLAP},
         {"UNKNOWN", SignalType::UNKNOWN}
     };
 

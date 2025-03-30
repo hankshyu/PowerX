@@ -33,6 +33,7 @@
 #include "ballOut.hpp"
 #include "microBump.hpp"
 #include "c4Bump.hpp"
+#include "aStarBaseline.hpp"
 
 
 bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
@@ -219,6 +220,46 @@ bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath){
     
     
 
+    ofs.close();
+    return true;
+}
+
+bool visualiseM5(const AStarBaseline &ast, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "M5 VISUALISATION " << ast.canvasWidth << " " << ast.canvasHeight << std::endl;
+
+    for(int j = ast.canvasWidth - 1; j >= 0; --j){
+        for(int i = 0; i < ast.canvasWidth; ++i){
+            // ofs << int(toIdx(ast.canvasM5[j][i])) << " ";
+            ofs << 1 << " ";
+        }
+        ofs << std::endl;
+    }
+    int displaySignalType = ast.uBump.signalTypeToAllCords.size();
+
+    std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
+    cit = ast.uBump.signalTypeToAllCords.find(SignalType::SIGNAL);
+    if(cit != ast.uBump.signalTypeToAllCords.end()) displaySignalType--;
+    cit = ast.uBump.signalTypeToAllCords.find(SignalType::GROUND);
+    if(cit != ast.uBump.signalTypeToAllCords.end()) displaySignalType--;
+
+
+    ofs << "SIGNAL_TYPES " << displaySignalType << std::endl;
+    for(cit = ast.uBump.signalTypeToAllCords.begin(); cit != ast.uBump.signalTypeToAllCords.end(); ++cit){
+        if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
+        ofs << (cit->first) << " " << cit->second.size() << std::endl;
+        for(const Cord &c : cit->second){
+            ofs << c << " ";
+        }
+        ofs << std::endl;
+    }
+
+    
+    
     ofs.close();
     return true;
 }

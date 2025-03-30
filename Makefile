@@ -13,10 +13,12 @@ OPTFLAGS = -O3
 LINKFLAGS = -lm 
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
-			tile.o line.o lineTile.o \
+			tile.o line.o lineTile.o orderedSegment.o \
 			rectilinear.o cornerStitching.o 
 	
-PI_OBJS = technology.o eqCktExtractor.o signalType.o ballOut.o pinMap.o microBump.o c4Bump.o
+PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o pinMap.o microBump.o c4Bump.o \
+			aStarBaseline.o
+
 
 _OBJS = main.o timeProfiler.o visualiser.o $(INF_OBJS) $(PI_OBJS)
 

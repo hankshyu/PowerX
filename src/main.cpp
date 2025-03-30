@@ -5,18 +5,22 @@
 #include "timeProfiler.hpp"
 #include "visualiser.hpp"
 
+#include "orderedSegment.hpp"
+
+
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
 #include "ballOut.hpp"
 #include "microBump.hpp"
 #include "c4Bump.hpp"
+#include "aStarBaseline.hpp"
 
 
 
 // #include "doughnutPolygon.hpp"
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
-std::string FILEPATH_UBUMP = "inputs/rocket64_0808.pinout";
+std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
 
 const std::string TIMERTAG_READ_TCH = "Read Technology File";
 const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
@@ -41,19 +45,14 @@ int main(int argc, char const *argv[]){
     timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
 
 
+    timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
+    AStarBaseline AStarBL(FILEPATH_BUMPS);
+    timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
 
-    MicroBump ub(FILEPATH_UBUMP);
-    visualiseMicroBump(ub, technology, "outputs/rocket64_0808.ubump");
-
-
-    C4Bump c4(FILEPATH_UBUMP);
-    visualiseC4Bump(c4, technology, "outputs/rocket64_0808.c4");
+    visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
 
 
 
-    // timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
-    // AStarBaseline AStarBaseline(FILEPATH_PINOUT);
-    // timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
 
     // timeProfiler.startTimer(TIMERTAG_MST);
     // AStarBaseline.calculateUBumpMST();
@@ -65,7 +64,6 @@ int main(int argc, char const *argv[]){
     // for(const Cord &c : pp.c4.m_ballMap[2][3].ballouts){
     //     std::cout << c << std::endl;
     // }
-
 
 
 
