@@ -25,6 +25,7 @@ std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
 const std::string TIMERTAG_READ_TCH = "Read Technology File";
 const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
 const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
+const std::string TIMERTAG_PIN_PAD = "Pin Pad Rim";
 const std::string TIMERTAG_MST = "Calculate MST";
 
 void printWelcomeBanner();
@@ -49,7 +50,34 @@ int main(int argc, char const *argv[]){
     AStarBaseline AStarBL(FILEPATH_BUMPS);
     timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
 
+    timeProfiler.startTimer(TIMERTAG_PIN_PAD);
+    // AStarBL.pinPadInsertion();
+    AStarBL.calculateUBumpMST();
+    timeProfiler.pauseTimer(TIMERTAG_PIN_PAD);
+
     visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
+
+    // std::vector<std::vector<int>> grid = {
+    //     {0, 1, 0, 0, 0},
+    //     {0, 1, 0, 1, 0},
+    //     {0, 0, 0, 1, 0},
+    //     {1, 1, 0, 0, 0},
+    //     {0, 0, 0, 1, 0}
+    // };
+
+    // Cord start(0, 0);
+    // Cord goal(4, 4);
+
+    // std::vector<Cord> path = runAStarAlgorithm(grid, start, goal);
+    
+    // if (path.empty()) {
+    //     std::cout << "No path found!" << std::endl;
+        
+    // }
+    // for (const Cord &c : path) {
+    //     std::cout << "(" << c.x() << "," << c.y() << ") ";
+    // }
+    // std::cout << std::endl;
 
 
 

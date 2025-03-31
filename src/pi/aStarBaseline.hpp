@@ -36,7 +36,22 @@
 #include "signalType.hpp"
 #include "microBump.hpp"
 #include "c4Bump.hpp"
+#include "orderedSegment.hpp"
 
+struct AStarNode{
+    Cord cord;
+    int gCost, hCost;
+    AStarNode *parent;
+
+    AStarNode(const Cord &c, int g, int h, AStarNode *p = nullptr);
+
+    inline int fCost() const {return gCost + hCost;}
+    bool operator >(const AStarNode &other) const;
+};
+
+bool isValid(const Cord &c, const std::vector<std::vector<SignalType>>& grid);
+std::vector<Cord> reconstructPath(AStarNode *end);
+std::vector<Cord> runAStarAlgorithm(const std::vector<std::vector<SignalType>>& grid, const Cord &start, const Cord &goal);
 
 class AStarBaseline{
 public:
@@ -46,10 +61,13 @@ public:
 
     len_t canvasWidth;
     len_t canvasHeight;
+    std::unordered_map<OrderedSegment, std::vector<Cord>> connectionToPath;
     std::vector<std::vector<SignalType>> canvasM5;
     std::vector<std::vector<SignalType>> canvasM7;
 
     AStarBaseline(const std::string &fileName);
+
+    void pinPadInsertion();
 
     void calculateUBumpMST();
 

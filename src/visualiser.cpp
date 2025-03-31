@@ -234,8 +234,7 @@ bool visualiseM5(const AStarBaseline &ast, const std::string &filePath){
 
     for(int j = ast.canvasWidth - 1; j >= 0; --j){
         for(int i = 0; i < ast.canvasWidth; ++i){
-            // ofs << int(toIdx(ast.canvasM5[j][i])) << " ";
-            ofs << 1 << " ";
+            ofs << int(toIdx(ast.canvasM5[j][i])) << " ";
         }
         ofs << std::endl;
     }
