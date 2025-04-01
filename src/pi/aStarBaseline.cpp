@@ -28,6 +28,8 @@
 #include <queue>
 #include <iostream>
 #include <set>
+#include <unordered_map>
+#include <unordered_set>
 
 // 2. Boost Library:
 #include <boost/graph/adjacency_list.hpp>
@@ -160,10 +162,17 @@ void AStarBaseline::pinPadInsertion(){
 
 void AStarBaseline::calculateUBumpMST(){
     
-    std::vector<Cord> hasOverlapCord;
+
+    std::unordered_map<OrderedSegment, std::vector<Cord>> connectionToPath;
+    std::unordered_map<OrderedSegment, SignalType> connectionToSignalType;
+
+    std::unordered_map<Cord, std::unordered_set<OrderedSegment>> sameSignalOverlap;
+    std::unordered_map<Cord, std::unordered_set<OrderedSegment>> diffSignalOverlap;
+
+    
 
     std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-    // ;signalTypeToAllCords
+    // signalTypeToAllCords
     for(cit = this->uBump.signalTypeToAllCords.begin(); cit != this->uBump.signalTypeToAllCords.end(); ++cit){
         SignalType st = cit->first;
         if((st == SignalType::GROUND) || (st == SignalType::SIGNAL)) continue;
@@ -188,7 +197,7 @@ void AStarBaseline::calculateUBumpMST(){
         std::vector<Vertex> p(num_vertices(graph));
         prim_minimum_spanning_tree(graph, &p[0]);
         
-    
+        // route the pin <-> pin result reflected by MST algorithm
         for (std::size_t i = 0; i != p.size(); ++i){
             if (p[i] != i){
                 Cord from = pinsVector[i];
@@ -237,21 +246,85 @@ void AStarBaseline::calculateUBumpMST(){
                 }
 
                 std::vector<Cord> path = runAStarAlgorithm(this->canvasM5, RoutingStart, RoutingEnd);
-                this->connectionToPath[OrderedSegment(from, to)] = path;
+                OrderedSegment connnName(from, to);
+
+                // Overlap Rule:
+                // 1. Use SignalType::OVERLAP to record same signal overlap
+                // 2. Use SignalType::UNKNOWN to record different signal overlaps
+
                 for(const Cord &c : path){
-                    if((this->canvasM5[c.y()][c.x()] != SignalType::EMPTY) && (this->canvasM5[c.y()][c.x()] != st)){
-                        this->canvasM5[c.y()][c.x()] = SignalType::OVERLAP;
-                        hasOverlapCord.push_back(c);
-                    }else{
+                    SignalType gridSigType = this->canvasM5[c.y()][c.x()];
+                    if(gridSigType == SignalType::EMPTY){
                         this->canvasM5[c.y()][c.x()] = st;
+                    }else if(gridSigType == st){
+                        this->canvasM5[c.y()][c.x()] = SignalType::OVERLAP;
+                        for(std::unordered_map<OrderedSegment, std::vector<Cord>>::const_iterator cit = connectionToPath.begin(); cit != connectionToPath.end(); ++cit){
+                            bool foundSoleConn = false;
+                            for(const Cord &oldCord : cit->second){
+                                if(oldCord == c){
+                                    sameSignalOverlap[c] ={cit->first, connnName};
+                                    foundSoleConn = true;
+                                    break;
+                                }
+                                if(foundSoleConn == true) break;
+                            }
+                        }
+
+                    }else if(gridSigType == SignalType::OVERLAP){
+                        // check if it's the same type of Signal
+                        SignalType othersType = connectionToSignalType[*(sameSignalOverlap[c].begin())];
+                        if(othersType== st){ // still remains OVERLAP
+                            sameSignalOverlap[c].insert(connnName);
+                        }else{ // Turns into Unknown
+                            this->canvasM5[c.y()][c.x()] = SignalType::UNKNOWN;
+                            diffSignalOverlap[c] = sameSignalOverlap[c];
+                            diffSignalOverlap[c].insert(connnName);
+                            sameSignalOverlap.erase(c);
+                        }
+                    }else if(gridSigType == SignalType::UNKNOWN){
+                        diffSignalOverlap[c].insert(connnName);
+                    }else{ // this is where two signals are not the same, 
+                        this->canvasM5[c.y()][c.x()] = SignalType::UNKNOWN;
+                        for(std::unordered_map<OrderedSegment, std::vector<Cord>>::const_iterator cit = connectionToPath.begin(); cit != connectionToPath.end(); ++cit){
+                            bool foundSoleConn = false;
+                            for(const Cord &oldCord : cit->second){
+                                if(oldCord == c){
+                                    diffSignalOverlap[c] ={cit->first, connnName};
+                                    foundSoleConn = true;
+                                    break;
+                                }
+                                if(foundSoleConn == true) break;
+                            }
+                        }
                     }
                 }
+                // insert into connection
+                connectionToSignalType[connnName] = st;
+                connectionToPath[connnName] = path;
+
             }
         }   
     }
     
-    // process overlap
+    // process overlap, for diffSignalTypes overlap
+    std::unordered_set<OrderedSegment> toTornconn;
 
+    for(std::unordered_map<Cord, std::unordered_set<OrderedSegment>>::const_iterator cit = diffSignalOverlap.begin(); cit != diffSignalOverlap.end(); ++cit){
+        toTornconn.insert(cit->second.begin(), cit->second.end());
+    }
+
+    for(const OrderedSegment &os : toTornconn){
+        connectionToPath.erase(os);
+    }
+
+    // clean the canvas, redraw lines
+    this->canvasM5.assign(this->canvasHeight, std::vector<SignalType>(this->canvasWidth, SignalType::EMPTY));
+    for(std::unordered_map<OrderedSegment, std::vector<Cord>>::const_iterator cit = connectionToPath.begin(); cit != connectionToPath.end(); ++cit){
+        SignalType st = connectionToSignalType[cit->first];
+        for(const Cord &c : cit->second){
+            this->canvasM5[c.y()][c.x()] = st;
+        }
+    }
 }
 
 // Cord AStarBaseline::traslateIdxToCord(int idx) const {

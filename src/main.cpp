@@ -27,6 +27,7 @@ const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
 const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
 const std::string TIMERTAG_PIN_PAD = "Pin Pad Rim";
 const std::string TIMERTAG_MST = "Calculate MST";
+const std::string TIMERTAG_REROUTE = "ReRoute using A* Algorithm"
 
 void printWelcomeBanner();
 void printExitBanner();
@@ -50,10 +51,15 @@ int main(int argc, char const *argv[]){
     AStarBaseline AStarBL(FILEPATH_BUMPS);
     timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
 
-    timeProfiler.startTimer(TIMERTAG_PIN_PAD);
-    // AStarBL.pinPadInsertion();
+    timeProfiler.startTimer(TIMERTAG_MST);
     AStarBL.calculateUBumpMST();
+    timeProfiler.pauseTimer(TIMERTAG_MST);
+
+
+    timeProfiler.startTimer(TIMERTAG_PIN_PAD);
+    AStarBL.pinPadInsertion();
     timeProfiler.pauseTimer(TIMERTAG_PIN_PAD);
+
 
     visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
 

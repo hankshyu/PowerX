@@ -61,7 +61,7 @@ public:
 
     len_t canvasWidth;
     len_t canvasHeight;
-    std::unordered_map<OrderedSegment, std::vector<Cord>> connectionToPath;
+    
     std::vector<std::vector<SignalType>> canvasM5;
     std::vector<std::vector<SignalType>> canvasM7;
 
