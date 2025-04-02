@@ -30,6 +30,8 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <queue>
+#include <utility>
 
 // 2. Boost Library:
 #include <boost/graph/adjacency_list.hpp>
@@ -162,7 +164,6 @@ void AStarBaseline::pinPadInsertion(){
 
 void AStarBaseline::calculateUBumpMST(){
     
-
     std::unordered_map<OrderedSegment, std::vector<Cord>> connectionToPath;
     std::unordered_map<OrderedSegment, SignalType> connectionToSignalType;
 
@@ -327,6 +328,137 @@ void AStarBaseline::calculateUBumpMST(){
     }
 }
 
+void AStarBaseline::reconnectAStar(){
+    std::vector<std::vector<int>> component;
+
+    std::unordered_set<SignalType>allsigtpes;
+    for(int j = 0; j < this->canvasHeight; ++j){
+        for(int i = 0; i < this->canvasWidth; ++i){
+            allsigtpes.insert(this->canvasM5[j][i]);
+        }
+    }
+    allsigtpes.erase(SignalType::EMPTY);
+    std::unordered_map<int, std::vector<Cord>> compIDToGrids;
+    std::unordered_map<SignalType, std::vector<int>> sigTypeToComponents;
+    for(const SignalType &cst : allsigtpes){
+        sigTypeToComponents[cst] = {};
+    }
+    
+    component.resize(this->canvasHeight, std::vector<int>(this->canvasWidth, -1));
+    int componentID = 0;
+    for(int j = 0; j < this->canvasHeight; ++j){
+        for(int i = 0; i < this->canvasWidth; ++i){
+            if(component[j][i] == -1){
+                SignalType st = this->canvasM5[j][i];
+                if(st != SignalType::EMPTY){
+                    compIDToGrids[componentID] = {};
+                    sigTypeToComponents[st].push_back(componentID);
+                }
+                compIDToGrids[componentID] = reconnectAStarHelperBFSLabel(component, j, i, componentID);
+                componentID++;
+            } 
+        }
+    }
+
+    std::cout << "compID" << componentID << std::endl;
+    for(auto at : sigTypeToComponents){
+        std::cout << at.first << " -> ";
+        for(int it : at.second){
+            std::cout << it << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    // remove if the signalType has only one island left
+    for(std::unordered_map<SignalType, std::vector<int>>::iterator it = sigTypeToComponents.begin(); it != sigTypeToComponents.end();){
+        if(it->second.size() == 1){
+            it = sigTypeToComponents.erase(it);
+        }else{
+            ++it;
+        }
+    }
+
+    // connect the signal islands if they are disconnected
+    while(!sigTypeToComponents.empty()){
+        std::unordered_map<SignalType, std::vector<int>>::iterator tgit = sigTypeToComponents.begin();
+        SignalType tgSig = tgit->first;
+        int rgSetIdx1 = tgit->second.at(0);
+        int rgSetIdx2 = tgit->second.at(1);
+
+        std::vector<std::vector<bool>> grid(this->canvasHeight, std::vector<bool>(this->canvasWidth, false));
+        for(int j = 0; j < this->canvasHeight; ++j){
+            for(int i = 0; i < this->canvasWidth; ++i){
+                if((this->canvasM5[j][i] == SignalType::EMPTY) || (this->canvasM5[j][i] == st)){
+                    grid[j][i] = true;
+                }
+            }
+        }
+
+        std::vector<Cord> routingResult = shortestPathBetweenSets(grid, compIDToGrids[rgSetIdx1], compIDToGrids[rgSetIdx2]);
+        assert(!routingResult.empty());
+        for(const Cord &c : routingResult){
+            this->canvasM5[c.y()][c.x()] = tgSig;
+        }
+
+        compIDToGrids[rgSetIdx1].insert(compIDToGrids[rgSetIdx2].begin(), compIDToGrids[rgSetIdx2].end());
+        compIDToGrids.erase(rgSetIdx2);
+        
+        sigTypeToComponents[tgSig].erase(sigTypeToComponents[tgSig].begin() + 1); // erase the second at rgSetIdx2
+
+        // check if the signal has only one island left
+        for(std::unordered_map<SignalType, std::vector<int>>::iterator it = sigTypeToComponents.begin(); it != sigTypeToComponents.end();){
+            if(it->second.size() == 1){
+                it = sigTypeToComponents.erase(it);
+            }else{
+                ++it;
+            }
+
+        }
+    }
+
+
+
+
+
+}
+
+std::vector<Cord> AStarBaseline::reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id){
+    const int dx[4] = {-1, 1, 0, 0};
+    const int dy[4] = {0, 0, -1, 1};
+
+    std::vector<Cord> cordsofThisID;
+    
+    SignalType st = this->canvasM5[j][i];
+    std::queue<std::pair<int, int>> q;
+    q.push(std::pair<int, int>(j, i));
+    component[j][i] = id;
+    cordsofThisID.push_back(Cord(i, j));
+
+    while(!q.empty()){
+        int x = q.front().first;
+        int y = q.front().second;
+        q.pop();
+
+        for(int dir = 0; dir < 4; ++dir){
+            int nx = x + dx[dir]; 
+            int ny = y + dy[dir];
+            if(nx >= 0 && nx < this->canvasHeight && ny >= 0 && ny < this->canvasWidth &&
+                component[nx][ny] == -1 && this->canvasM5[nx][ny] == st){
+                
+                q.push(std::pair<int, int>(nx, ny));
+                component[nx][ny] = id;
+                cordsofThisID.push_back(Cord(ny, nx));
+            }
+        }
+    }
+
+    return cordsofThisID;
+}
+
+
+std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB){
+
+}
 // Cord AStarBaseline::traslateIdxToCord(int idx) const {
 //     const int pinCountWidth = powerPlane.uBump.getPinCountWidth();
 //     len_t x = idx / pinCountWidth;
