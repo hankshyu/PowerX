@@ -73,6 +73,7 @@ public:
     void reconnectAStar();
     std::vector<Cord> reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id);
     std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB);
+    void runKNN();
 
 
     Cord traslateIdxToCord(int idx) const;

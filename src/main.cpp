@@ -28,6 +28,7 @@ const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
 const std::string TIMERTAG_PIN_PAD = "Pin Pad Rim";
 const std::string TIMERTAG_MST = "Calculate MST";
 const std::string TIMERTAG_REROUTE = "ReRoute using A* Algorithm";
+const std::string TIMERTAG_KNN = "KNN Algorithm";
 
 void printWelcomeBanner();
 void printExitBanner();
@@ -63,6 +64,10 @@ int main(int argc, char const *argv[]){
     timeProfiler.startTimer(TIMERTAG_REROUTE);
     AStarBL.reconnectAStar();
     timeProfiler.pauseTimer(TIMERTAG_REROUTE);
+
+    timeProfiler.startTimer(TIMERTAG_KNN);
+    AStarBL.runKNN();
+    timeProfiler.pauseTimer(TIMERTAG_KNN);
 
     visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
 

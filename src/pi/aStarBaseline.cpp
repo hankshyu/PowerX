@@ -360,14 +360,7 @@ void AStarBaseline::reconnectAStar(){
         }
     }
 
-    std::cout << "compID" << componentID << std::endl;
-    for(auto at : sigTypeToComponents){
-        std::cout << at.first << " -> ";
-        for(int it : at.second){
-            std::cout << it << " ";
-        }
-        std::cout << std::endl;
-    }
+
 
     // remove if the signalType has only one island left
     for(std::unordered_map<SignalType, std::vector<int>>::iterator it = sigTypeToComponents.begin(); it != sigTypeToComponents.end();){
@@ -377,6 +370,7 @@ void AStarBaseline::reconnectAStar(){
             ++it;
         }
     }
+
 
     // connect the signal islands if they are disconnected
     while(!sigTypeToComponents.empty()){
@@ -388,19 +382,22 @@ void AStarBaseline::reconnectAStar(){
         std::vector<std::vector<bool>> grid(this->canvasHeight, std::vector<bool>(this->canvasWidth, false));
         for(int j = 0; j < this->canvasHeight; ++j){
             for(int i = 0; i < this->canvasWidth; ++i){
-                if((this->canvasM5[j][i] == SignalType::EMPTY) || (this->canvasM5[j][i] == st)){
+                if((this->canvasM5[j][i] == SignalType::EMPTY) || (this->canvasM5[j][i] == tgSig)){
                     grid[j][i] = true;
                 }
             }
         }
-
+        
         std::vector<Cord> routingResult = shortestPathBetweenSets(grid, compIDToGrids[rgSetIdx1], compIDToGrids[rgSetIdx2]);
+
         assert(!routingResult.empty());
         for(const Cord &c : routingResult){
             this->canvasM5[c.y()][c.x()] = tgSig;
         }
+        for(const Cord &c : compIDToGrids[rgSetIdx2]){
+            compIDToGrids[rgSetIdx1].push_back(c);
+        }
 
-        compIDToGrids[rgSetIdx1].insert(compIDToGrids[rgSetIdx2].begin(), compIDToGrids[rgSetIdx2].end());
         compIDToGrids.erase(rgSetIdx2);
         
         sigTypeToComponents[tgSig].erase(sigTypeToComponents[tgSig].begin() + 1); // erase the second at rgSetIdx2
@@ -414,12 +411,10 @@ void AStarBaseline::reconnectAStar(){
             }
 
         }
+
+
+
     }
-
-
-
-
-
 }
 
 std::vector<Cord> AStarBaseline::reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id){
@@ -456,9 +451,120 @@ std::vector<Cord> AStarBaseline::reconnectAStarHelperBFSLabel(std::vector<std::v
 }
 
 
-std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB){
+std::vector<Cord> AStarBaseline::shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB){
+    std::vector<std::vector<bool>> visisted(this->canvasHeight, std::vector<bool>(this->canvasWidth, false));
+    std::queue<Cord> q;
+    std::set<Cord> setBSet(setB.begin(), setB.end());
+    std::unordered_map<Cord, Cord> parent; // map a cord to its parent
+
+    for(const Cord &c : setA){
+        q.push(c);
+        visisted[c.y()][c.x()] = true;
+        parent[c] = Cord(-1, -1); // Mark as root
+    }
+
+    std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};
+    Cord goal(-1, -1);
+    while(!q.empty()){
+        Cord mc(q.front());
+        q.pop();
+        int x = mc.x();
+        int y = mc.y();
+
+        if(setBSet.count(mc)){
+            goal = mc;
+            break;
+        }
+        
+        for(const Cord &c : directions){
+            int nx = x + c.x();
+            int ny = y + c.y();
+
+            if(nx >= 0 && nx < canvasWidth && ny >= 0 && ny < canvasHeight && !visisted[ny][nx] && grid[ny][nx]){
+                visisted[ny][nx] = true;
+                parent[Cord(nx, ny)] = mc;
+                q.push(Cord(nx, ny));
+            }
+        }
+    }
+    
+
+    // if no path found
+    if(goal == Cord(-1, -1)) return {};
+
+    // reconstrut path
+    std::vector<Cord> returnPath;
+    for(Cord cur(goal); cur != Cord(-1, -1); cur = parent[cur]){
+        returnPath.push_back(cur);
+    }
+
+    reverse(returnPath.begin(), returnPath.end());
+    return returnPath;
+    
+}
+
+
+void AStarBaseline::runKNN(){
+    std::vector<std::vector<SignalType>> refMap = this->canvasM5;
+    std::unordered_set<SignalType> allSignalTypes;
+    for(int j = 0; j < this->canvasHeight; ++j){
+        for(int i = 0; i < this->canvasWidth; ++i){
+            allSignalTypes.insert(this->canvasM5[j][i]);
+        }
+    }
+    allSignalTypes.erase(SignalType::EMPTY);
+    for(int j = 0; j < this->canvasHeight; ++j){
+        for(int i = 0; i < this->canvasWidth; ++i){
+            std::cout << "KNN " << j << " " << i << std::endl;
+            if(refMap[j][i] != SignalType::EMPTY) continue;
+            // run knn
+            for(int dist = 1; dist <= (this->canvasWidth + this->canvasHeight - 2); ++dist){
+                std::unordered_map<SignalType, int> vote;
+                std::vector<Cord> searchGridsDeltas;
+                for(const SignalType &st : allSignalTypes){
+                    vote[st] = 0;
+                }
+                for(int a = -dist; a <= dist; ++a){
+                    int abs_b = dist - std::abs(a);
+                    int b1 = abs_b;
+
+                    if(abs_b == 0){
+                        searchGridsDeltas.push_back(Cord(a, 0));
+                    }else{
+                        searchGridsDeltas.push_back(Cord(a, b1));
+                        searchGridsDeltas.push_back(Cord(a, -b1));
+                    }
+                }
+                for(const Cord &c : searchGridsDeltas){
+                    int nx = c.x() + i;
+                    int ny = c.y() + j;
+                    if(!(nx >= 0 && nx < this->canvasWidth && ny >= 0 && ny < this->canvasHeight)) continue;
+
+                    SignalType voteSt = refMap[ny][nx];
+                    if(voteSt!= SignalType::EMPTY){
+                        vote[voteSt]++;
+                    }
+                }
+                int maxCount = 0;
+                SignalType maxCountSigtype = SignalType::EMPTY;
+                for(std::unordered_map<SignalType, int>::const_iterator cit = vote.begin(); cit != vote.end(); ++cit){
+                    if(cit->second >= maxCount){
+                        maxCount = cit->second;
+                        maxCountSigtype = cit->first;
+                    }
+                } 
+                if(maxCount != 0){
+                    this->canvasM5[j][i] = maxCountSigtype;
+                    break;
+                } 
+
+            }
+
+        }
+    }
 
 }
+
 // Cord AStarBaseline::traslateIdxToCord(int idx) const {
 //     const int pinCountWidth = powerPlane.uBump.getPinCountWidth();
 //     len_t x = idx / pinCountWidth;
