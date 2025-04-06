@@ -515,7 +515,6 @@ void AStarBaseline::runKNN(){
     allSignalTypes.erase(SignalType::EMPTY);
     for(int j = 0; j < this->canvasHeight; ++j){
         for(int i = 0; i < this->canvasWidth; ++i){
-            std::cout << "KNN " << j << " " << i << std::endl;
             if(refMap[j][i] != SignalType::EMPTY) continue;
             // run knn
             for(int dist = 1; dist <= (this->canvasWidth + this->canvasHeight - 2); ++dist){

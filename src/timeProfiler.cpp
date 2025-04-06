@@ -80,11 +80,11 @@ void TimeProfiler::printTimingReport() const {
         durationS = durationS / 1000.0;
         
 
-        printf("║%-30s│ %11.3lf (%5.2lf%%) │%75s║\n", StageName.c_str(), durationS, durationPercentage,  "");
+        printf("║%-30s│ %10.3lf (%6.2lf%%) │%75s║\n", StageName.c_str(), durationS, durationPercentage,  "");
 
     }
     printf("╟──────────────────────────────│──────────────────────│───────────────────────────────────────────────────────────────────────────╢\n");
-    printf("║ Summary                      │ %11.3lf          │%75s║\n", totalDuration/1000.0, "");
+    printf("║ Summary                      │ %10.3lf           │%75s║\n", totalDuration/1000.0, "");
     printf("╚═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝\n");
 
 }

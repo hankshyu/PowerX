@@ -15,6 +15,9 @@
 #include "c4Bump.hpp"
 #include "aStarBaseline.hpp"
 
+#include "cadical.hpp"
+#include "coin/CbcModel.hpp"
+#include "OsiClpSolverInterface.hpp"
 
 
 // #include "doughnutPolygon.hpp"
@@ -22,13 +25,8 @@
 std::string FILEPATH_TCH = "inputs/standard.tch";
 std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
 
-const std::string TIMERTAG_READ_TCH = "Read Technology File";
-const std::string TIMERTAG_EQCKTCOMPONENT_CAL = "CKT Components Calculations";
-const std::string TIMERTAG_IMPORT_PARAM = "Import Parameters";
-const std::string TIMERTAG_PIN_PAD = "Pin Pad Rim";
-const std::string TIMERTAG_MST = "Calculate MST";
-const std::string TIMERTAG_REROUTE = "ReRoute using A* Algorithm";
-const std::string TIMERTAG_KNN = "KNN Algorithm";
+const std::string TIMERTAG_ASTAR = "Run A* Baseline Algo.";
+
 
 void printWelcomeBanner();
 void printExitBanner();
@@ -36,96 +34,74 @@ void printExitBanner();
 
 int main(int argc, char const *argv[]){
 
-    printWelcomeBanner();
-    TimeProfiler timeProfiler;
+    // printWelcomeBanner();
+    // TimeProfiler timeProfiler;
 
-    timeProfiler.startTimer(TIMERTAG_READ_TCH);
-    Technology technology(FILEPATH_TCH);
-    timeProfiler.pauseTimer(TIMERTAG_READ_TCH);
-
-    timeProfiler.startTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
-    EqCktExtractor EqCktExtor (technology);
-    timeProfiler.pauseTimer(TIMERTAG_EQCKTCOMPONENT_CAL);
+    // Technology technology(FILEPATH_TCH);
+    // EqCktExtractor EqCktExtor (technology);
 
 
-    timeProfiler.startTimer(TIMERTAG_IMPORT_PARAM);
-    AStarBaseline AStarBL(FILEPATH_BUMPS);
-    timeProfiler.pauseTimer(TIMERTAG_IMPORT_PARAM);
 
-    timeProfiler.startTimer(TIMERTAG_MST);
-    AStarBL.calculateUBumpMST();
-    timeProfiler.pauseTimer(TIMERTAG_MST);
+    // timeProfiler.startTimer(TIMERTAG_ASTAR);
+    // AStarBaseline AStarBL(FILEPATH_BUMPS);
+    // AStarBL.calculateUBumpMST();
+    // AStarBL.pinPadInsertion();
+    // AStarBL.reconnectAStar();
+    // AStarBL.runKNN();
+    // timeProfiler.pauseTimer(TIMERTAG_ASTAR);
 
+    // visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
 
-    timeProfiler.startTimer(TIMERTAG_PIN_PAD);
-    AStarBL.pinPadInsertion();
-    timeProfiler.pauseTimer(TIMERTAG_PIN_PAD);
-
-    timeProfiler.startTimer(TIMERTAG_REROUTE);
-    AStarBL.reconnectAStar();
-    timeProfiler.pauseTimer(TIMERTAG_REROUTE);
-
-    timeProfiler.startTimer(TIMERTAG_KNN);
-    AStarBL.runKNN();
-    timeProfiler.pauseTimer(TIMERTAG_KNN);
-
-    visualiseM5(AStarBL, "outputs/rocket64_m5.m5");
-
-    // std::vector<std::vector<int>> grid = {
-    //     {0, 1, 0, 0, 0},
-    //     {0, 1, 0, 1, 0},
-    //     {0, 0, 0, 1, 0},
-    //     {1, 1, 0, 0, 0},
-    //     {0, 0, 0, 1, 0}
-    // };
-
-    // Cord start(0, 0);
-    // Cord goal(4, 4);
-
-    // std::vector<Cord> path = runAStarAlgorithm(grid, start, goal);
     
-    // if (path.empty()) {
-    //     std::cout << "No path found!" << std::endl;
-        
-    // }
-    // for (const Cord &c : path) {
-    //     std::cout << "(" << c.x() << "," << c.y() << ") ";
-    // }
-    // std::cout << std::endl;
+    // timeProfiler.printTimingReport();
+    // printExitBanner();
 
 
-
-
-    // timeProfiler.startTimer(TIMERTAG_MST);
-    // AStarBaseline.calculateUBumpMST();
-    // timeProfiler.pauseTimer(TIMERTAG_MST);
-
-
-    // PowerPlane pp(FILEPATH_PINOUT);
-    // std::cout << pp.c4.m_ballMap[2][3].representation << std::endl;
-    // for(const Cord &c : pp.c4.m_ballMap[2][3].ballouts){
-    //     std::cout << c << std::endl;
-    // }
-
-
-
-
-    // visualisation part
-    // std::vector<BumpMap> allChipletBumpMap = powerPlane.uBump.getAllChipletTypes();
-    // for(const BumpMap &bm : allChipletBumpMap){
-    //     visualiseBumpMap(bm, technology, "outputs/"+bm.getName()+".bm");
-    // }
-
-    // visualisePinout(powerPlane.uBump, technology, "outputs/"+powerPlane.uBump.getName()+".ubump");
-    // visualiseBallout(powerPlane.c4, technology, "outputs/"+powerPlane.c4.getName()+".c4");
-
-    // BumpMap c4bm("inputs/c4.csv");
-    // visualiseBumpMap(c4bm, technology, "outputs/c4.bm");
+    // int arr[3][4] = { {1, 2, 0, 2},
+    //                 {0, 0, 1, 0},
+    //                 {1, 0, 2, 0} };
     
-    
-    timeProfiler.printTimingReport();
-    printExitBanner();
 
+        // Set up LP solver
+        OsiClpSolverInterface solver;
+
+        // Variables: x and y
+        const int numCols = 2; // two variables 
+        const int numRows = 1; // one constraints
+        double objective[] = {1.0, 1.0}; // Objective: minimize x + y
+        double colLB[] = {0.0, 0.0};
+        double colUB[] = {1e20, 1e20};
+    
+        // Constraint: x + 2y ≥ 4
+        double rowLB[] = {4.0};
+        double rowUB[] = {1e20};
+    
+        // Matrix for constraint: one row, two columns
+        // Column-major storage (compressed sparse column format)
+        int starts[] = {0, 1, 2};        // 2 columns → 3 entries
+        int indices[] = {0, 0};          // row 0 has two entries (x and y)
+        double elements[] = {1.0, 2.0};  // x has coef 1, y has coef 2
+    
+        // Load the problem into solver
+        solver.loadProblem(numCols, numRows, starts, indices, elements,
+                           colLB, colUB, objective, rowLB, rowUB);
+    
+        // Make variables integer
+        solver.setInteger(0); // x
+        solver.setInteger(1); // y
+    
+        // Create CBC model and solve
+        std::cout << "Try to build model" << std::endl;
+        CbcModel model(solver);
+        model.branchAndBound();
+    
+        // Output results
+        const double* solution = model.solver()->getColSolution();
+        std::cout << "Solution:\n";
+        std::cout << "x = " << solution[0] << "\n";
+        std::cout << "y = " << solution[1] << "\n";
+    
+        return 0;
 
 }
 

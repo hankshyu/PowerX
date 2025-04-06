@@ -5,12 +5,23 @@ BINPATH = ./bin
 OBJPATH = ./obj
 BOOSTPATH = ./lib/boost_1_87_0
 
+CADICAL_LIB_PATH = ./lib/cadical/build
+CADICAL_HEADER_PATH = ./lib/cadical/src
+
+CBC_LIB_INCLUDE = /opt/homebrew/opt/cbc/include/cbc #Cbc include files
+CBCDEP_COINUTILS_INCLUDE = /opt/homebrew/opt/coinutils/include/coinutils/coin #Cbc dependencies: Coinutils
+CBCDEP_OSI_INCLUDE = /opt/homebrew/opt/osi/include/osi/coin # Cbc depnedencies: osi
+CBCDEP_CLP_INCLUDE = /opt/homebrew/opt/clp/include/clp/coin # Cbc dependencies: clp
+CBC_LIB_PATH =  /opt/homebrew/opt/cbc/lib #Cbc library file
+CBCDEP_LIB_PATH =  /opt/homebrew/lib/
+CBC_LINKS = -lCbc -lCbcSolver -lOsiClp -lClp -lCoinUtils -lOsi #Cbc link libraries
+
+
 # CXX = /usr/bin/g++
 CXX = g++
-FLAGS = -std=c++17 -I $(SRCPATH) -I $(TEXO_SRCPATH) -I $(PI_SRCPATH) -I $(BOOSTPATH)
+FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(CADICAL_HEADER_PATH) -I$(CBC_LIB_INCLUDE) -I$(CBCDEP_COINUTILS_INCLUDE) -I$(CBCDEP_OSI_INCLUDE) -I$(CBCDEP_CLP_INCLUDE)
 OPTFLAGS = -O3
-
-LINKFLAGS = -lm 
+LINKFLAGS = -L$(CADICAL_LIB_PATH) -L$(CBC_LIB_PATH)  -L$(CBCDEP_LIB_PATH) -lm -lcadical $(CBC_LINKS)
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o orderedSegment.o \
