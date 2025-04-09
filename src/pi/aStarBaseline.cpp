@@ -119,47 +119,8 @@ std::vector<Cord> runAStarAlgorithm(const std::vector<std::vector<SignalType>>& 
     return {}; // No path found
 }
 
+AStarBaseline::AStarBaseline(const std::string &fileName): PowerGrid(fileName) {
 
-AStarBaseline::AStarBaseline(const std::string &fileName): uBump(fileName), c4(fileName) {
-    assert(uBump.getPinMapWidth() == c4.getPinMapWidth());
-    assert(uBump.getPinMapHeight() == c4.getPinMapHeight());
-    assert(uBump.getPinMapWidth() > 1);
-    assert(uBump.getPinMapHeight() > 1);
-
-    this->canvasWidth = uBump.getPinMapWidth() - 1;
-    this->canvasHeight = uBump.getPinMapHeight() - 1;
-    
-    this->canvasM5.resize(this->canvasHeight, std::vector<SignalType>(this->canvasWidth, SignalType::EMPTY));
-    this->canvasM7.resize(this->canvasHeight, std::vector<SignalType>(this->canvasWidth, SignalType::EMPTY));
-}
-
-void AStarBaseline::pinPadInsertion(){
-    for(std::unordered_map<Cord, SignalType>::const_iterator cit = uBump.cordToSignalTypeMap.begin(); cit != uBump.cordToSignalTypeMap.end(); ++cit){
-        Cord c = cit->first;
-        SignalType st = cit->second;
-        if((st == SignalType::GROUND) || (st == SignalType::SIGNAL)) continue;
-
-        if(c.x() != 0){
-            if(c.y() != uBump.getPinMapHeight()){
-                this->canvasM5[c.y()][c.x()] = st;
-            }
-
-            if(c.y() != 0){
-                this->canvasM5[c.y() - 1][c.x()] = st;
-            }
-
-        }
-        if(c.x() != this->uBump.getPinMapWidth()){
-            if(c.y() != uBump.getPinMapHeight()){
-                this->canvasM5[c.y()][c.x() - 1] = st;
-            }
-
-            if(c.y() != 0){
-                this->canvasM5[c.y() - 1][c.x() - 1] = st;
-
-            }
-        }
-    }
 }
 
 void AStarBaseline::calculateUBumpMST(){

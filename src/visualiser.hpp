@@ -34,15 +34,16 @@
 #include "c4Bump.hpp"
 #include "cornerStitching.hpp"
 #include "floorplan.hpp"
+#include "powerGrid.hpp"
 
 
 // use "renderPinMap.py" to render ballOut data structure
 bool visualiseBallOut(const BallOut &bumpMap, const Technology &tch, const std::string &filePath);
 
-// use "renderPinout.py" to render UBump data structure
+// use "renderPinMap.py" to render UBump data structure
 bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath);
 
-// // use "renderPinout.py" to render Ballout data structure
+// // use "renderPinMap.py" to render C4 data structure
 bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath);
 
 // use "renderCornerStitching.py" tor render class cornerStitching, which composed of Tiles with pointers
@@ -51,7 +52,9 @@ bool visualiseCornerStitching(const CornerStitching &cs, const std::string &file
 // use "renderFloorplan.py" for render class floorplan 
 bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath);
 
-
+bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
+bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
+bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump = false, bool overlayM7C4 = false);
 
 
 

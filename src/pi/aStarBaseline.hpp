@@ -33,9 +33,7 @@
 
 // 3. Texo Library:
 #include "cord.hpp"
-#include "signalType.hpp"
-#include "microBump.hpp"
-#include "c4Bump.hpp"
+#include "powerGrid.hpp"
 #include "orderedSegment.hpp"
 
 struct AStarNode{
@@ -53,34 +51,20 @@ bool isValid(const Cord &c, const std::vector<std::vector<SignalType>>& grid);
 std::vector<Cord> reconstructPath(AStarNode *end);
 std::vector<Cord> runAStarAlgorithm(const std::vector<std::vector<SignalType>>& grid, const Cord &start, const Cord &goal);
 
-class AStarBaseline{
+class AStarBaseline: public PowerGrid{
+private:
+    std::vector<Cord> reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id);
+    std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB);
 public:
-
-    MicroBump uBump;
-    C4Bump c4;
-
-    len_t canvasWidth;
-    len_t canvasHeight;
-    
-    std::vector<std::vector<SignalType>> canvasM5;
-    std::vector<std::vector<SignalType>> canvasM7;
 
     AStarBaseline(const std::string &fileName);
 
-
     void calculateUBumpMST();
-    void pinPadInsertion();
     void reconnectAStar();
-    std::vector<Cord> reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id);
-    std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB);
     void runKNN();
-
-
-    Cord traslateIdxToCord(int idx) const;
-    int translateCordToIdx(Cord cord) const;
-
-    friend bool visualiseM5(const AStarBaseline &ast, const std::string &filePath);
-    friend bool visualiseM7(const AStarBaseline &ast, const std::string &filePath);
+    
+    // Cord traslateIdxToCord(int idx) const;
+    // int translateCordToIdx(Cord cord) const;
 
 };
 

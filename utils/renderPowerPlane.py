@@ -70,31 +70,6 @@ def parse_arguments():
     
     return parser.parse_args()
 
-def print_arguments(args):
-        print(CYAN,"IRISLAB Power Plane Rendering Program ", COLORRST)
-        print("Input File: ", GREEN, args.input, COLORRST)
-        
-        if args.output is None:
-            print("Output File: ", RED, "Not saved", COLORRST)
-        else:
-            print("Output File: ", GREEN, args.output, COLORRST)
-        
-        if args.dpi is None:
-            print("Output Image dpi: ", GREEN, "400", COLORRST)
-        else:
-            FIG_DPI = int(args.dpi)
-            print("Output Image dpi: ", GREEN, FIG_DPI, COLORRST)
-        
-        if args.noLegend:
-            print("Legend display: ", RED, "off", COLORRST)
-        else:
-            print("Legend: ", GREEN, "on", COLORRST)
-            
-        if args.noTitle:
-            print("Title display: ", RED, "off", COLORRST)
-        else:
-            print("Title display: ", GREEN, "on", COLORRST)
-
 def parse_line(LineBuffer: str, powerPlaneWidth: int):
     tokens = []
     i = 0
@@ -163,35 +138,103 @@ if __name__ == "__main__":
 
     args = parse_arguments()
 
-    if args.verbose:
-        print_arguments(args)
         
     fig, ax = plt.subplots(figsize=(24, 24))
 
     GRID_MUL = 10
-    PIN_RAD = 3
+    PIN_RAD = 4
     powerPlaneWidth = 0
     powerPlaneHeight = 0
+    visualiseOverlap = False
+    visualiseM5UBump = False
+    visualiseM7C4 = False
     # start rendering progress
     try:
         with open(args.input, 'r') as filein:
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if((LineBuffer[0] == "M5") or (LineBuffer[0] == "M7")) and (LineBuffer[1] == "VISUALISATION"):
-                renderMode = LineBuffer[0]
-                powerPlaneWidth = int(LineBuffer[2])
-                powerPlaneHeight = int(LineBuffer[3])
-                ax.set_xlim(0, GRID_MUL*powerPlaneWidth)
-                ax.set_ylim(0, GRID_MUL*powerPlaneHeight)
-                ax.set_aspect('equal')
-                ax.set_xticks([])
-                ax.set_yticks([])
+            if not ((LineBuffer[0] == "PGM5") or (LineBuffer[0] == "PGM7") or (LineBuffer[0] == "PGOVERLAP")):
+                print("Error: Render mode unrecognized")
+                exit()
+
+            if not (LineBuffer[1] == "VISUALISATION"):
+                print("Error: Render mode unrecognized")
+                exit()
                 
-                ax.spines['top'].set_color('white')
-                ax.spines['right'].set_color('white')
-                ax.spines['bottom'].set_color('white')
-                ax.spines['left'].set_color('white')
+            renderMode = LineBuffer[0] + " " + LineBuffer[1]
+            powerPlaneWidth = int(LineBuffer[2])
+            powerPlaneHeight = int(LineBuffer[3])
+
+            if not (LineBuffer[4] == "OVERLAP"):
+                print("Error: Overlap Render mode unspecified")
+                exit()
+            visualiseOverlap = (LineBuffer[5] == "1")
+
+            if not (LineBuffer[6] == "M5_UBUMP"):
+                print("Error: M5 uBump Rendering unsepcified")
+                exit()
+            visualiseM5UBump = (LineBuffer[7] == "1")
+
+            if not (LineBuffer[8] == "M7_C4"):
+                print("Error: M7 C4 Rendering unsepcified")
+                exit()
+            visualiseM7C4 = (LineBuffer[9] == "1")
+            
+            # display the arguments if user specifies verbose mode
+            if args.verbose:
+                print(CYAN,"IRISLAB Power Plane Rendering Program ", COLORRST)
+                print("Input File: ", GREEN, args.input, COLORRST)
+                
+                if args.output is None:
+                    print("Output File: ", RED, "Not saved", COLORRST)
+                else:
+                    print("Output File: ", GREEN, args.output, COLORRST)
+                
+                if args.dpi is None:
+                    print("Output Image dpi: ", GREEN, "400", COLORRST)
+                else:
+                    FIG_DPI = int(args.dpi)
+                    print("Output Image dpi: ", GREEN, FIG_DPI, COLORRST)
+                
+                if args.noLegend:
+                    print("Legend display: ", RED, "off", COLORRST)
+                else:
+                    print("Legend: ", GREEN, "on", COLORRST)
+                    
+                if args.noTitle:
+                    print("Title display: ", RED, "off", COLORRST)
+                else:
+                    print("Title display: ", GREEN, "on", COLORRST)
+
+                print(f"Render Mode: " + renderMode)
+                print(f"Canvas Size: {powerPlaneWidth} x {powerPlaneHeight}")
+                if visualiseOverlap:
+                    print("Display Overlap: ", GREEN, "on", COLORRST)
+                else:
+                    print("Display Overlap: ", RED, "off", COLORRST)
+
+                if visualiseM5UBump:
+                    print("Display M5 uBump: ", GREEN, "on", COLORRST)
+                else:
+                    print("Display M5 uBump: ", RED, "off", COLORRST)
+
+                if visualiseM7C4:
+                    print("Display M7 c4 Bump: ", GREEN, "on", COLORRST)
+                else:
+                    print("Display M7 c4 Bump: ", RED, "off", COLORRST)
+                    
+
+            ax.set_xlim(0, GRID_MUL*powerPlaneWidth)
+            ax.set_ylim(0, GRID_MUL*powerPlaneHeight)
+            ax.set_aspect('equal')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            
+            ax.spines['top'].set_color('white')
+            ax.spines['right'].set_color('white')
+            ax.spines['bottom'].set_color('white')
+            ax.spines['left'].set_color('white')
                 
             # Draw each box
             for j in range(powerPlaneHeight):
@@ -201,21 +244,31 @@ if __name__ == "__main__":
                     # Generate a random RGB color (each channel between 0 and 1)
                     token = LineArr[i]
                     color = 0
+                    alpha = 0.3
                     if isinstance(token, int):
-                        color = GRID_COLORS[token]
+                        if token >= 100:
+                            alpha = 0.8
+                            color = GRID_COLORS[token - 100]
+                        else:
+                            alpha = 0.4
+                            color = GRID_COLORS[token]
                     elif isinstance(token, list):
+                        alpha = 0.7
                         color = GRID_COLORS[14]
                     else:
                         print(f"Error: Token unrecognized {token}")
                         exit()
                         
                     # Draw the box
-                    rect = plt.Rectangle((GRID_MUL*i, GRID_MUL*j), GRID_MUL, GRID_MUL, facecolor=color, edgecolor='black', linewidth=1.5)
+                    rect = plt.Rectangle((GRID_MUL*i, GRID_MUL*(powerPlaneHeight-j-1)), GRID_MUL, GRID_MUL, facecolor=color, edgecolor='black', linewidth=1.5, alpha = alpha)
                     ax.add_patch(rect)
             
-            # Draw the pin
+            # Draw the M5 ubumps (marked by the upper circle)
             LineBuffer = filein.readline().strip().split()
-            kindsOfSigType = int(LineBuffer[1])
+            if((LineBuffer[0] != "M5_UBUMP") or (LineBuffer[1] != "SIGNAL_TYPES")):
+                print("Error: M5 uBump labels missing")
+                exit()
+            kindsOfSigType = int(LineBuffer[2])
             for types in range(kindsOfSigType):
                 LineBuffer = filein.readline().strip().split()
                 color = SIGNAL_COLORS[LineBuffer[0]]
@@ -223,9 +276,38 @@ if __name__ == "__main__":
                 
                 xArr, yArr = parse_coordinates(filein.readline(), cordCount)
                 for i in range(cordCount):
-                    circle = patches.Circle((GRID_MUL*xArr[i], GRID_MUL*yArr[i]), PIN_RAD, edgecolor='black', facecolor=color)
+                    circle = patches.Wedge(
+                        center=(GRID_MUL*xArr[i], GRID_MUL*yArr[i]), 
+                        r=PIN_RAD, 
+                        theta1=0, 
+                        theta2=180,
+                        edgecolor='black',
+                        facecolor=color
+                    )
                     ax.add_patch(circle)
                     
+            # Draw the M7 C4 Bumps (marked by the lower circle)
+            LineBuffer = filein.readline().strip().split()
+            if((LineBuffer[0] != "M7_C4BUMP") or (LineBuffer[1] != "SIGNAL_TYPES")):
+                print("Error: M7 C4 Bump labels missing")
+                exit()
+            kindsOfSigType = int(LineBuffer[2])
+            for types in range(kindsOfSigType):
+                LineBuffer = filein.readline().strip().split()
+                color = SIGNAL_COLORS[LineBuffer[0]]
+                cordCount = int(LineBuffer[1])
+                
+                xArr, yArr = parse_coordinates(filein.readline(), cordCount)
+                for i in range(cordCount):
+                    circle = patches.Wedge(
+                        center=(GRID_MUL*xArr[i], GRID_MUL*yArr[i]), 
+                        r=PIN_RAD, 
+                        theta1=180, 
+                        theta2=360,
+                        edgecolor='black',
+                        facecolor=color
+                    )
+                    ax.add_patch(circle)
                 
             if args.output is not None:
                 plt.savefig(args.output, dpi=args.dpi)
