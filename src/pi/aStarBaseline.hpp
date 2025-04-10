@@ -62,10 +62,6 @@ public:
     void reconnectIslands(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &ignoreSt);
     void runKNearestNeighbor(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &ignoreSt);
 
-    
-    // Cord traslateIdxToCord(int idx) const;
-    // int translateCordToIdx(Cord cord) const;
-
 };
 
 

@@ -565,14 +565,3 @@ void AStarBaseline::runKNearestNeighbor(std::vector<std::vector<SignalType>> &ca
     }
 
 }
-
-// Cord AStarBaseline::traslateIdxToCord(int idx) const {
-//     const int pinCountWidth = powerPlane.uBump.getPinCountWidth();
-//     len_t x = idx / pinCountWidth;
-//     return Cord(x, idx - x*pinCountWidth);
-// }
-
-// int AStarBaseline::translateCordToIdx(Cord cord) const {
-//     const int pinCountWidth = powerPlane.uBump.getPinCountWidth();
-//     return cord.x() * pinCountWidth + cord.y();
-// }
