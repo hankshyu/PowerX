@@ -25,7 +25,8 @@
 std::string FILEPATH_TCH = "inputs/standard.tch";
 std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
 
-const std::string TIMERTAG_ASTAR = "Run A* Baseline Algo.";
+const std::string TIMERTAG_ASTAR_M5 = "Run A* Baseline Algo on M5";
+const std::string TIMERTAG_ASTAR_M7 = "Run A* Baseline Algo on M7";
 
 
 void printWelcomeBanner();
@@ -41,25 +42,38 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor (technology);
 
 
-
-    timeProfiler.startTimer(TIMERTAG_ASTAR);
+    
     AStarBaseline AStarBL(FILEPATH_BUMPS);
+    visualiseMicroBump(AStarBL.uBump, technology, "outputs/uBump.ub");
+    visualiseC4Bump(AStarBL.c4, technology, "outputs/c4.c4");
+
+
+    timeProfiler.startTimer(TIMERTAG_ASTAR_M5);
     AStarBL.insertPinPads(AStarBL.uBump, AStarBL.canvasM5, AStarBL.defulatM5SigPadMap);
+    AStarBL.calculateMST(AStarBL.uBump, AStarBL.canvasM5, {SignalType::GROUND, SignalType::SIGNAL});
+    AStarBL.reconnectIslands(AStarBL.canvasM5, {SignalType::EMPTY, SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
+    AStarBL.runKNearestNeighbor(AStarBL.canvasM5, {SignalType::EMPTY, SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
+
+    timeProfiler.pauseTimer(TIMERTAG_ASTAR_M5);
+
+
+    timeProfiler.startTimer(TIMERTAG_ASTAR_M7);
     AStarBL.insertPinPads(AStarBL.c4, AStarBL.canvasM7, AStarBL.defulatM7SigPadMap);
+    AStarBL.calculateMST(AStarBL.c4, AStarBL.canvasM7, {SignalType::GROUND, SignalType::SIGNAL});
+    AStarBL.reconnectIslands(AStarBL.canvasM7, {SignalType::EMPTY, SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
+    AStarBL.runKNearestNeighbor(AStarBL.canvasM7, {SignalType::EMPTY, SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
 
-    // AStarBL.calculateUBumpMST();
-    // AStarBL.pinPadInsertion();
-    // AStarBL.reconnectAStar();
-    // AStarBL.runKNN();
-    timeProfiler.pauseTimer(TIMERTAG_ASTAR);
+    timeProfiler.pauseTimer(TIMERTAG_ASTAR_M7);
 
-    visualisePGM5(AStarBL, "outputs/rocket64_m5.m5",true, true, true);
-    visualisePGM7(AStarBL, "outputs/rocket64_m7.m7",true, false, true);
+
+
+
+    visualisePGM5(AStarBL, "outputs/rocket64_m5.m5",false, true, false);
+    visualisePGM7(AStarBL, "outputs/rocket64_m7.m7",false, false, true);
     visualisePGOverlap(AStarBL, "outputs/rocket64_ov.ov", true, true);
     
     timeProfiler.printTimingReport();
     printExitBanner();
-
 
     // int arr[3][4] = { {1, 2, 0, 2},
     //                 {0, 0, 1, 0},

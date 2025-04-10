@@ -47,21 +47,21 @@ struct AStarNode{
     bool operator >(const AStarNode &other) const;
 };
 
-bool isValid(const Cord &c, const std::vector<std::vector<SignalType>>& grid);
 std::vector<Cord> reconstructPath(AStarNode *end);
-std::vector<Cord> runAStarAlgorithm(const std::vector<std::vector<SignalType>>& grid, const Cord &start, const Cord &goal);
+std::vector<Cord> runAStarAlgorithm(const std::vector<std::vector<SignalType>> &canvas, const Cord &start, const Cord &goal, const SignalType &st);
 
 class AStarBaseline: public PowerGrid{
 private:
-    std::vector<Cord> reconnectAStarHelperBFSLabel(std::vector<std::vector<int>> &component, int j, int i, int id);
+    std::vector<Cord> reconnectAStarHelperBFSLabel(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &component, int j, int i, int id);
     std::vector<Cord> shortestPathBetweenSets(const std::vector<std::vector<bool>> &grid, const std::vector<Cord> &setA, const std::vector<Cord> &setB);
 public:
 
     AStarBaseline(const std::string &fileName);
 
-    void calculateUBumpMST();
-    void reconnectAStar();
-    void runKNN();
+    void calculateMST(const PinMap &pm, std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &ignoreSt);
+    void reconnectIslands(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &ignoreSt);
+    void runKNearestNeighbor(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &ignoreSt);
+
     
     // Cord traslateIdxToCord(int idx) const;
     // int translateCordToIdx(Cord cord) const;

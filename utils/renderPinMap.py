@@ -27,11 +27,17 @@ PIN_COLORS = {
     "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
     "EMPTY": "none",
     "SIGNAL": "#A0A0A0",  # Gray
-    "GROUND": "#5A773D",  # Muted Olive Green (Adjusted for better differentiation)
-    "POWER_1": "#B04E3A",  # Muted Brick Red
-    "POWER_2": "#3B6B8E",  # Steel Blue
-    "POWER_3": "#9B8832",  # Desaturated Gold
-    "POWER_4": "#6B4C9A",  # Deep Purple (Strong but not too vibrant, contrasts well)
+    "POWER_1": "#1e81b0",
+    "POWER_2": "#e67e22",
+    "POWER_3": "#ffc107",
+    "POWER_4": "#b29dd9",
+    "POWER_5": "#72f2ee",
+    "POWER_6": "#fc83bc",
+    "POWER_7": "#c0392b",
+    "POWER_8": "#21b2ab",
+    "POWER_9": "#b0f294",
+    "POWER_10": "#8d57a3",
+    "GROUND": "#5cb85c",
 }
 
 if __name__ == '__main__':

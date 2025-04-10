@@ -244,13 +244,13 @@ if __name__ == "__main__":
                     # Generate a random RGB color (each channel between 0 and 1)
                     token = LineArr[i]
                     color = 0
-                    alpha = 0.3
+                    alpha = 0.5
                     if isinstance(token, int):
                         if token >= 100:
                             alpha = 0.8
                             color = GRID_COLORS[token - 100]
                         else:
-                            alpha = 0.4
+                            alpha = 0.5
                             color = GRID_COLORS[token]
                     elif isinstance(token, list):
                         alpha = 0.7
