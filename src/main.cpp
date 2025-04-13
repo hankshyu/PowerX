@@ -65,7 +65,9 @@ int main(int argc, char const *argv[]){
 
     timeProfiler.pauseTimer(TIMERTAG_ASTAR_M7);
 
+    AStarBL.reportOverlaps();
 
+    EqCktExtor.exportEquivalentCircuit(AStarBL, SignalType::POWER_4, "outputs/eqckt.sp");
 
 
     visualisePGM5(AStarBL, "outputs/rocket64_m5.m5",false, true, false);

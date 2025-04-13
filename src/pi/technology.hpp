@@ -66,8 +66,8 @@ private:
     double m_C4Resistance; // mOhm
     double m_C4Inductance; // pH
 
-    double m_PCBInductance; // um
-    double m_PCBResistance; // uhm
+    double m_PCBInductance; // uH
+    double m_PCBResistance; // uOhm
     double m_PCBDecapInductance; // nH
     double m_PCBDecapCapacitance; // uF
     double m_PCBDecapResistance; // uOhm

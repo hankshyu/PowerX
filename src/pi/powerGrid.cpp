@@ -20,6 +20,7 @@
 // 1. C++ STL:
 #include <cassert>
 #include <vector>
+#include <map>
 
 // 2. Boost Library:
 
@@ -108,5 +109,44 @@ void PowerGrid::insertPinPads(const PinMap &pm, std::vector<std::vector<SignalTy
 
             }
         }
+    }
+}
+
+void PowerGrid::reportOverlaps() const {
+    std::map<SignalType, int> m5Stats;
+    std::map<SignalType, int> m7Stats;
+    std::map<SignalType, int> ovStats;
+
+    for(int j = 0; j < canvasHeight; ++j){
+        for(int i = 0; i < canvasWidth; ++i){
+            SignalType stup = canvasM5[j][i];
+            if(m5Stats.find(stup) == m5Stats.end()) m5Stats[stup] = 0;
+            m5Stats[stup]++;
+
+            SignalType stdn = canvasM7[j][i];
+            if(m7Stats.find(stdn) == m7Stats.end()) m7Stats[stdn] = 0;
+            m7Stats[stdn]++;
+
+            if(stup == stdn){
+                if(ovStats.find(stdn) == ovStats.end()) ovStats[stdn] = 0;
+                ovStats[stdn]++;
+            }
+        }
+    }
+
+    // for(auto at : m5Stats){
+    //     std::cout << at.first << " " << at.second << std::endl;
+    // }
+    // std::cout << std::endl;
+    
+    // for(auto at : m7Stats){
+    //     std::cout << at.first << " " << at.second << std::endl;
+    // }
+
+    std::cout << "Overlap Report: " << std::endl;
+    for(auto at : ovStats){
+        SignalType st = at.first;
+        double ovpct = 100*2*double(at.second) / (double(m7Stats[st]) + double(m5Stats[st]));
+        std::cout << at.first << " " << at.second << "(" << ovpct << "%)" << std::endl;    
     }
 }
