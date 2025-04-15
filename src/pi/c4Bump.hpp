@@ -70,6 +70,17 @@ public:
     explicit C4Bump(const std::string &fileName);
     ~C4Bump();
 
+    inline int getClusterPinCountWidth() const {return this->m_clusterPinCountWidth;}
+    inline int getClusterPinCountHeight() const {return this->m_clusterPinCountHeight;}
+    inline int getClusterPitchWidth() const {return this->m_clusterPitchWidth;}
+    inline int getClusterPitchHeight() const {return this->m_clusterPitchHeight;}
+    inline int getClusterCountWidth() const {return this->m_clusterCountWidth;}
+    inline int getClusterCountHeight() const {return this->m_clusterCountHeight;}
+    inline int getLeftBorder() const {return this->m_leftBorder;}
+    inline int getRightBorder() const {return this->m_rightBorder;}
+    inline int getUpBorder() const {return this->m_upBorder;}
+    inline int getDownBorder() const {return this->m_downBorder;}
+
     std::vector<C4PinCluster *> allClusters;
     std::unordered_map<SignalType, std::unordered_set<C4PinCluster *>> signalTypeToAllClusters;
     std::unordered_map<Cord, C4PinCluster *> cordToClusterMap;

@@ -14,10 +14,7 @@
 #include "microBump.hpp"
 #include "c4Bump.hpp"
 #include "aStarBaseline.hpp"
-
-#include "cadical.hpp"
-#include "coin/CbcModel.hpp"
-#include "OsiClpSolverInterface.hpp"
+#include "voronoiPDNGen.hpp"
 
 
 // #include "doughnutPolygon.hpp"
@@ -42,7 +39,7 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor (technology);
 
 
-    
+    /*
     AStarBaseline AStarBL(FILEPATH_BUMPS);
     visualiseMicroBump(AStarBL.uBump, technology, "outputs/uBump.ub");
     visualiseC4Bump(AStarBL.c4, technology, "outputs/c4.c4");
@@ -73,13 +70,30 @@ int main(int argc, char const *argv[]){
     visualisePGM5(AStarBL, "outputs/rocket64_m5.m5",false, true, false);
     visualisePGM7(AStarBL, "outputs/rocket64_m7.m7",false, false, true);
     visualisePGOverlap(AStarBL, "outputs/rocket64_ov.ov", true, true);
+    */
     
+    timeProfiler.startTimer("Test ILP");
+    VoronoiPDNGen vpg(FILEPATH_BUMPS);
+    vpg.initPoints({}, {});
+    vpg.connectLayers();
+    // vpg.runFLUTERouting();
+    
+    timeProfiler.pauseTimer("Test ILP");
+
+
     timeProfiler.printTimingReport();
     printExitBanner();
 
-    // int arr[3][4] = { {1, 2, 0, 2},
-    //                 {0, 0, 1, 0},
-    //                 {1, 0, 2, 0} };
+    Segment s1(Cord(12, 3), Cord(12, 6));
+    Segment s2(Cord(12, 6), Cord(12, 3));
+    Segment s3(Cord(12, 5), Cord(15, 4));
+    Segment s4(Cord(14, 4), Cord(12, 8));
+    Segment s5(Cord(16, 7), Cord(13, 5));
+    using namespace boost::polygon::operators;
+
+    std::cout << boost::polygon::intersects(s5, s4, true);
+    
+
     
 }
 

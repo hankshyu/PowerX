@@ -35,6 +35,7 @@
 #include "cornerStitching.hpp"
 #include "floorplan.hpp"
 #include "powerGrid.hpp"
+#include "voronoiPDNGen.hpp"
 
 
 // use "renderPinMap.py" to render ballOut data structure
@@ -56,6 +57,7 @@ bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overla
 bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
 bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump = false, bool overlayM7C4 = false);
 
+bool visualiseVoronoiPoints(const VoronoiPDNGen &vpg, const Technology &tch, const std::string &filePath);
 
 
 #endif // __VISUALIZER_H__

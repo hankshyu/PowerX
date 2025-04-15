@@ -85,10 +85,9 @@ void EqCktExtractor::exportEquivalentCircuit(const PowerGrid &pg, const SignalTy
     std::tm local_tm = *std::localtime(&now_time_t);
     ofs << "* Date/Time: " << std::put_time(&local_tm, "%Y-%m-%d %H:%M:%S") << std::endl;
     ofs << std::endl;
-
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
     ofs << "* 1. PCB Subcircuit" << std::endl;
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
     ofs << ".subckt pcb vrm_i, vrm_o, pcb_o, pcb_i" << std::endl;
     ofs << "Lpcbh vrm_i N1PCB " << this->m_Technology.getPCBInductance() << "p" << std::endl;
     ofs << "Rpcbh N1PCB pcb_o " << this->m_Technology.getPCBResistance() << "u" << std::endl;
@@ -102,23 +101,29 @@ void EqCktExtractor::exportEquivalentCircuit(const PowerGrid &pg, const SignalTy
     ofs << std::endl << std::endl;
 
 
-    ofs << "*************************************" << std::endl;
-    ofs << "* 2. C4 and TSVs" << std::endl;
-    ofs << "*************************************" << std::endl;
-    ofs << ".subckt tsvc4 in out" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << "* 2. C4 with RL modeling" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << ".subckt c4 in out" << std::endl;
     ofs << "Rc4 in N1C4 " <<  this->m_Technology.getC4Resistance() << "m" << std::endl;
-    ofs << "Lc4 N1C4 N0TSV " << this->m_Technology.getC4Inductance() << "p" << std::endl;
-    for(int i = 1; i <= 9; ++i){
-        ofs << "Rtsv" << i << " N0TSV" << " N" << i << "TSV " << this->m_Technology.getTsvResistance() << "m" << std::endl;
-        ofs << "Ltsv" << i << " N" << i << "TSV out " << this->m_Technology.getTsvInductance() << "p" << std::endl;
-    }
-    ofs << ".ends tsvc4" << std::endl;
+    ofs << "Lc4 N1C4 out " << this->m_Technology.getC4Inductance() << "p" << std::endl;
+    ofs << ".ends c4" << std::endl;
 
     ofs << std::endl << std::endl;
 
-    ofs << "*************************************" << std::endl;
-    ofs << "* 3. microBump" << std::endl;
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << "* 3. TSV with RL modeling" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << ".subckt tsv in out" << std::endl;
+    ofs << "Rtsv in N1TSV " <<  this->m_Technology.getTsvResistance() << "m" << std::endl;
+    ofs << "Ltsv N1TSV out " << this->m_Technology.getTsvInductance() << "p" << std::endl;
+    ofs << ".ends tsv" << std::endl;
+
+    ofs << std::endl << std::endl;
+
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << "* 4. MicroBump with RL modeling " << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
     ofs << ".subckt ubump in out" << std::endl;
     ofs << "Rubump in N1UB " << this->m_Technology.getMicrobumpResistance() << "m" << std::endl;
     ofs << "Lubump N1UB out " << this->m_Technology.getMicrobumpInductance() << "p" << std::endl;
@@ -126,16 +131,17 @@ void EqCktExtractor::exportEquivalentCircuit(const PowerGrid &pg, const SignalTy
 
     ofs << std::endl << std::endl;
 
-    ofs << "*************************************" << std::endl;
-    ofs << "* Instantiate main models, create connections to Interposer Equivalent Circuits"
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << "* Instantiate main models, create connections to Interposer Equivalent Circuits" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
+    ofs << "* TODO " << std::endl;
 
     ofs << std::endl << std::endl;
 
 
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
     ofs << "* Construct the Interposer Equivalent Circuits" << std::endl;
-    ofs << "*************************************" << std::endl;
+    ofs << "*******************************************************************************" << std::endl;
     // builing the equivalent circuit of the interposer
     double itpR = 2 * getInterposerResistance();
     double itpL = 2 * getInterposerInductance();

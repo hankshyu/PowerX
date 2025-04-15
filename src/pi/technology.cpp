@@ -69,7 +69,7 @@ const std::unordered_map<std::string, std::string> Technology::m_standardUnits =
     {"C4_INDUCTANCE", "pH"},
 
     {"PCB_INDUCTANCE", "pH"},
-    {"PCB_RESISTANCE", "uOhmp"},
+    {"PCB_RESISTANCE", "uOhm"},
     {"PCB_DECAP_INDUCTANCE", "nH"},
     {"PCB_DECAP_CAPACITANCE", "uF"},
     {"PCB_DECAP_RESISTANCE", "uOhm"},

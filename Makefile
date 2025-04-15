@@ -5,6 +5,9 @@ BINPATH = ./bin
 OBJPATH = ./obj
 BOOSTPATH = ./lib/boost_1_87_0
 
+FLUTE_LIB_PATH = ./lib/flute/build
+FLUTE_HEADER_PATH = ./lib/flute
+
 CADICAL_LIB_PATH = ./lib/cadical/build
 CADICAL_HEADER_PATH = ./lib/cadical/src
 
@@ -19,9 +22,9 @@ CBC_LINKS = -lCbc -lCbcSolver -lOsiClp -lClp -lCoinUtils -lOsi #Cbc link librari
 
 # CXX = /usr/bin/g++
 CXX = g++
-FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(CADICAL_HEADER_PATH) -I$(CBC_LIB_INCLUDE) -I$(CBCDEP_COINUTILS_INCLUDE) -I$(CBCDEP_OSI_INCLUDE) -I$(CBCDEP_CLP_INCLUDE)
+FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(CADICAL_HEADER_PATH) -I$(CBC_LIB_INCLUDE) -I$(CBCDEP_COINUTILS_INCLUDE) -I$(CBCDEP_OSI_INCLUDE) -I$(CBCDEP_CLP_INCLUDE)
 OPTFLAGS = -O3
-LINKFLAGS = -L$(CADICAL_LIB_PATH) -L$(CBC_LIB_PATH)  -L$(CBCDEP_LIB_PATH) -lm -lcadical $(CBC_LINKS)
+LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(CADICAL_LIB_PATH) -L$(CBC_LIB_PATH) -L$(CBCDEP_LIB_PATH) -lm -lflute -lcadical $(CBC_LINKS)
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o orderedSegment.o \

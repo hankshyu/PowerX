@@ -26,22 +26,57 @@
 
 // Dependencies
 // 1. C++ STL:
+#include <unordered_map>
+
 
 // 2. Boost Library:
 
 // 3. Texo Library:
+#include "cord.hpp"
+#include "segment.hpp"
 #include "powerGrid.hpp"
+#include "signalType.hpp"
 
+struct VEdge{
+    SignalType sig;
+    Cord c1, c2;
+    
+};
+
+struct VNode{
+    SignalType sig;
+    VEdge *up;
+    VEdge *down;
+    VEdge *left;
+    VEdge *right;
+
+};
 
 
 class VoronoiPDNGen: public PowerGrid{
+
 public:
+    int nodeHeight, nodeWidth;
+    std::unordered_map<SignalType, std::vector<Cord>> m5Points;
+    std::unordered_map<SignalType, std::vector<Segment>> m5Segments;
+
+    std::unordered_map<SignalType, std::vector<Cord>> m7Points;
+    std::unordered_map<SignalType, std::vector<Segment>> m7Segments;
+
+    std::vector<std::vector<VNode *>> m5NodeArr;
+    std::vector<std::vector<VNode *>> m7NodeArr;
 
     VoronoiPDNGen(const std::string &fileName);
 
-    void runILPRouting();
     void runSATRouting();
+    void runILPRouting();
 
+    void initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs);
+    void connectLayers();
+
+    void runFLUTERouting();
+
+    friend bool visualiseVoronoiPoints(const VoronoiPDNGen &vpg, const Technology &tch, const std::string &filePath);
 };
 
 #endif // __VORONOIPDNGEN_H__
