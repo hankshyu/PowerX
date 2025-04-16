@@ -34,7 +34,7 @@
 #include "microBump.hpp"
 #include "c4Bump.hpp"
 #include "aStarBaseline.hpp"
-
+#include "voronoiPDNGen.hpp"
 
 bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
 
@@ -445,4 +445,47 @@ bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool o
 
     ofs.close();
     return true; 
+}
+
+bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    std::unordered_set<Cord> knownCords;
+
+    ofs << "M5 VORONOI VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
+    ofs << "SIGNALS" << " " << vpg.m5Segments.size() << std::endl;
+
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = vpg.m5Segments.begin(); cit != vpg.m5Segments.end(); ++cit){
+        SignalType st = cit->first;
+        ofs << st << std::endl;
+        ofs << "SEGMENTS " << cit->second.size() << std::endl;
+        for(const OrderedSegment &cos : cit->second){
+            Cord c1(cos.getLow());
+            Cord c2(cos.getHigh());
+            knownCords.insert(c1);
+            knownCords.insert(c2);
+            ofs << c1 << " " << c2 << std::endl;
+        }
+        std::unordered_set<Cord> unseenCords;
+        for(const Cord &c : vpg.m5Points.at(st)){
+            if(knownCords.count(c) == 0) unseenCords.insert(c);
+        }
+        ofs << "POINTS " << unseenCords.size() << std::endl;
+        for(const Cord &c : unseenCords){
+            ofs << c << std::endl;
+        }
+        
+    }
+
+    ofs.close();
+    return true; 
+
+}
+
+bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath){
+    return false;
 }

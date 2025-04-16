@@ -34,13 +34,14 @@
 // 3. Texo Library:
 #include "cord.hpp"
 #include "segment.hpp"
+#include "orderedSegment.hpp"
 #include "powerGrid.hpp"
 #include "signalType.hpp"
 
 struct VEdge{
     SignalType sig;
     Cord c1, c2;
-    
+
 };
 
 struct VNode{
@@ -58,10 +59,10 @@ class VoronoiPDNGen: public PowerGrid{
 public:
     int nodeHeight, nodeWidth;
     std::unordered_map<SignalType, std::vector<Cord>> m5Points;
-    std::unordered_map<SignalType, std::vector<Segment>> m5Segments;
+    std::unordered_map<SignalType, std::vector<OrderedSegment>> m5Segments;
 
     std::unordered_map<SignalType, std::vector<Cord>> m7Points;
-    std::unordered_map<SignalType, std::vector<Segment>> m7Segments;
+    std::unordered_map<SignalType, std::vector<OrderedSegment>> m7Segments;
 
     std::vector<std::vector<VNode *>> m5NodeArr;
     std::vector<std::vector<VNode *>> m7NodeArr;
@@ -74,9 +75,10 @@ public:
     void initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs);
     void connectLayers();
 
-    void runFLUTERouting();
+    void runFLUTERouting(const std::string &wirelengthVectorFile, const std::string &RoutingTreeFile);
 
-    friend bool visualiseVoronoiPoints(const VoronoiPDNGen &vpg, const Technology &tch, const std::string &filePath);
+    friend bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
+    friend bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
 };
 
 #endif // __VORONOIPDNGEN_H__

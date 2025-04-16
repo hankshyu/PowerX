@@ -23,11 +23,14 @@
 
 // Dependencies
 // 1. C++ STL:
-
+#include <string>
 // 2. Boost Library:
 
 // 3. Texo Library:
+#include "units.hpp"
 #include "powerGrid.hpp"
+#include "segment.hpp"
+#include "orderedSegment.hpp"
 #include "voronoiPDNGen.hpp"
 
 // 4. Cadical SAT solver
@@ -169,7 +172,6 @@ void VoronoiPDNGen::runILPRouting(){
         
 }
 
-
 void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs){
 
     this->nodeHeight = this->canvasHeight + 1;
@@ -180,13 +182,21 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
 
     for(int j = 0; j < nodeHeight; ++j){
         for(int i = 0; i < nodeWidth; ++i){
-            VNode *node = new VNode;
-            node.sig = SignalType::EMPTY;
-            node->up = nullptr;
-            node->down = nullptr;
-            node->left = nullptr;
-            node->right = nullptr;
-            this->m5NodeArr[j][i] = node;
+            VNode *unode = new VNode;
+            unode->sig = SignalType::EMPTY;
+            unode->up = nullptr;
+            unode->down = nullptr;
+            unode->left = nullptr;
+            unode->right = nullptr;
+            this->m5NodeArr[j][i] = unode;
+
+            VNode *dnode = new VNode;
+            dnode->sig = SignalType::EMPTY;
+            dnode->up = nullptr;
+            dnode->down = nullptr;
+            dnode->left = nullptr;
+            dnode->right = nullptr;
+            this->m7NodeArr[j][i] = dnode;
         }
     }
     // create node and edges
@@ -194,54 +204,35 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
         for(int i = 0; i < nodeWidth; ++i){
 
             if(i != (nodeWidth - 1)){
-                VEdge rEdge = new VEdge;
-                rEdge.sig = SignalType::EMPTY;
-                rEdge.c1 = Cord(i, j);
-                rEdge.c2 = Cord(i+1, j);
-                this->m5NodeArr[j][i]->right = rEdge;
-                this->m5NodeArr[j][i+1]->left = rEdge;
+                VEdge *urEdge = new VEdge;
+                urEdge->sig = SignalType::EMPTY;
+                urEdge->c1 = Cord(i, j);
+                urEdge->c2 = Cord(i+1, j);
+                this->m5NodeArr[j][i]->right = urEdge;
+                this->m5NodeArr[j][i+1]->left = urEdge;
+
+                VEdge *drEdge = new VEdge;
+                drEdge->sig = SignalType::EMPTY;
+                drEdge->c1 = Cord(i, j);
+                drEdge->c2 = Cord(i+1, j);
+                this->m7NodeArr[j][i]->right = drEdge;
+                this->m7NodeArr[j][i+1]->left = drEdge;
             }
+
             if(j != (nodeHeight -1)){
-                VEdge uEdge = new VEdge;
-                uEdge.sig = SignalType::EMPTY;
-                uEdge.c1 = Cord(i, j);
-                uEdge.c2 = Cord(i, j+1);
+                VEdge *uEdge = new VEdge;
+                uEdge->sig = SignalType::EMPTY;
+                uEdge->c1 = Cord(i, j);
+                uEdge->c2 = Cord(i, j+1);
                 this->m5NodeArr[j][i]->up = uEdge;
                 this->m5NodeArr[j+1][i]->down = uEdge;
-            }
-        }
-    }
 
-    for(int j = 0; j < nodeHeight; ++j){
-        for(int i = 0; i < nodeWidth; ++i){
-            VNode *node = new VNode;
-            node.sig = SignalType::EMPTY;
-            node->up = nullptr;
-            node->down = nullptr;
-            node->left = nullptr;
-            node->right = nullptr;
-            this->m7NodeArr[j][i] = node;
-        }
-    }
-
-    for(int j = 0; j < nodeHeight; ++j){
-        for(int i = 0; i < nodeWidth; ++i){
-
-            if(i != (nodeWidth - 1)){
-                VEdge rEdge = new VEdge;
-                rEdge.sig = SignalType::EMPTY;
-                rEdge.c1 = Cord(i, j);
-                rEdge.c2 = Cord(i+1, j);
-                this->m7NodeArr[j][i]->right = rEdge;
-                this->m7NodeArr[j][i+1]->left = rEdge;
-            }
-            if(j != (nodeHeight -1)){
-                VEdge uEdge = new VEdge;
-                uEdge.sig = SignalType::EMPTY;
-                uEdge.c1 = Cord(i, j);
-                uEdge.c2 = Cord(i, j+1);
-                this->m7NodeArr[j][i]->up = uEdge;
-                this->m7NodeArr[j+1][i]->down = uEdge;
+                VEdge *duEdge = new VEdge;
+                duEdge->sig = SignalType::EMPTY;
+                duEdge->c1 = Cord(i, j);
+                duEdge->c1 = Cord(i, j+1);
+                this->m7NodeArr[j][i]->up = duEdge;
+                this->m7NodeArr[j+1][i]->down = duEdge;
             }
         }
     }
@@ -276,7 +267,7 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
     
     for(const SignalType &st : this->c4.allSignalTypes){
         for(const Cord &c : this->c4.signalTypeToAllCords[st]){
-            SignalType fillSig = (m7IgnoreSigs.count(st) != 0)? st : SignalType::OBSTACLE;
+            SignalType fillSig = (m7IgnoreSigs.count(st) == 0)? st : SignalType::OBSTACLE;
             
             int leftBorder = (c.x() != 0)? (c.x() - 1) : 0;
             int rightBorder = (c.x() != (nodeWidth - 1))? (c.x() + 1) : c.x();
@@ -304,33 +295,104 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
 }
 
 void VoronoiPDNGen::connectLayers(){
+    // for each signalType. These must at least be one point overlaap between m5 and m7
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = this->m5Points.begin(); cit != m5Points.end(); ++cit){
+        SignalType st = cit->first;
+        std::vector<Segment> links;
 
-}
+        for(const Cord &up : cit->second){
+            for(const Cord &dn : this->m7Points[st]){
+                links.push_back(Segment(dn, up));
+            }
+        }
 
-void VoronoiPDNGen::runFLUTERouting(){
-    // Initialize LUT using POWV9.dat and PORT9.dat (POST9.dat not needed)
-    Flute::FluteState *state = Flute::flute_init("./lib/flute/POWV9.dat", "./lib/flute/PORT9.dat");
+        std::sort(links.begin(), links.end(), [](Segment o1, Segment o2){
+            return calEuclideanDistance(o1.low(), o1.high()) < calEuclideanDistance(o2.low(), o2.high());
+        });
 
-    int x[4] = {10, 20, 30, 40};
-    int y[4] = {10, 25, 15, 30};
+        if(links[0].low() == links[0].high()) continue;
 
-    Flute::Tree tree = Flute::flute(state, 4, x, y, FLUTE_ACCURACY);
+        bool connectSuccess = false;
+        for(int osidx = 0; osidx < links.size(); ++osidx){
+            Segment pos = links[osidx];
+            Cord up(pos.high());
+            Cord down(pos.low());
+            SignalType downSig = this->m7NodeArr[up.y()][up.x()]->sig;
+            if((downSig == st) || (downSig == SignalType::EMPTY)){
+                // attempt to add a point on m7
+                connectSuccess = true;
+                m7NodeArr[up.y()][up.x()]->sig = st;
+                m7Points[st].push_back(up);
+            }
 
-    std::cout << "Wirelength: " << tree.length << std::endl;
-    // Print branches
-    std::cout << "Branches:" << std::endl;
-    for (int i = 0; i < tree.deg; ++i) {
-        const Flute::Branch& b = tree.branch[i];
-        const Flute::Branch& neighbor = tree.branch[b.n];  // The branch this one connects to
+            if(connectSuccess) break;
+        }
 
-        std::cout << "  Branch " << i << ": (" << b.x << ", " << b.y << ")"
-                  << " ↔ (" << neighbor.x << ", " << neighbor.y << ")"
-                  << " [connected to branch " << b.n << "]" << std::endl;
+        // if there is overlap point, skip the signal
     }
-
-    // Free resources
-    free_tree(state, tree);
-    flute_free(state);
-
-
+    
 }
+
+void VoronoiPDNGen::runFLUTERouting(const std::string &wirelengthVectorFile, const std::string &RoutingTreeFile){
+    const int FLUTE_ACC = 9; // 0 ~ 9
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = this->m5Points.begin(); it != this->m5Points.end(); ++it){
+        SignalType targetSig = it->first;
+        int pointCount = it->second.size();
+        if(pointCount == 0) continue;
+        std::vector<len_t> xArr;
+        std::vector<len_t> yArr;
+        for(const Cord &c : it->second){
+            xArr.push_back(c.x());
+            yArr.push_back(c.y());
+        }
+
+        Flute::FluteState *state = Flute::flute_init(wirelengthVectorFile.c_str(), RoutingTreeFile.c_str());
+        Flute::Tree tree = Flute::flute(state, pointCount, xArr.data(), yArr.data(), FLUTE_ACC);
+        std::cout << targetSig << "Before: " << m5Points[targetSig].size() << std::endl;
+        for(int i = 0; i < tree.deg*2 - 2; ++i){
+            int n = tree.branch[i].n;
+            Cord c1(tree.branch[i].x, tree.branch[i].y);
+            Cord c2(tree.branch[n].x, tree.branch[n].y);
+            bool foundc1 = false;
+            bool foundc2 = false;
+            for(int j = 0; j < this->m5Points[targetSig].size(); ++j){
+                Cord m5c = m5Points[targetSig].at(j);
+                if(m5c == c1) foundc1 = true;
+            }
+            for(int j = 0; j < this->m5Points[targetSig].size(); ++j){
+                Cord m5c = m5Points[targetSig].at(j);
+                if(m5c == c2) foundc2 = true;
+            }
+            if(!foundc1) m5Points[targetSig].push_back(c1);
+            if(!foundc2) m5Points[targetSig].push_back(c2);
+
+            OrderedSegment newos(c1, c2);
+            bool foundos = false;
+            for(OrderedSegment os : m5Segments[targetSig]){
+                if(os == newos) foundos = true;
+            }
+            if(!foundos) m5Segments[targetSig].push_back(newos);
+
+
+        }
+
+        std::cout << "after: " << m5Points[targetSig].size() << std::endl;
+        std::cout << "segs: " << m5Segments[targetSig].size() << std::endl; 
+
+        std::cout << "Wirelength: " << tree.length << std::endl;
+        // Print branches
+        std::cout << "Branches:" << std::endl;
+        // for (int i = 0; i < tree.deg * 2 - 2; ++i) {
+        //     int n = tree.branch[i].n;
+        //     std::cout << "Branch " << i << " at (" << tree.branch[i].x << ", " << tree.branch[i].y << ") "
+        //             << "is connected to Branch " << n << " at ("
+        //             << tree.branch[n].x << ", " << tree.branch[n].y << ")\n";
+        // }
+
+        // Free resources
+        free_tree(state, tree);
+        flute_free(state);
+    }
+}
+
+
