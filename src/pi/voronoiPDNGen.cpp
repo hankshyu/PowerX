@@ -189,10 +189,26 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
             this->m5NodeArr[j][i] = node;
         }
     }
-
+    // create node and edges
     for(int j = 0; j < nodeHeight; ++j){
         for(int i = 0; i < nodeWidth; ++i){
-            // todo, build edges ...
+
+            if(i != (nodeWidth - 1)){
+                VEdge rEdge = new VEdge;
+                rEdge.sig = SignalType::EMPTY;
+                rEdge.c1 = Cord(i, j);
+                rEdge.c2 = Cord(i+1, j);
+                this->m5NodeArr[j][i]->right = rEdge;
+                this->m5NodeArr[j][i+1]->left = rEdge;
+            }
+            if(j != (nodeHeight -1)){
+                VEdge uEdge = new VEdge;
+                uEdge.sig = SignalType::EMPTY;
+                uEdge.c1 = Cord(i, j);
+                uEdge.c2 = Cord(i, j+1);
+                this->m5NodeArr[j][i]->up = uEdge;
+                this->m5NodeArr[j+1][i]->down = uEdge;
+            }
         }
     }
 
@@ -208,8 +224,47 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
         }
     }
 
+    for(int j = 0; j < nodeHeight; ++j){
+        for(int i = 0; i < nodeWidth; ++i){
+
+            if(i != (nodeWidth - 1)){
+                VEdge rEdge = new VEdge;
+                rEdge.sig = SignalType::EMPTY;
+                rEdge.c1 = Cord(i, j);
+                rEdge.c2 = Cord(i+1, j);
+                this->m7NodeArr[j][i]->right = rEdge;
+                this->m7NodeArr[j][i+1]->left = rEdge;
+            }
+            if(j != (nodeHeight -1)){
+                VEdge uEdge = new VEdge;
+                uEdge.sig = SignalType::EMPTY;
+                uEdge.c1 = Cord(i, j);
+                uEdge.c2 = Cord(i, j+1);
+                this->m7NodeArr[j][i]->up = uEdge;
+                this->m7NodeArr[j+1][i]->down = uEdge;
+            }
+        }
+    }
+
     for(const SignalType &st : this->uBump.allSignalTypes){
         if(m5IgnoreSigs.count(st) != 0) continue;
+
+        for(const Cord &c : this->uBump.signalTypeToAllCords[st]){
+            SignalType fillSig = st;
+            
+            int leftBorder = (c.x() != 0)? (c.x() - 1) : 0;
+            int rightBorder = (c.x() != (nodeWidth - 1))? (c.x() + 1) : c.x();
+            int downBorder = (c.y() != 0)? (c.y() - 1) : 0;
+            int upBorder = (c.y() != (nodeHeight - 1))? (c.y() + 1) : c.y();
+            for(int j = downBorder; j <= upBorder; ++j){
+                for(int i = leftBorder; i <= rightBorder; ++i){
+                    m7NodeArr[j][i]->sig = fillSig;
+                    if(i != rightBorder) m7NodeArr[j][i]->right->sig = fillSig;
+                    if(j != upBorder) m7NodeArr[j][i]->up->sig = fillSig;
+                }
+            }
+        }
+
         this->m5Points[st] = {};
         this->m5Segments[st] = {};
         if(this->uBump.signalTypeToAllCords[st].size() != 0){
@@ -220,7 +275,24 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
     }
     
     for(const SignalType &st : this->c4.allSignalTypes){
+        for(const Cord &c : this->c4.signalTypeToAllCords[st]){
+            SignalType fillSig = (m7IgnoreSigs.count(st) != 0)? st : SignalType::OBSTACLE;
+            
+            int leftBorder = (c.x() != 0)? (c.x() - 1) : 0;
+            int rightBorder = (c.x() != (nodeWidth - 1))? (c.x() + 1) : c.x();
+            int downBorder = (c.y() != 0)? (c.y() - 1) : 0;
+            int upBorder = (c.y() != (nodeHeight - 1))? (c.y() + 1) : c.y();
+            for(int j = downBorder; j <= upBorder; ++j){
+                for(int i = leftBorder; i <= rightBorder; ++i){
+                    m7NodeArr[j][i]->sig = fillSig;
+                    if(i != rightBorder) m7NodeArr[j][i]->right->sig = fillSig;
+                    if(j != upBorder) m7NodeArr[j][i]->up->sig = fillSig;
+                }
+            }
+        }
+
         if(m7IgnoreSigs.count(st) != 0) continue;
+
         this->m7Points[st] = {};
         this->m7Segments[st] = {};
         if(this->c4.signalTypeToAllCords[st].size() != 0){
@@ -229,8 +301,6 @@ void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSig
             }
         }
     }
-
-
 }
 
 void VoronoiPDNGen::connectLayers(){
