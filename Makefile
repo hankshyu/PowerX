@@ -65,16 +65,16 @@ pwrx_dbg: $(DBG_OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -g -o $(BINPATH)/$@
 
 $(OBJPATH)/main_dbg.o: $(SRCPATH)/main.cpp 
-	$(CXX) $(FLAGS) -g -c -DCOMPILETIME="\"`date`\"" $^ -o $@
+	$(CXX) $(FLAGS) -O0 -g -c -DCOMPILETIME="\"`date`\"" $^ -o $@
 
 $(OBJPATH)/%_dbg.o: $(SRCPATH)/%.cpp $(SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
 
 $(OBJPATH)/%_dbg.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
 
 $(OBJPATH)/%_dbg.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
 
 .PHONY: clean
 clean:

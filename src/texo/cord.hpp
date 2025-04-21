@@ -59,7 +59,6 @@ namespace boost {
 } // namespace boost
 
 len_t calManhattanDistance(const Cord &c1, const Cord &c2) noexcept;
-flen_t calEuclideanDistance(const Cord &c1, const Cord &c2) noexcept;
 len_t calDistanceSquared(const Cord &c1, const Cord &c2) noexcept;
 
 #endif  // __CORD_H__

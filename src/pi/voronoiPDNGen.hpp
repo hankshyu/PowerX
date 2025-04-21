@@ -81,6 +81,11 @@ public:
 
     void runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     void ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    
+    void generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+
+
+
     friend bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
     friend bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
 };

@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>
+#include <stack>
 // 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
 
@@ -603,6 +604,110 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             layerSegments[cosSt].push_back(OrderedSegment(path[i], path[i+1]));
         }
 
+    }
+
+}
+
+void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    std::stack<std::pair<OrderedSegment, SignalType>> toFix;
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
+        SignalType st = it->first;
+        for(std::vector<OrderedSegment>::iterator osit = it->second.begin(); osit!= it->second.end();){
+            OrderedSegment os = *osit;
+            Cord osLow(os.getLow());
+            Cord osHigh(os.getHigh());
+            FCord centre(double(osLow.x() + osHigh.x())/2, double(osLow.y() + osHigh.y())/2);
+            double radius = calEuclideanDistance(osLow, osHigh) / 2;
+
+            bool needsRemoval = false;
+            for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator pcit = layerPoints.begin(); pcit != layerPoints.end(); ++pcit){
+                if(pcit->first == st) continue;
+                bool foundIntersect = false;
+                for(std::vector<Cord>::const_iterator cordit = pcit->second.begin(); cordit != pcit->second.end(); ++cordit){
+                    Cord eCord = *cordit;
+                    if(calEuclideanDistance(centre, eCord) <= radius){
+                        toFix.push(std::pair<OrderedSegment, SignalType>(os, st));
+                        foundIntersect = true;
+                        break;
+                    }
+                }
+                needsRemoval = foundIntersect;
+                if(needsRemoval) break;
+            }
+
+            osit = (needsRemoval)? it->second.erase(osit) : osit + 1;
+        }
+    }
+
+    while(!toFix.empty()){
+        std::pair<OrderedSegment, SignalType> tftop = toFix.top();
+        toFix.pop();
+
+        OrderedSegment fixos = tftop.first;
+        SignalType fixst = tftop.second;
+        Cord osLow(fixos.getLow());
+        Cord osHigh(fixos.getHigh());
+        FCord centre(double(osLow.x() + osHigh.x())/2, double(osLow.y() + osHigh.y())/2);
+        double radius = calEuclideanDistance(osLow, osHigh) / 2;
+
+        bool hasIntersect = false;
+        Cord c3;
+        
+        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator pcit = layerPoints.begin(); pcit != layerPoints.end(); ++pcit){
+            if(pcit->first == fixst) continue;
+            bool foundIntersect = false;
+            for(std::vector<Cord>::const_iterator cordit = pcit->second.begin(); cordit != pcit->second.end(); ++cordit){
+                Cord eCord = *cordit;
+                if(calEuclideanDistance(centre, eCord) <= radius){
+                    foundIntersect = hasIntersect = true;
+                    c3 = eCord;
+                    break;
+                }
+            }
+            if(foundIntersect) break;
+        }
+
+        if(hasIntersect){
+            // calculate the projection of c3 on line(osLow, osHigh) 
+            if(osLow.x() > osHigh.x()) std::swap(osLow, osHigh);
+
+            Cord ab(osHigh.x() - osLow.x(), osHigh.y() - osLow.y());
+            Cord ac(c3.x() - osLow.x(), c3.y() - osLow.y());
+            double t = double(ac.x()*ab.x() + ac.y()*ab.y()) / double(ab.x()*ab.x() + ab.y()*ab.y());
+            Cord projection(osLow.x() + ab.x()*t, osLow.y() + ab.y()*t);
+            if(projection == osLow){
+                if(osLow.y() < osHigh.y()){
+                    projection.x(projection.x()+1);
+                    projection.y(projection.y()+1);
+                }else if(osLow.y()== osHigh.y()){
+                    projection.x(projection.x()+1);
+                }else{ // osLow.y() > osHigh.y()
+                    projection.x(projection.x()+1);
+                    projection.y(projection.y()-1);
+                }
+            }else if(projection == osHigh){
+
+                if(osLow.y() < osHigh.y()){
+                    projection.x(projection.x()-1);
+                    projection.y(projection.y()-1);
+                }else if(osLow.y() == osHigh.y()){
+
+                    projection.x(projection.x()-1);
+                }else{ // osLow.y() > osHigh.y()
+
+                    projection.x(projection.x()-1);
+                    projection.y(projection.y()+1);
+                }
+            }
+            layerPoints[fixst].push_back(projection);
+
+            OrderedSegment nos1(osLow, projection);
+            OrderedSegment nos2(projection, osHigh);
+            toFix.push(std::pair<OrderedSegment, SignalType>(nos1, fixst));
+            toFix.push(std::pair<OrderedSegment, SignalType>(nos2, fixst));
+        }else{
+            layerSegments[fixst].push_back(fixos);
+        }
     }
 
 }

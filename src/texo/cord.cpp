@@ -50,10 +50,6 @@ len_t calManhattanDistance(const Cord &c1, const Cord &c2) noexcept {
     return boost::polygon::manhattan_distance<Cord, Cord>(c1, c2);
 }
 
-flen_t calEuclideanDistance(const Cord &c1, const Cord &c2) noexcept{
-    return boost::polygon::euclidean_distance<Cord, Cord>(c1, c2);
-}
-
 len_t calDistanceSquared(const Cord &c1, const Cord &c2) noexcept{
     return boost::polygon::distance_squared<Cord, Cord>(c1, c2);
 }

@@ -52,6 +52,8 @@ int main(int argc, char const *argv[]){
     vpg.ripAndReroute(vpg.m5Points, vpg.m5Segments);
     vpg.ripAndReroute(vpg.m7Points, vpg.m7Segments);
 
+    vpg.generateInitialPowerPlane(vpg.m5Points, vpg.m5Segments);
+    vpg.generateInitialPowerPlane(vpg.m7Points, vpg.m7Segments);
 
     visualiseM5VoronoiPoints(vpg, "outputs/m5.ps");
     visualiseM7VoronoiPoints(vpg, "outputs/m7.ps");
