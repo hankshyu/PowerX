@@ -19,8 +19,7 @@
 
 // #include "doughnutPolygon.hpp"
 
-const std::string WL_VEC_FILE = "./lib/flute/POWV9.dat";
-const std::string ROUTING_TREE_FILE = "./lib/flute/PORT9.dat";
+
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
 std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
@@ -46,7 +45,13 @@ int main(int argc, char const *argv[]){
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
     vpg.initPoints({SignalType::GROUND, SignalType::SIGNAL}, {SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
     vpg.connectLayers();
-    vpg.runFLUTERouting(WL_VEC_FILE, ROUTING_TREE_FILE);
+
+    vpg.runFLUTERouting(vpg.m5Points, vpg.m5Segments);
+    vpg.runFLUTERouting(vpg.m7Points, vpg.m7Segments);
+
+    vpg.ripAndReroute(vpg.m5Points, vpg.m5Segments);
+    vpg.ripAndReroute(vpg.m7Points, vpg.m7Segments);
+
 
     visualiseM5VoronoiPoints(vpg, "outputs/m5.ps");
     visualiseM7VoronoiPoints(vpg, "outputs/m7.ps");

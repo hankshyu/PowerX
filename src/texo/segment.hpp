@@ -47,4 +47,9 @@ namespace boost{
     };
 } // namespace boost
 
+namespace seg{
+    inline bool intersects(const Segment& segment1, const Segment& segment2, bool considerTouch = true){
+        return boost::polygon::intersects(segment1, segment2, considerTouch);
+    }
+}
 #endif  // #define __SEGMENT_H__

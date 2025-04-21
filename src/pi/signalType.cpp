@@ -23,6 +23,7 @@
 #include <string>
 #include <ostream>
 #include <unordered_map>
+#include <algorithm>
 
 // 2. Boost Library:
 
@@ -37,7 +38,7 @@ SignalType convertToSignalType (const std::string &str){
     
     // Convert to uppercase for case-insensitive comparison
     std::string input = str;
-    std::transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
+    transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
 
     // Remove prefix if exists
     std::string prefix1 = "SIGNALTYPE::";

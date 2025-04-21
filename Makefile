@@ -19,12 +19,14 @@ CBC_LIB_PATH =  /opt/homebrew/opt/cbc/lib #Cbc library file
 CBCDEP_LIB_PATH =  /opt/homebrew/lib/
 CBC_LINKS = -lCbc -lCbcSolver -lOsiClp -lClp -lCoinUtils -lOsi #Cbc link libraries
 
+OPENMP_OPT = -fopenmp
 
-# CXX = /usr/bin/g++
-CXX = g++
-FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(CADICAL_HEADER_PATH) -I$(CBC_LIB_INCLUDE) -I$(CBCDEP_COINUTILS_INCLUDE) -I$(CBCDEP_OSI_INCLUDE) -I$(CBCDEP_CLP_INCLUDE)
+
+CXX = /opt/homebrew/bin/g++-14
+# CXX = g++
 OPTFLAGS = -O3
-LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(CADICAL_LIB_PATH) -L$(CBC_LIB_PATH) -L$(CBCDEP_LIB_PATH) -lm -lflute -lcadical $(CBC_LINKS)
+FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) $(OPENMP_OPT) -D_Alignof=alignof
+LINKFLAGS = -L$(FLUTE_LIB_PATH) -lm -lflute
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o orderedSegment.o \
@@ -46,7 +48,7 @@ pwrx: $(OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -o $(BINPATH)/$@
 
 $(OBJPATH)/main.o: $(SRCPATH)/main.cpp 
-	$(CXX) $(FLAGS) $(OPTFLAGS) -c -DCOMPILETIME="\"`date`\"" $^ -o $@
+	$(CXX) $(FLAGS) $(OPTFLAGS) -c -DCOMPILETIME="\"`date`\""  $^ -o $@
 
 $(OBJPATH)/%.o: $(SRCPATH)/%.cpp $(SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(OPTFLAGS) -c $< -o $@

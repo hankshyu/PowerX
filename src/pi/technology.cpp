@@ -24,7 +24,7 @@
 #include <regex>
 #include <fstream>
 #include <algorithm>
-
+#include <cmath>
 
 // 2. Boost Library:
 
@@ -404,8 +404,9 @@ Technology::Technology(const std::string &filePath){
             m_PermitivityOfFreeSpace = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
 
         }else if(key == "PERMITIVITY_OF_DIELECTRIC"){
-            if((stdUnit != unit) || (magnitude_map.find(magnitude) == magnitude_map.end())){
-                std::cout << "[PowerX:TchParser] Unmatch unit for PERMITIVITY_OF_DIELECTRIC: " << magnitude << unit << std::endl;
+            
+            if(!unit.empty()){
+                std::cout << "[PowerX:TchParser] Unmatch unit for PERMITIVITY_OF_DIELECTRIC: " << unit << std::endl;
                 continue;
             }
             m_PermitivityOfDielectric = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));

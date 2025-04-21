@@ -21,6 +21,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 
+
+
 #ifndef __VORONOIPDNGEN_H__
 #define __VORONOIPDNGEN_H__
 
@@ -53,8 +55,10 @@ struct VNode{
 
 };
 
-
 class VoronoiPDNGen: public PowerGrid{
+private:
+    const char *WIRELENGTH_VECTOR_FILE = "./lib/flute/POWV9.dat";
+    const char *ROUTING_TREE_FILE = "./lib/flute/PORT9.dat";
 
 public:
     int nodeHeight, nodeWidth;
@@ -75,8 +79,8 @@ public:
     void initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs);
     void connectLayers();
 
-    void runFLUTERouting(const std::string &wirelengthVectorFile, const std::string &RoutingTreeFile);
-
+    void runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    void ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     friend bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
     friend bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
 };

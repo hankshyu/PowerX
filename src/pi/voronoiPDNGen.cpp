@@ -24,7 +24,11 @@
 // Dependencies
 // 1. C++ STL:
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <queue>
 // 2. Boost Library:
+#include "boost/polygon/polygon.hpp"
 
 // 3. Texo Library:
 #include "units.hpp"
@@ -34,19 +38,20 @@
 #include "voronoiPDNGen.hpp"
 
 // 4. Cadical SAT solver
-#include "cadical.hpp"
+// #include "cadical.hpp"
 
 // 5. ILP library COIN-OR (CBC)
-#include "coin/CbcModel.hpp"
-#include "OsiClpSolverInterface.hpp"
+// #include "coin/CbcModel.hpp"
+// #include "OsiClpSolverInterface.hpp"
 
 // 6. FLUTE
 #include "flute.h"
+#include <omp.h>
 
 VoronoiPDNGen::VoronoiPDNGen(const std::string &fileName): PowerGrid(fileName) {
 
 }
-
+/*
 void VoronoiPDNGen::runSATRouting(){
     CaDiCaL::Solver solver;
 
@@ -171,7 +176,7 @@ void VoronoiPDNGen::runILPRouting(){
     }
         
 }
-
+*/
 void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs){
 
     this->nodeHeight = this->canvasHeight + 1;
@@ -333,9 +338,9 @@ void VoronoiPDNGen::connectLayers(){
     
 }
 
-void VoronoiPDNGen::runFLUTERouting(const std::string &wirelengthVectorFile, const std::string &RoutingTreeFile){
+void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     const int FLUTE_ACC = 9; // 0 ~ 9
-    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = this->m5Points.begin(); it != this->m5Points.end(); ++it){
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
         SignalType targetSig = it->first;
         int pointCount = it->second.size();
         if(pointCount == 0) continue;
@@ -346,42 +351,41 @@ void VoronoiPDNGen::runFLUTERouting(const std::string &wirelengthVectorFile, con
             yArr.push_back(c.y());
         }
 
-        Flute::FluteState *state = Flute::flute_init(wirelengthVectorFile.c_str(), RoutingTreeFile.c_str());
+        Flute::FluteState *state = Flute::flute_init(WIRELENGTH_VECTOR_FILE, ROUTING_TREE_FILE);
         Flute::Tree tree = Flute::flute(state, pointCount, xArr.data(), yArr.data(), FLUTE_ACC);
-        std::cout << targetSig << "Before: " << m5Points[targetSig].size() << std::endl;
+        // std::cout << targetSig << "Before: " << layerPoints[targetSig].size() << std::endl;
         for(int i = 0; i < tree.deg*2 - 2; ++i){
             int n = tree.branch[i].n;
             Cord c1(tree.branch[i].x, tree.branch[i].y);
             Cord c2(tree.branch[n].x, tree.branch[n].y);
+            if(c1 == c2) continue;
             bool foundc1 = false;
             bool foundc2 = false;
-            for(int j = 0; j < this->m5Points[targetSig].size(); ++j){
-                Cord m5c = m5Points[targetSig].at(j);
+            for(int j = 0; j < layerPoints[targetSig].size(); ++j){
+                Cord m5c = layerPoints[targetSig].at(j);
                 if(m5c == c1) foundc1 = true;
             }
-            for(int j = 0; j < this->m5Points[targetSig].size(); ++j){
-                Cord m5c = m5Points[targetSig].at(j);
+            for(int j = 0; j < layerPoints[targetSig].size(); ++j){
+                Cord m5c = layerPoints[targetSig].at(j);
                 if(m5c == c2) foundc2 = true;
             }
-            if(!foundc1) m5Points[targetSig].push_back(c1);
-            if(!foundc2) m5Points[targetSig].push_back(c2);
+            if(!foundc1) layerPoints[targetSig].push_back(c1);
+            if(!foundc2) layerPoints[targetSig].push_back(c2);
 
             OrderedSegment newos(c1, c2);
             bool foundos = false;
-            for(OrderedSegment os : m5Segments[targetSig]){
+            for(OrderedSegment os : layerSegments[targetSig]){
                 if(os == newos) foundos = true;
             }
-            if(!foundos) m5Segments[targetSig].push_back(newos);
-
+            if(!foundos) layerSegments[targetSig].push_back(newos);
 
         }
 
-        std::cout << "after: " << m5Points[targetSig].size() << std::endl;
-        std::cout << "segs: " << m5Segments[targetSig].size() << std::endl; 
+        // std::cout << "after: " << layerPoints[targetSig].size() << std::endl;
+        // std::cout << "segs: " << layerSegments[targetSig].size() << std::endl; 
 
-        std::cout << "Wirelength: " << tree.length << std::endl;
-        // Print branches
-        std::cout << "Branches:" << std::endl;
+        // std::cout << "Wirelength: " << tree.length << std::endl;
+        // std::cout << "Branches:" << std::endl;
         // for (int i = 0; i < tree.deg * 2 - 2; ++i) {
         //     int n = tree.branch[i].n;
         //     std::cout << "Branch " << i << " at (" << tree.branch[i].x << ", " << tree.branch[i].y << ") "
@@ -395,4 +399,211 @@ void VoronoiPDNGen::runFLUTERouting(const std::string &wirelengthVectorFile, con
     }
 }
 
+void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    std::vector<std::pair<OrderedSegment, OrderedSegment>> rerouteSegmentArr;
+    std::unordered_map<OrderedSegment, SignalType> allSegmentMap;
+
+    // fill all Segments
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = layerSegments.begin(); cit != layerSegments.end(); ++cit){
+        for(const OrderedSegment &os : cit->second){
+            allSegmentMap[os] = cit->first;
+        }
+    }
+
+    // run segment intersect checking
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator lsit = layerSegments.begin(); lsit != layerSegments.end(); ++lsit){
+        for(OrderedSegment os : lsit->second){
+            for(std::unordered_map<OrderedSegment, SignalType>::iterator it = allSegmentMap.begin(); it != allSegmentMap.end(); ++it){
+                if(lsit->first == it->second) continue;
+                OrderedSegment cos = it->first;
+                if (os == cos) continue;
+                if(seg::intersects(os, cos) ){
+                    rerouteSegmentArr.push_back(std::pair<OrderedSegment, OrderedSegment>(os, cos));
+                }
+            }
+        }
+    }
+
+    std::vector<OrderedSegment> ripArr;
+    // attempt to fix
+    while(!rerouteSegmentArr.empty()){
+        std::pair<OrderedSegment, OrderedSegment> fixPair = rerouteSegmentArr[0];
+        // copare the segment length:
+        flen_t firstLength = calEuclideanDistance(fixPair.first.getLow(), fixPair.first.getHigh());
+        flen_t secondLength = calEuclideanDistance(fixPair.second.getLow(), fixPair.second.getHigh());
+        OrderedSegment removeTarget;
+        if(firstLength > secondLength){
+            removeTarget = fixPair.first;
+        }else{
+            removeTarget = fixPair.second;
+        }
+
+        ripArr.push_back(removeTarget);
+        rerouteSegmentArr.erase(remove_if(rerouteSegmentArr.begin(), rerouteSegmentArr.end(),
+                [=](const std::pair<OrderedSegment, OrderedSegment>& p) {
+                    return p.first == removeTarget || p.second == removeTarget;
+                }
+            ),rerouteSegmentArr.end()
+        );
+    
+    }
+
+    // remove OrderedSegment from the layerSegments
+    for(OrderedSegment dos : ripArr){
+        for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
+            it->second.erase(std::remove(it->second.begin(), it->second.end(), dos), it->second.end());
+        }
+    }
+
+    // sort the ripArr according to wirelength
+    std::sort(ripArr.begin(), ripArr.end(), [](OrderedSegment os1, OrderedSegment os2){
+        return calEuclideanDistance(os1.getLow(), os1.getHigh()) < calEuclideanDistance(os2.getLow(), os2.getHigh());
+    });
+
+    for(const OrderedSegment &cos : ripArr){
+
+        SignalType cosSt = allSegmentMap[cos];
+        Cord start(cos.getLow());
+        Cord goal(cos.getHigh());
+        std::cout << "Attempt BFS Routing From " << start << " -> " << goal << "of type: " << cosSt << std::endl;
+
+        std::vector<std::vector<int>> nodeStat(this->nodeHeight, std::vector<int>(this->nodeWidth, 0));
+        
+        using P45Data = boost::polygon::polygon_45_data<len_t>;
+        std::vector<P45Data> blockingObjects;
+        std::vector<Segment> blockingSegs;
+
+
+        for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = layerSegments.begin(); cit != layerSegments.end(); ++cit){
+            if(cit->first == cosSt) continue;
+            for(const OrderedSegment &cbos : cit->second){
+                Cord c1(cbos.getLow());
+                Cord c2(cbos.getHigh());
+                std::vector<Cord> windings;
+
+                if(c1.x() == c2.x()){
+                    if(c1.y() > c2.y()) std::swap(c1, c2);
+                    windings = {Cord(c2.x()-1, c2.y()+1), Cord(c2.x()+1, c2.y()+1), Cord(c1.x()+1, c1.y()-1), Cord(c1.x()-1, c1.y()-1)};
+                }else{
+                    if(c1.x() > c2.x()) std::swap(c1, c2);
+                    if(c1.y() > c2.y()){
+                        windings = {
+                            Cord(c1.x()-1, c1.y()-1), Cord(c1.x()-1, c1.y()+1), Cord(c1.x()+1, c1.y()+1),
+                            Cord(c2.x()+1, c2.y()+1), Cord(c2.x()+1, c2.y()-1), Cord(c2.x()-1, c2.y()-1)
+                        };
+                    }else if(c1.y() < c2.y()){
+                        windings = {
+                            Cord(c1.x()+1, c1.y()-1), Cord(c1.x()-1, c1.y()-1), Cord(c1.x()-1, c1.y()+1),
+                            Cord(c2.x()-1, c2.y()+1), Cord(c2.x()+1, c2.y()+1), Cord(c2.x()+1, c2.y()-1)
+                        };
+                    }else{ // c1.y() == c2.y()
+                        windings = {Cord(c1.x()-1, c1.y()+1), Cord(c2.x()+1, c2.y()+1), Cord(c2.x()+1, c2.y()-1), Cord(c1.x()-1, c1.y()-1)};
+                    }
+                }
+
+                blockingObjects.emplace_back(P45Data(windings.begin(), windings.end()));
+                for(int i = 0; i < windings.size(); ++i){
+                    blockingSegs.emplace_back(Segment(windings[i], windings[(i+1)%windings.size()]));
+                    }
+            }
+        }
+
+        for(int j = 0; j < this->nodeHeight; ++j){
+            for(int i = 0; i < this->nodeWidth; ++i){
+                Cord c(i, j);
+                for(const P45Data &dt : blockingObjects){
+                    if(boost::polygon::contains(dt, c)){
+                        nodeStat[j][i] = 9;
+                        break;
+                    } 
+                }
+            }
+        }
+
+        // Start Routing uisng BFS
+        // 9: blockages, 1 visited
+        std::unordered_map<Cord, Cord> prev;
+        std::unordered_map<Cord, int> cost;
+        auto comp = [&](const Cord &a, const Cord &b){
+            return (cost[a]+calEuclideanDistance(a, goal)) > (cost[b]+calEuclideanDistance(b, goal));
+        };
+
+        std::priority_queue<Cord, std::vector<Cord>, decltype(comp)> q(comp);
+
+        cost[start] = 0;
+        q.push(start);
+        nodeStat[start.y()][start.x()] = 1;
+        while(!q.empty()){
+            Cord curr = q.top();
+            q.pop();
+
+            if(curr == goal) break;
+            std::vector<Cord>neighbors;
+
+            std::vector<Cord> candidates;
+            #pragma omp parallel
+            {
+                std::vector<Cord> local_candidates;
+                #pragma omp for nowait
+                for(int j = 0; j < this->nodeHeight; ++j){
+                    for(int i = 0; i < this->nodeWidth; ++i){
+                        if(nodeStat[j][i] != 0) continue;
+                        Cord cand(i, j);
+                        Segment candSeg(curr, cand);
+                        bool intersects = false;
+                        for(const Segment &sg : blockingSegs){
+                            if(seg::intersects(candSeg, sg)){
+                                intersects = true;
+                                break;
+                            }
+                        }
+                        if(!intersects){
+                            local_candidates.push_back(cand);
+                        }
+                    }
+                }
+            
+                #pragma omp critical
+                candidates.insert(candidates.end(), local_candidates.begin(), local_candidates.end());
+            }
+            // sequential section: update shared structures
+            for (const Cord& cand : candidates) {
+                int x = cand.x(), y = cand.y();
+                if (nodeStat[y][x] == 0) {
+                    nodeStat[y][x] = 1;
+                    prev[cand] = curr;
+                    cost[cand] = cost[curr] + calManhattanDistance(cand, curr);
+                    q.push(cand);
+                }
+            }
+
+            // std::cout << "Done " << curr << std::endl;
+        }
+
+        std::cout << "Finish Routing!" << std::endl;
+        assert(nodeStat[goal.y()][goal.x()] != 0);
+        std::vector<Cord> path;
+
+        for(Cord at = goal; at != start; at = prev[at]){
+            path.push_back(at);
+        }
+        path.push_back(start);
+        std::reverse(path.begin(), path.end());
+        std::cout << "Path: ";
+        for(Cord &c : path){
+            std::cout <<  c << " ";
+        }
+        std::cout << std::endl;
+        // add points
+        for(int i = 1; i < path.size()-1; ++i){
+            layerPoints[cosSt].push_back(path[i]);
+        }
+        // add paths
+        for(int i = 0; i < path.size()-1; ++i){
+            layerSegments[cosSt].push_back(OrderedSegment(path[i], path[i+1]));
+        }
+
+    }
+
+}
 
