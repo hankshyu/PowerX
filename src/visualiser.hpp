@@ -57,7 +57,11 @@ bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overla
 bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
 bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump = false, bool overlayM7C4 = false);
 
-bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
-bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
+bool visualiseM7voronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
 
 #endif // __VISUALIZER_H__

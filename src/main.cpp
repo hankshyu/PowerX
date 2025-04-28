@@ -17,6 +17,7 @@
 #include "voronoiPDNGen.hpp"
 
 
+
 // #include "doughnutPolygon.hpp"
 
 
@@ -41,24 +42,61 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor (technology);
 
 
-    timeProfiler.startTimer("Test ILP");
+    timeProfiler.startTimer("Voronoi Diagram Based P/G");
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
     vpg.initPoints({SignalType::GROUND, SignalType::SIGNAL}, {SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
     vpg.connectLayers();
 
-    vpg.runFLUTERouting(vpg.m5Points, vpg.m5Segments);
-    vpg.runFLUTERouting(vpg.m7Points, vpg.m7Segments);
+    // vpg.runFLUTERouting(vpg.m5Points, vpg.m5Segments);
+    // vpg.runFLUTERouting(vpg.m7Points, vpg.m7Segments);
+    
+    vpg.runMSTRouting(vpg.m5Points, vpg.m5Segments);
+    vpg.runMSTRouting(vpg.m7Points, vpg.m7Segments);
+
 
     vpg.ripAndReroute(vpg.m5Points, vpg.m5Segments);
     vpg.ripAndReroute(vpg.m7Points, vpg.m7Segments);
 
+
     vpg.generateInitialPowerPlane(vpg.m5Points, vpg.m5Segments);
     vpg.generateInitialPowerPlane(vpg.m7Points, vpg.m7Segments);
 
-    visualiseM5VoronoiPoints(vpg, "outputs/m5.ps");
-    visualiseM7VoronoiPoints(vpg, "outputs/m7.ps");
     
-    timeProfiler.pauseTimer("Test ILP");
+    vpg.generateVoronoiDiagram(vpg.m5Points, vpg.m5VoronoiCells);
+    vpg.generateVoronoiDiagram(vpg.m7Points, vpg.m7VoronoiCells);
+
+    vpg.mergeVoronoiCells(vpg.m5Points, vpg.m5VoronoiCells, vpg.m5MultiPolygons);
+    vpg.mergeVoronoiCells(vpg.m7Points, vpg.m7VoronoiCells, vpg.m7MultiPolygons);
+
+    // visualiseM5VoronoiGraph(vpg, "outputs/m5graph.psg");
+    // visualiseM7VoronoiGraph(vpg, "outputs/m7graph.psg");
+
+    vpg.enhanceCrossLayerPI(vpg.m5MultiPolygons, vpg.m7MultiPolygons);
+
+    // visualiseM5VoronoiPolygons(vpg, "outputs/m5polygon.polg");
+    // visualiseM7VoronoiPolygons(vpg, "outputs/m7polygon.polg");
+
+    vpg.exportToCanvas(vpg.canvasM5, vpg.m5MultiPolygons);
+    vpg.insertPinPads(vpg.uBump, vpg.canvasM5, vpg.defulatM5SigPadMap);
+
+    vpg.exportToCanvas(vpg.canvasM7, vpg.m7MultiPolygons);
+    vpg.insertPinPads(vpg.c4, vpg.canvasM7, vpg.defulatM7SigPadMap);
+
+    vpg.fixIsolatedCells(vpg.canvasM5, {});
+    vpg.fixIsolatedCells(vpg.canvasM7, {SignalType::OBSTACLE});
+
+    visualisePGM5(vpg, "outputs/rocket64_m5.m5",false, true, false);
+    visualisePGM7(vpg, "outputs/rocket64_m7.m7",false, false, true);
+
+
+
+
+    // visualiseM5VoronoiPointsSegments(vpg, "outputs/m5.ps");
+    // visualiseM7VoronoiPointsSegments(vpg, "outputs/m7.ps");
+
+
+    timeProfiler.pauseTimer("Voronoi Diagram Based P/G");
+
 
 
     /*
@@ -92,7 +130,8 @@ int main(int argc, char const *argv[]){
 
 
     timeProfiler.printTimingReport();
- 
+
+   
 }
 
 void printWelcomeBanner(){

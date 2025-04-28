@@ -28,8 +28,15 @@
 #include <unordered_set>
 #include <queue>
 #include <stack>
+#include <memory>
+#include <assert.h>
+#include <omp.h> // parallel computing
+
 // 2. Boost Library:
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/prim_minimum_spanning_tree.hpp>
 #include "boost/polygon/polygon.hpp"
+#include "boost/geometry.hpp"
 
 // 3. Texo Library:
 #include "units.hpp"
@@ -38,16 +45,18 @@
 #include "orderedSegment.hpp"
 #include "voronoiPDNGen.hpp"
 
-// 4. Cadical SAT solver
-// #include "cadical.hpp"
-
-// 5. ILP library COIN-OR (CBC)
-// #include "coin/CbcModel.hpp"
-// #include "OsiClpSolverInterface.hpp"
-
-// 6. FLUTE
+// 4. FLUTE
 #include "flute.h"
-#include <omp.h>
+
+// 5.GEOS
+#define USE_UNSTABLE_GEOS_CPP_API  // Suppress GEOS C++ warning
+#include "geos/geom/Coordinate.h"
+#include "geos/geom/Envelope.h"
+#include "geos/geom/GeometryFactory.h"
+#include "geos/geom/Point.h"
+#include "geos/geom/Geometry.h"
+#include "geos/geom/MultiPoint.h"
+#include "geos/triangulate/VoronoiDiagramBuilder.h"
 
 VoronoiPDNGen::VoronoiPDNGen(const std::string &fileName): PowerGrid(fileName) {
 
@@ -178,6 +187,7 @@ void VoronoiPDNGen::runILPRouting(){
         
 }
 */
+
 void VoronoiPDNGen::initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs){
 
     this->nodeHeight = this->canvasHeight + 1;
@@ -400,6 +410,64 @@ void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<C
     }
 }
 
+void VoronoiPDNGen::runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
+        SignalType targetSig = it->first;
+        int pointCount = it->second.size();
+        if(pointCount == 0) continue;
+        
+        std::vector <Cord> pinsVector(it->second.begin(), it->second.end());
+
+
+        typedef boost::adjacency_list<
+            boost::vecS, 
+            boost::vecS, 
+            boost::undirectedS, 
+            boost::no_property, 
+            boost::property<boost::edge_weight_t, int>> Graph;
+        typedef boost::graph_traits<Graph>::vertex_descriptor Vertex;
+
+        Graph graph(pinsVector.size());
+        for(int i = 0; i < pinsVector.size() - 1; ++i){
+            for(int j = i+1; j < pinsVector.size(); ++j){
+                add_edge(i, j, calManhattanDistance(pinsVector[i], pinsVector[j]), graph);
+            }
+        }
+
+        std::vector<Vertex> p(num_vertices(graph));
+        prim_minimum_spanning_tree(graph, &p[0]);
+
+        for (std::size_t i = 0; i != p.size(); ++i){
+            if (p[i] == i) continue;
+
+            Cord c1 = pinsVector[i];
+            Cord c2 = pinsVector[p[i]];
+            assert(c1 != c2);
+
+            if(c1 == c2) continue;
+            bool foundc1 = false;
+            bool foundc2 = false;
+            for(int j = 0; j < layerPoints[targetSig].size(); ++j){
+                Cord m5c = layerPoints[targetSig].at(j);
+                if(m5c == c1) foundc1 = true;
+            }
+            for(int j = 0; j < layerPoints[targetSig].size(); ++j){
+                Cord m5c = layerPoints[targetSig].at(j);
+                if(m5c == c2) foundc2 = true;
+            }
+            if(!foundc1) layerPoints[targetSig].push_back(c1);
+            if(!foundc2) layerPoints[targetSig].push_back(c2);
+
+            OrderedSegment newos(c1, c2);
+            bool foundos = false;
+            for(OrderedSegment os : layerSegments[targetSig]){
+                if(os == newos) foundos = true;
+            }
+            if(!foundos) layerSegments[targetSig].push_back(newos);
+        }
+    }
+}
+
 void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     std::vector<std::pair<OrderedSegment, OrderedSegment>> rerouteSegmentArr;
     std::unordered_map<OrderedSegment, SignalType> allSegmentMap;
@@ -424,6 +492,8 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             }
         }
     }
+
+    
 
     std::vector<OrderedSegment> ripArr;
     // attempt to fix
@@ -605,7 +675,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         }
 
     }
-
+    fixRepeatedPoints(layerPoints);
 }
 
 void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
@@ -710,5 +780,429 @@ void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std
         }
     }
 
+    fixRepeatedPoints(layerPoints);
 }
 
+void VoronoiPDNGen::fixRepeatedPoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints){
+    std::unordered_map<Cord, SignalType> table;
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
+        SignalType st = it->first;
+        for(const Cord &cord : it->second){
+            std::unordered_map<Cord, SignalType>::iterator fit = table.find(cord);
+            if(fit != table.end()){
+                assert(fit->second == st);
+            }else{
+                table[cord] = st;
+            }
+        }
+    }
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
+        it->second.clear();
+    }
+    for(std::unordered_map<Cord, SignalType>::const_iterator cit = table.begin(); cit != table.end(); ++cit){
+        layerPoints[cit->second].push_back(cit->first);
+    }
+    
+}
+
+void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells){
+    
+    std::vector<Cord> voronoiCentres;
+    std::vector<SignalType> voronoiCentreSignalTypes;
+    std::vector<std::vector<FCord>> allWindings;
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = layerPoints.begin(); cit != layerPoints.end(); ++cit){
+        for(const Cord &c : cit->second){
+            voronoiCentres.push_back(c);
+            voronoiCentreSignalTypes.push_back(cit->first);
+        }
+    }
+
+    using namespace geos::geom;
+    using geos::triangulate::VoronoiDiagramBuilder;
+
+    // Input coordinates
+    std::vector<Coordinate> inputSites;
+    for(int i = 0; i < voronoiCentres.size(); ++i){
+        inputSites.push_back(Coordinate(voronoiCentres[i].x(), voronoiCentres[i].y()));
+    }
+
+    const GeometryFactory* factory = GeometryFactory::getDefaultInstance();
+    auto coordSeq = std::make_unique<CoordinateSequence>();
+    for (const Coordinate& c : inputSites) {
+        coordSeq->add(c);
+    }
+
+    // Create MultiPoint from CoordinateSequence
+    std::unique_ptr<Geometry> multipoint = factory->createMultiPoint(*coordSeq);
+
+    // Bounding box
+    Envelope clipEnv(0, this->nodeWidth - 1, 0, this->nodeHeight-1);
+    std::unique_ptr<Geometry> canvas = factory->toGeometry(&clipEnv);
+
+    // Build Voronoi
+    VoronoiDiagramBuilder builder;
+    builder.setSites(*multipoint);
+    builder.setClipEnvelope(&clipEnv);
+    std::unique_ptr<Geometry> diagram = builder.getDiagram(*factory);
+
+    // Extract and display each clipped Voronoi cell
+    for (std::size_t i = 0; i < diagram->getNumGeometries(); ++i) {
+        const Geometry* cell = diagram->getGeometryN(i);
+
+        // Clip to bounding box
+        std::unique_ptr<Geometry> clipped = cell->intersection(canvas.get());
+        if (clipped->isEmpty()) continue;
+
+        const Polygon* poly = dynamic_cast<const Polygon*>(clipped.get());
+        if (!poly) continue;
+
+        // Get the site (input point) this cell corresponds to
+        const Geometry* siteGeom = multipoint->getGeometryN(i);
+        const CoordinateXY* coordPtr = siteGeom->getCoordinate();
+        if(!coordPtr) continue;
+
+
+        // Extract exterior ring points into a vector
+        std::unique_ptr<CoordinateSequence> ring = poly->getExteriorRing()->getCoordinates();
+        std::vector<FCord> windingVector;
+        for (std::size_t j = 0; j < ring->getSize(); ++j) {
+            Coordinate tmpc = ring->getAt(j);
+            windingVector.push_back(FCord(tmpc.x, tmpc.y));
+        }
+
+
+        allWindings.push_back(windingVector);
+    }
+
+    // start linking voronoi cells to its centre point
+
+    for(int i = 0; i < allWindings.size(); ++i){
+        std::vector<FCord> winding = allWindings[i];
+        FPGMPolygon poly;
+        for(const FCord &fc : winding){
+            boost::geometry::append(poly, FPGMPoint(fc.x(), fc.y()));
+        }
+        boost::geometry::correct(poly);
+        bool foundcentre = false;
+        for(const Cord &c :voronoiCentres){
+            FPGMPoint inside(flen_t(c.x()), flen_t(c.y()));
+            if(boost::geometry::within(inside, poly)){
+                assert(!foundcentre);
+                foundcentre = true;
+                voronoiCells[c] = winding;
+            }
+        }
+        assert(foundcentre);
+        // if(!foundcentre) std::cout << "No centre found for !" << i << std::endl;
+    }
+}
+
+void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap){
+    // merge polygons
+
+    auto printFPGMMultiPolygon = [&](const FPGMMultiPolygon &mp){
+        std::cout << "MultiPolygon has " << mp.size() << " piece(s)\n";
+
+        for (size_t i = 0; i < mp.size(); ++i) {
+            const FPGMPolygon& poly = mp[i];
+    
+            // Print exterior ring
+            const auto& exterior = poly.outer();
+            std::cout << "\nPiece #" << i << ": Exterior contour with "
+                      << exterior.size() << " point(s):\n";
+            // for (const auto& pt : exterior) {
+            //     std::cout << std::fixed << std::setprecision(3)
+            //               << "  (" << boost::geometry::get<0>(pt)
+            //               << ", " << boost::geometry::get<1>(pt) << ")\n";
+            // }
+    
+            // Print interior rings (holes)
+            const auto& holes = poly.inners();
+            std::cout << "  " << holes.size() << " hole(s):\n";
+            // for (size_t h = 0; h < holes.size(); ++h) {
+            //     std::cout << "    Hole #" << h << " with " << holes[h].size() << " point(s):\n";
+            //     for (const auto& pt : holes[h]) {
+            //         std::cout << std::fixed << std::setprecision(3)
+            //                   << "      (" << boost::geometry::get<0>(pt)
+            //                   << ", " << boost::geometry::get<1>(pt) << ")\n";
+            //     }
+            // }
+        }
+    };
+
+
+    std::vector<SignalType> allSignalTypes;
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = layerPoints.begin(); cit != layerPoints.end(); ++cit){
+        allSignalTypes.push_back(cit->first);
+    }
+
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cordit = layerPoints.begin(); cordit != layerPoints.end(); ++cordit){
+        SignalType rst = cordit->first;
+        FPGMMultiPolygon merged;
+        for(const Cord &voronoiMidCords : cordit->second){
+            std::unordered_map<Cord, std::vector<FCord>>::iterator vcmit = voronoiCellMap.find(voronoiMidCords);
+            if(vcmit == voronoiCellMap.end()) continue;
+
+            FPGMPolygon voronoiPoly;
+            for(const FCord &fc : vcmit->second){
+                boost::geometry::append(voronoiPoly, FPGMPoint(fc.x(), fc.y()));
+            }
+            boost::geometry::correct(voronoiPoly);
+            FPGMMultiPolygon tmp; 
+            boost::geometry::union_(merged, voronoiPoly, tmp);
+            merged = std::move(tmp);
+        }
+
+        multiPolygonMap[rst]= merged;
+    }
+
+    // for(const SignalType rst : allSignalTypes){
+    //     FPGMMultiPolygon fpmp = multiPolygonMap[rst];
+    //     std::cout << rst << std::endl;
+    //     printFPGMMultiPolygon(fpmp);
+    // }
+
+
+}
+
+void VoronoiPDNGen::enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &m7PolygonMap){
+    
+    auto calculateSignalArea = [&]() -> std::unordered_map<SignalType, farea_t> {
+        
+        std::unordered_map<SignalType, farea_t> sigToArea;
+        for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = m5PolygonMap.begin(); cit != m5PolygonMap.end(); ++cit){
+            
+            farea_t area = boost::geometry::area(cit->second);
+            if(sigToArea.find(cit->first) == sigToArea.end()) sigToArea[cit->first] = area;
+            else sigToArea[cit->first] += area;
+        }
+
+        for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = m7PolygonMap.begin(); cit != m7PolygonMap.end(); ++cit){
+            
+            farea_t area = boost::geometry::area(cit->second);
+            if(sigToArea.find(cit->first) == sigToArea.end()) sigToArea[cit->first] = area;
+            else sigToArea[cit->first] += area;
+        }
+
+        return sigToArea;
+
+    };
+    
+    std::unordered_set<SignalType> allSignalSet;
+    for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = m5PolygonMap.begin(); cit != m5PolygonMap.end(); ++cit){
+        allSignalSet.insert(cit->first);
+    }
+    for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = m7PolygonMap.begin(); cit != m7PolygonMap.end(); ++cit){
+        allSignalSet.insert(cit->first);
+    }
+    std::vector<SignalType> allSignalIdx(allSignalSet.begin(), allSignalSet.end());
+    
+    for(int upidx = 0; upidx < allSignalIdx.size(); ++upidx){
+        for(int dnidx = 0; dnidx < allSignalIdx.size(); ++dnidx){
+            if(upidx == dnidx) continue;
+            SignalType upSigType = allSignalIdx[upidx];
+            SignalType dnSigType = allSignalIdx[dnidx];
+
+            std::unordered_map<SignalType, FPGMMultiPolygon>::iterator it5 = m5PolygonMap.find(upSigType);
+            if(it5 == m5PolygonMap.end()) continue;
+            FPGMMultiPolygon upMP(it5->second);
+            
+
+            std::unordered_map<SignalType, FPGMMultiPolygon>::iterator it7 = m7PolygonMap.find(dnSigType);
+            if(it7 == m7PolygonMap.end()) continue;
+            FPGMMultiPolygon dnMP(it7->second);
+
+            FPGMMultiPolygon overlap;
+            boost::geometry::intersection(upMP, dnMP, overlap);
+            if(overlap.empty()) continue;
+
+            std::stack<FPGMMultiPolygon> overlapPieces;
+            for (FPGMPolygon const &singlePolygon : overlap) {
+                FPGMMultiPolygon onePiece;
+                onePiece.push_back(singlePolygon);
+                overlapPieces.push(onePiece);
+            }
+            
+            while(!overlapPieces.empty()){
+                FPGMMultiPolygon targetPiece(overlapPieces.top());
+                FPGMMultiPolygon targetPiece2(overlapPieces.top());
+                overlapPieces.pop();
+
+                std::unordered_map<SignalType, farea_t> areaReport =  calculateSignalArea();
+                
+                if(areaReport[upSigType] < areaReport[dnSigType]){
+                    // attempt to paint the overlap area at the M7 layer from dnSigType to upSigType
+                    // 1. check whether it will disconnect the doner
+                    // 2. check if the added overlap area would introduce discontinuity to donee
+                    
+                    FPGMMultiPolygon expFrom(m7PolygonMap[dnSigType]);
+                    FPGMMultiPolygon expTo;
+                    if(m7PolygonMap.find(upSigType) != m7PolygonMap.end()){
+                        expTo = m7PolygonMap[upSigType];
+                    }
+                    FPGMMultiPolygon expFromResult;
+                    FPGMMultiPolygon expToResult;
+
+                    boost::geometry::difference(expFrom, targetPiece, expFromResult);
+                    boost::geometry::union_(expTo, targetPiece, expToResult);
+    
+                    if((expFromResult.size() == 1) && (expToResult.size() == 1)){
+                        // safe to transfer, execute
+                        m7PolygonMap[dnSigType] = expFromResult;
+                        m7PolygonMap[upSigType] = expToResult;
+                        continue;
+                    }
+                }
+                
+                // attempt to print the overlap area at the M5 layer from upSigType to dnSigType
+                FPGMMultiPolygon expFrom(m5PolygonMap[upSigType]);
+                FPGMMultiPolygon expTo;
+                if(m5PolygonMap.find(dnSigType) != m5PolygonMap.end()){
+                    expTo = m5PolygonMap[dnSigType];
+                }
+
+                FPGMMultiPolygon expFromResult;
+                FPGMMultiPolygon expToResult;
+
+                boost::geometry::difference(expFrom, targetPiece2, expFromResult);
+                boost::geometry::union_(expTo, targetPiece2, expToResult);
+
+                if((expFromResult.size() == 1) && (expToResult.size() == 1)){
+                    // safe to transfer, execute
+                    m5PolygonMap[upSigType] = expFromResult;
+                    m5PolygonMap[dnSigType] = expToResult;
+                }
+            }
+        }
+
+    }
+
+}
+
+void VoronoiPDNGen::exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon){
+    // std::cout << "Export: " << std::endl;
+    // std::cout << this->nodeWidth << " " << this->nodeHeight << std::endl;
+    // std::cout << this->canvasWidth << " " << this->canvasHeight << std::endl;
+    std::vector<SignalType> allSigType;
+    std::vector<FPGMMultiPolygon> allSigPolygon;
+    for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = signalPolygon.begin(); cit != signalPolygon.end(); ++cit){
+        allSigType.push_back(cit->first);
+        allSigPolygon.push_back(FPGMMultiPolygon(cit->second));
+    }
+
+    for(int canvasJ = 0; canvasJ < canvasHeight; ++canvasJ){
+        for(int canvasI = 0; canvasI < canvasWidth; ++canvasI){
+            std::vector<farea_t> signalOverlapArea(allSigType.size(), 0);
+            std::vector<FPGMMultiPolygon> polygons = allSigPolygon;
+            FPGMPolygon unitBox;
+            boost::geometry::append(unitBox, FPGMPoint(canvasI, canvasJ));
+            boost::geometry::append(unitBox, FPGMPoint(canvasI+1, canvasJ));
+            boost::geometry::append(unitBox, FPGMPoint(canvasI+1, canvasJ+1));
+            boost::geometry::append(unitBox, FPGMPoint(canvasI, canvasJ+1));
+            boost::geometry::append(unitBox, FPGMPoint(canvasI, canvasJ));
+            boost::geometry::correct(unitBox);
+            // FPGMMultiPolygon MunitBox;
+
+
+            std::vector<FPGMMultiPolygon> unitBoxes(allSigType.size(), FPGMMultiPolygon({unitBox}));
+            std::vector<FPGMMultiPolygon> resultPolygon(allSigType.size(), FPGMMultiPolygon());
+            for(int i = 0; i < allSigType.size(); ++i){
+                boost::geometry::intersection(polygons[i], unitBoxes[i], resultPolygon[i]);
+                signalOverlapArea[i] = boost::geometry::area(resultPolygon[i]);
+                // std::cout << i << " " << signalOverlapArea[i];
+            }
+            int largestIdx = 0;
+            farea_t largestVal = FAREA_T_MIN;
+            for(int i = 0; i < allSigType.size(); ++i){
+                if(signalOverlapArea[i] > largestVal){
+                    largestVal = signalOverlapArea[i];
+                    largestIdx = i;
+                }
+            }
+
+            canvas[canvasJ][canvasI] = allSigType[largestIdx];
+        }
+    }
+}
+
+void VoronoiPDNGen::fixIsolatedCells(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &obstacles){
+   
+    const int dx[4] = {-1, 1, 0, 0};
+    const int dy[4] = {0, 0, -1, 1};
+    
+    std::vector<std::vector<int>> clusterArr;
+    std::unordered_map<SignalType, std::vector<int>> labeling;
+    runClustering(canvas, clusterArr, labeling);
+
+    std::unordered_map<int, area_t> labelArea;
+    for(int j = 0; j < clusterArr.size(); ++j){
+        for(int i = 0; i < clusterArr[0].size(); ++i){
+            int label = clusterArr[j][i];
+            if(labelArea.find(label) != labelArea.end()){
+                labelArea[label]++;
+            }else{
+                labelArea[label] = 1;
+            }
+        }
+    }
+    // std::cout << "Label Area: " << std::endl;
+    // for(auto at : labelArea){
+    //     std::cout << at.first << ": " << at.second << std::endl;
+    // }
+    
+    for(std::unordered_map<SignalType, std::vector<int>>::iterator it = labeling.begin(); it != labeling.end(); ++it){
+        if(obstacles.count(it->first) == 1) continue;
+        if(it->second.size() <= 1) continue;
+        SignalType fixingSignalType = it->first;
+        std::sort(it->second.begin(), it->second.end(), [&](int x, int y){return labelArea[x] > labelArea[y];});
+
+        for(int fixclusterIdx = 1; fixclusterIdx < it->second.size(); ++fixclusterIdx){
+            // collect the coordinates
+            int toFixIdx = it->second[fixclusterIdx];
+            std::vector<Cord> toFix;
+            for(int canvasJ = 0; canvasJ < clusterArr.size(); ++canvasJ){
+                for(int canvasI = 0; canvasI < clusterArr[0].size(); ++ canvasI){
+                    if(clusterArr[canvasJ][canvasI] == toFixIdx) toFix.push_back(Cord(canvasI, canvasJ));
+                }
+            }
+
+            for(const Cord &c : toFix){
+                std::unordered_map<SignalType, int> sigTypeCounter;
+                for(int didx = 0; didx < 4; ++didx){
+                    int newX = c.x() + dx[didx];
+                    int newY = c.y() + dy[didx];
+                    if ((newX > 0) && (newX < canvas[0].size()) && (newY > 0) && (newY < canvas.size())){
+                        SignalType st = canvas[newY][newX];
+                        if((st == fixingSignalType) || (obstacles.count(st))) continue;
+                        if(sigTypeCounter.find(st) == sigTypeCounter.end()) sigTypeCounter[st] = 1;
+                        else sigTypeCounter[st]++;
+                    }
+                }
+
+                int maxsigCount = 0;
+                SignalType maxsigtype = SignalType::EMPTY;
+                for(std::unordered_map<SignalType, int>::const_iterator cit = sigTypeCounter.begin(); cit != sigTypeCounter.end(); ++cit){
+                    if(cit->second > maxsigCount){
+                        maxsigCount = cit->second;
+                        maxsigtype = cit->first;
+                    }
+                }
+                // std::cout << c << ": " << maxsigtype << std::endl;
+
+                canvas[c.y()][c.x()] = maxsigtype;
+            }
+        }
+    }
+
+    // for(auto at : labeling){
+    //     std::cout << at.first << ": ";
+    //     for(auto lb : at.second){
+    //         std::cout << lb << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
+    // fix 
+
+
+}

@@ -20,6 +20,7 @@
 // 1. C++ STL:
 #include <cassert>
 #include <vector>
+#include <queue>
 #include <map>
 
 // 2. Boost Library:
@@ -111,6 +112,64 @@ void PowerGrid::insertPinPads(const PinMap &pm, std::vector<std::vector<SignalTy
         }
     }
 }
+
+void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label){
+    const int rows = static_cast<int>(canvas.size());
+    if (rows == 0) return;
+    const int cols = static_cast<int>(canvas[0].size());
+
+    // [NEW] Clear label map
+    label.clear();
+
+    // Resize cluster to match canvas and initialize all to -1
+    cluster.resize(rows);
+    for (std::size_t i = 0; i < cluster.size(); ++i) {
+        cluster[i].resize(cols, -1);
+    }
+
+    int currentLabel = 0;
+    
+    const int dRow[4] = {-1, 1, 0, 0};
+    const int dCol[4] = {0, 0, -1, 1};
+    
+    for (int i = 0; i < rows; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            if (cluster[i][j] != -1) continue;
+            
+            SignalType currentType = canvas[i][j];
+            
+            std::queue<std::pair<int, int>> bfsQueue;
+            bfsQueue.push(std::make_pair(i, j));
+            cluster[i][j] = currentLabel;
+            
+            while (!bfsQueue.empty()) {
+                std::pair<int, int> cell = bfsQueue.front();
+                bfsQueue.pop();
+                int x = cell.first;
+                int y = cell.second;
+                
+                for (int dir = 0; dir < 4; ++dir) {
+                    int newX = x + dRow[dir];
+                    int newY = y + dCol[dir];
+                    
+                    if (newX < 0 || newX >= rows || newY < 0 || newY >= cols)
+                        continue;
+                    if (canvas[newX][newY] != currentType)
+                        continue;
+                    if (cluster[newX][newY] != -1)
+                        continue;
+                    
+                    cluster[newX][newY] = currentLabel;
+                    bfsQueue.push(std::make_pair(newX, newY));
+                }
+            }
+            
+            label[currentType].push_back(currentLabel);
+            ++currentLabel;
+        }
+    }
+}
+
 
 void PowerGrid::reportOverlaps() const {
     std::map<SignalType, int> m5Stats;

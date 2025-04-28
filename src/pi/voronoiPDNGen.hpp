@@ -29,11 +29,16 @@
 // Dependencies
 // 1. C++ STL:
 #include <unordered_map>
+#include <unordered_set>
 
 
 // 2. Boost Library:
+#include "boost/geometry.hpp"
+#include "boost/geometry/geometries/point_xy.hpp"
+#include "boost/geometry/geometries/polygon.hpp"
 
 // 3. Texo Library:
+#include "units.hpp"
 #include "cord.hpp"
 #include "segment.hpp"
 #include "orderedSegment.hpp"
@@ -60,13 +65,26 @@ private:
     const char *WIRELENGTH_VECTOR_FILE = "./lib/flute/POWV9.dat";
     const char *ROUTING_TREE_FILE = "./lib/flute/PORT9.dat";
 
+    void fixRepeatedPoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints);
 public:
+
+    // Boost::geometry definitions
+
+    typedef boost::geometry::model::d2::point_xy<flen_t> FPGMPoint;
+    typedef boost::geometry::model::polygon<FPGMPoint> FPGMPolygon;
+    typedef boost::geometry::model::multi_polygon<FPGMPolygon> FPGMMultiPolygon;
+
+
     int nodeHeight, nodeWidth;
     std::unordered_map<SignalType, std::vector<Cord>> m5Points;
     std::unordered_map<SignalType, std::vector<OrderedSegment>> m5Segments;
+    std::unordered_map<Cord, std::vector<FCord>> m5VoronoiCells;
+    std::unordered_map<SignalType, FPGMMultiPolygon> m5MultiPolygons;
 
     std::unordered_map<SignalType, std::vector<Cord>> m7Points;
     std::unordered_map<SignalType, std::vector<OrderedSegment>> m7Segments;
+    std::unordered_map<Cord, std::vector<FCord>> m7VoronoiCells;
+    std::unordered_map<SignalType, FPGMMultiPolygon> m7MultiPolygons;
 
     std::vector<std::vector<VNode *>> m5NodeArr;
     std::vector<std::vector<VNode *>> m7NodeArr;
@@ -80,14 +98,27 @@ public:
     void connectLayers();
 
     void runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    void runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     void ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     
     void generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    void generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells);
+    void mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap);
+    void enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &PolygonMap);
+    
+    void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon);
+    void fixIsolatedCells(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &obstacles);
+    
+    
+    friend bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
+    friend bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
 
+    friend bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
+    friend bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
 
+    friend bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
+    friend bool visualiseM7VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
 
-    friend bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
-    friend bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath);
 };
 
 #endif // __VORONOIPDNGEN_H__

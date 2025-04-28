@@ -54,14 +54,12 @@ def parse_arguments():
 if __name__ == "__main__":
 
     args = parse_arguments()
-
-        
-    fig, ax = plt.subplots(figsize=(24, 24))
+    fig, ax = plt.subplots(figsize=(30, 30))
 
     BORDER_WIDTH = 2
-    GRID_MUL = 10
-    POINT_RAIDUS = 3
-    LINE_WIDTH = 1.5
+    GRID_MUL = 20
+    POINT_RAIDUS = 4
+    LINE_WIDTH = 1
     planeWidth = 0
     planeHeight = 0
 
@@ -75,13 +73,13 @@ if __name__ == "__main__":
                 print("Error: Render mode unrecognized")
                 exit()
 
-            if not ((LineBuffer[1] == "VORONOI") and (LineBuffer[2] == "VISUALISATION")):
+            if not ((LineBuffer[1] == "VORONOI_GRAPH") and (LineBuffer[2] == "VISUALISATION")):
                 print("Error: Render mode unrecognized")
                 exit()
                 
             renderMode = LineBuffer[0] + " " + LineBuffer[1]
-            planeWidth = int(LineBuffer[3])
-            planeHeight = int(LineBuffer[4])
+            planeWidth = int(LineBuffer[3]) - 1
+            planeHeight = int(LineBuffer[4]) - 1
 
             # display the arguments if user specifies verbose mode
             if args.verbose:
@@ -139,37 +137,38 @@ if __name__ == "__main__":
                 sigName = filein.readline().strip()
                 color = SIGNAL_COLORS[sigName]
 
-                # render the Segment part
                 LineBuffer = filein.readline().strip().split()
-                if LineBuffer[0] != "SEGMENTS":
-                    print("Error: no SEGMENTS label found")
-                    exit()
-                segmentCount = int(LineBuffer[1])
-                for seg in range(segmentCount):
-                    LineBuffer = filein.readline().strip()
-                    matches = re.findall(r'\((\d+),\s*(\d+)\)', LineBuffer)
-
-                    x1, y1 = map(int, matches[0])
-                    x2, y2 = map(int, matches[1])
-
-                    circle = plt.Circle((GRID_MUL*x1, GRID_MUL*y1), radius=POINT_RAIDUS, color=color, fill=True)
-                    ax.add_patch(circle)
-                    circle = plt.Circle((GRID_MUL*x2, GRID_MUL*y2), radius=POINT_RAIDUS, color=color, fill=True)
-                    ax.add_patch(circle)
-                    plt.plot([GRID_MUL*x1, GRID_MUL*x2], [GRID_MUL*y1, GRID_MUL*y2], color=color, linewidth=LINE_WIDTH)
-
-                
-                # Render the leftout points
-                LineBuffer = filein.readline().strip().split()
-                if LineBuffer[0] != "POINTS":
-                    print("Error: no POINTS label found")
+                if not ((LineBuffer[0] == "POINTS")):
+                    print("Error: POINTS label not found")
                     exit()
                 pointCount = int(LineBuffer[1])
-                for pt in range(pointCount):
+                for pc in range(pointCount):
+                    cellCentre = filein.readline().strip()
+                    cellCentreX = 0
+                    cellCentreY = 0
+                    match = re.match(r"\(?\s*(-?\d+)\s*,\s*(-?\d+)\s*\)?", cellCentre)
+                    if match:
+                        cellCentreX, cellCentreY = map(int, match.groups())
+                        circle = plt.Circle((GRID_MUL*cellCentreX, GRID_MUL*cellCentreY), radius=POINT_RAIDUS, color=color, fill=True, alpha = 1.0)
+                        ax.add_patch(circle)
+                    else:
+                        print("Centre cell no match " + cellCentre)
+                        exit()
+                    # process the surroundings
                     LineBuffer = filein.readline().strip()
-                    x, y = map(int, LineBuffer.strip("()").split(","))
-                    circle = plt.Circle((GRID_MUL*x, GRID_MUL*y), radius=POINT_RAIDUS, color=color, fill=True)
-                    ax.add_patch(circle)
+                    if LineBuffer != "0":
+                        matches = re.findall(r"f\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)", LineBuffer)
+                        # Split into x and y vectors
+                        x_vec = [float(x) for x, _ in matches]
+                        y_vec = [float(y) for _, y in matches]
+                        x_vec = [element * GRID_MUL for element in x_vec]
+                        y_vec = [element * GRID_MUL for element in y_vec]
+                        if (x_vec[0] != x_vec[-1]) or (y_vec[0] != y_vec[-1]):
+                            x_vec.append(x_vec[0])
+                            y_vec.append(y_vec[0])
+
+                        plt.plot(x_vec, y_vec, color='black', linewidth = LINE_WIDTH)
+                        plt.fill(x_vec, y_vec, facecolor = color, edgecolor='black', alpha = 0.6)
             
             
             if args.output is not None:

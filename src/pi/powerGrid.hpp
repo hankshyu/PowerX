@@ -54,4 +54,7 @@ public:
     friend bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump, bool overlayM7C4);
 };
 
+void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label);
+
+
 #endif // __POWERGRID_H__

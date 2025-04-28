@@ -8,16 +8,8 @@ BOOSTPATH = ./lib/boost_1_87_0
 FLUTE_LIB_PATH = ./lib/flute/build
 FLUTE_HEADER_PATH = ./lib/flute
 
-CADICAL_LIB_PATH = ./lib/cadical/build
-CADICAL_HEADER_PATH = ./lib/cadical/src
-
-CBC_LIB_INCLUDE = /opt/homebrew/opt/cbc/include/cbc #Cbc include files
-CBCDEP_COINUTILS_INCLUDE = /opt/homebrew/opt/coinutils/include/coinutils/coin #Cbc dependencies: Coinutils
-CBCDEP_OSI_INCLUDE = /opt/homebrew/opt/osi/include/osi/coin # Cbc depnedencies: osi
-CBCDEP_CLP_INCLUDE = /opt/homebrew/opt/clp/include/clp/coin # Cbc dependencies: clp
-CBC_LIB_PATH =  /opt/homebrew/opt/cbc/lib #Cbc library file
-CBCDEP_LIB_PATH =  /opt/homebrew/lib/
-CBC_LINKS = -lCbc -lCbcSolver -lOsiClp -lClp -lCoinUtils -lOsi #Cbc link libraries
+GEOS_LIB_PATH = ./lib/geos/geos-install/lib
+GEOS_HEADER_PATH = ./lib/geos/geos-install/include
 
 OPENMP_OPT = -fopenmp
 
@@ -25,12 +17,14 @@ OPENMP_OPT = -fopenmp
 CXX = /opt/homebrew/bin/g++-14
 # CXX = g++
 OPTFLAGS = -O3
-FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) $(OPENMP_OPT) -D_Alignof=alignof
-LINKFLAGS = -L$(FLUTE_LIB_PATH) -lm -lflute
+FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) \
+		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) $(OPENMP_OPT) -D_Alignof=alignof
+
+LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -lm -lflute -lgeos -Wl,-rpath,lib/geos/geos-install/lib
 
 INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o orderedSegment.o \
-			rectilinear.o cornerStitching.o 
+			rectilinear.o cornerStitching.o
 	
 PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o pinMap.o microBump.o c4Bump.o \
 			powerGrid.o aStarBaseline.o voronoiPDNGen.o

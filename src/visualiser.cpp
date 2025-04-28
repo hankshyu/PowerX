@@ -23,6 +23,9 @@
 #include <fstream>
 
 // 2. Boost Library:
+#include "boost/geometry.hpp"
+#include "boost/geometry/geometries/point_xy.hpp"
+#include "boost/geometry/geometries/polygon.hpp"
 
 // 3. Texo Library:
 #include "visualiser.hpp"
@@ -66,7 +69,6 @@ bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::
     ofs.close();
     return true;
 }
-
 
 bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath){
     
@@ -447,7 +449,7 @@ bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool o
     return true; 
 }
 
-bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath){
+bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
 
@@ -486,7 +488,7 @@ bool visualiseM5VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &fileP
 
 }
 
-bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &filePath){
+bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
     std::ofstream ofs(filePath, std::ios::out);
 
     assert(ofs.is_open());
@@ -522,3 +524,163 @@ bool visualiseM7VoronoiPoints(const VoronoiPDNGen &vpg, const std::string &fileP
     ofs.close();
     return true; 
 }
+
+bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "M5 VORONOI_GRAPH VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
+    ofs << "SIGNALS" << " " << vpg.m5Segments.size() << std::endl;
+
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = vpg.m5Points.begin(); cit != vpg.m5Points.end(); ++cit){
+        SignalType st = cit->first;
+        ofs << st << std::endl;
+        ofs << "POINTS " << cit->second.size() << std::endl;
+        for(const Cord &c : cit->second){
+            ofs << c << std::endl;
+            std::unordered_map<Cord, std::vector<FCord>>::const_iterator fcit = vpg.m5VoronoiCells.find(c);
+            if(fcit == vpg.m5VoronoiCells.end()) ofs << 0 << std::endl;
+            else{
+                for(const FCord &fc : fcit->second){
+                    ofs << fc << " ";
+                }
+                ofs << std::endl;
+            }
+        }
+        
+    }
+
+    ofs.close();
+    return true; 
+}
+
+bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "M5 VORONOI_GRAPH VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
+    ofs << "SIGNALS" << " " << vpg.m7Segments.size() << std::endl;
+
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = vpg.m7Points.begin(); cit != vpg.m7Points.end(); ++cit){
+        SignalType st = cit->first;
+        ofs << st << std::endl;
+        ofs << "POINTS " << cit->second.size() << std::endl;
+        for(const Cord &c : cit->second){
+            ofs << c << std::endl;
+            std::unordered_map<Cord, std::vector<FCord>>::const_iterator fcit = vpg.m7VoronoiCells.find(c);
+            if(fcit == vpg.m7VoronoiCells.end()) ofs << 0 << std::endl;
+            else{
+                for(const FCord &fc : fcit->second){
+                    ofs << fc << " ";
+                }
+                ofs << std::endl;
+            }
+        }
+        
+    }
+
+    ofs.close();
+    return true; 
+}
+
+bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    using FPGMPoint = boost::geometry::model::d2::point_xy<flen_t>;
+    using FPGMPolygon = boost::geometry::model::polygon<FPGMPoint>;
+    using FPGMMultiPolygon = boost::geometry::model::multi_polygon<FPGMPolygon>;
+
+    ofs << "M5 VORONOI_POLYGON VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
+    ofs << "SIGNALS" << " " << vpg.m5MultiPolygons.size() << std::endl;
+
+    for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = vpg.m5MultiPolygons.begin(); cit != vpg.m5MultiPolygons.end(); ++cit){
+        SignalType st = cit->first;
+        FPGMMultiPolygon mp = cit->second;
+        ofs << st  << " " << mp.size() << " PIECES " << std::endl;
+
+        for (size_t i = 0; i < mp.size(); ++i) {
+            const FPGMPolygon& poly = mp[i];
+    
+            // Print exterior ring
+            const auto& exterior = poly.outer();
+            ofs << "PIECE " << i << " POINTS " << exterior.size() << std::endl;
+
+            for (const auto& pt : exterior) {
+                ofs << "f(" << boost::geometry::get<0>(pt) << ", " << boost::geometry::get<1>(pt) << ")" << std::endl;
+            }
+    
+            // Print interior rings (holes)
+            const auto& holes = poly.inners();
+            ofs << "PIECE " << i << " HOLES " << holes.size() << std::endl;
+            for (size_t h = 0; h < holes.size(); ++h) {
+                ofs << "HOLE " << h << " POINTS " << holes[h].size() << std::endl;
+                for (const auto& pt : holes[h]) {
+                    ofs << "f(" << boost::geometry::get<0>(pt) << ", " << boost::geometry::get<1>(pt) << ")" << std::endl;
+                }
+            }
+        } 
+        
+    }
+
+    ofs.close();
+    return true; 
+}
+
+bool visualiseM7VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    using FPGMPoint = boost::geometry::model::d2::point_xy<flen_t>;
+    using FPGMPolygon = boost::geometry::model::polygon<FPGMPoint>;
+    using FPGMMultiPolygon = boost::geometry::model::multi_polygon<FPGMPolygon>;
+
+    ofs << "M7 VORONOI_POLYGON VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
+    ofs << "SIGNALS" << " " << vpg.m7MultiPolygons.size() << std::endl;
+
+    for(std::unordered_map<SignalType, FPGMMultiPolygon>::const_iterator cit = vpg.m7MultiPolygons.begin(); cit != vpg.m7MultiPolygons.end(); ++cit){
+        SignalType st = cit->first;
+        FPGMMultiPolygon mp = cit->second;
+        ofs << st << " " << mp.size() << " PIECES " << std::endl;
+
+        for (size_t i = 0; i < mp.size(); ++i) {
+            const FPGMPolygon& poly = mp[i];
+    
+            // Print exterior ring
+            const auto& exterior = poly.outer();
+            ofs << "PIECE " << i << " POINTS " << exterior.size() << std::endl;
+
+            for (const auto& pt : exterior) {
+                ofs << "f(" << boost::geometry::get<0>(pt) << ", " << boost::geometry::get<1>(pt) << ")" << std::endl;
+            }
+    
+            // Print interior rings (holes)
+            const auto& holes = poly.inners();
+            ofs << "PIECE " << i << " HOLES " << holes.size() << std::endl;
+            for (size_t h = 0; h < holes.size(); ++h) {
+                ofs << "HOLE " << h << " POINTS " << holes[h].size() << std::endl;
+                for (const auto& pt : holes[h]) {
+                    ofs << "f(" << boost::geometry::get<0>(pt) << ", " << boost::geometry::get<1>(pt) << ")" << std::endl;
+                }
+            }
+        } 
+        
+    }
+
+    ofs.close();
+    return true; 
+}
+
+
