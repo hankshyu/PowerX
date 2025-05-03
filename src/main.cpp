@@ -9,9 +9,11 @@
 #include "technology.hpp"
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
-// #include "ballOut.hpp"
+#include "objectArray.hpp"
+#include "c4Bump.hpp"
 // #include "microBump.hpp"
-// #include "c4Bump.hpp"
+
+// #include "ballOut.hpp"
 // #include "aStarBaseline.hpp"
 // #include "voronoiPDNGen.hpp"
 
@@ -39,32 +41,10 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
-    BallOut c4("inputs/l2.csv");
-    visualiseBallOut(c4, technology, "outputs/c4_test.ballout");
-
-    ObjectArray m0(5, 5);
-    ObjectArray v0(6, 6);
-    ObjectArray v1(6, 6);
-   
-    m0.readBlockages("inputs/preplaced_m0.csv");
-    v0.readBlockages("inputs/preplaced_v0.csv");
-    v1.readBlockages("inputs/preplaced_v1.csv");
+    C4Bump c4("inputs/rocket64_0808.pinout");
+    visualisePinArray(c4.canvas, technology, "outputs/test.txt");
 
 
-    m0.markPreplacedToCanvas();
-    v0.markPreplacedToCanvas();
-    v1.markPreplacedToCanvas();
-
-    // visualiseGridArray(m0.canvas, technology, "outputs/test.txt");
-    visualiseGridArrayWithPins(m0.canvas, v0.canvas, v1.canvas, technology, "outputs/test.txt");
-
-    for(auto at : v0.preplacedCords){
-        std::cout << at.first << ": " << std::endl;
-        for(Cord &c : at.second){
-            std::cout << c << " ";
-        }
-        std::cout << std::endl;
-    }
 
     /*
     timeProfiler.startTimer("Voronoi Diagram Based P/G");
