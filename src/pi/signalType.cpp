@@ -36,8 +36,20 @@ std::ostream& operator<<(std::ostream& os, SignalType st) {
 
 SignalType convertToSignalType (const std::string &str){
     
+    // trim white space
+    size_t start = 0;
+    while (start < str.size() && std::isspace(static_cast<unsigned char>(str[start]))) {
+        ++start;
+    }
+
+    size_t end = str.size();
+    while (end > start && std::isspace(static_cast<unsigned char>(str[end - 1]))) {
+        --end;
+    }
+
+    std::string input = str.substr(start, end - start);
+
     // Convert to uppercase for case-insensitive comparison
-    std::string input = str;
     transform(input.begin(), input.end(), input.begin(), [](unsigned char c){ return std::toupper(c); });
 
     // Remove prefix if exists

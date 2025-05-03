@@ -78,10 +78,10 @@ const std::unordered_map<std::string, std::string> Technology::m_standardUnits =
     {"INTERPOSER_METAL_RESISTIVITY", "nOhm.m"},
     {"PERMITIVITY_OF_FREE_SPACE", "fF/m"},
     {"PERMITIVITY_OF_DIELECTRIC", ""},
-    {"PERMEABILITY_OF_VACCUM", "uH/m"}
+    {"PERMEABILITY_OF_VACCUM", "uH/m"},
+    {"LOSS_TANGENT", ""}
 
 };
-
 
 
 Technology::Technology():
@@ -100,7 +100,8 @@ Technology::Technology():
     m_InterposerMetalResistivity(2.2),
     m_PermitivityOfFreeSpace(8.854),
     m_PermitivityOfDielectric(3.9),
-    m_PermeabilityOfVaccum(1.256637) {
+    m_PermeabilityOfVaccum(1.256637), 
+    m_LossTangent(0.002) {
 
 }
 
@@ -409,7 +410,7 @@ Technology::Technology(const std::string &filePath){
                 std::cout << "[PowerX:TchParser] Unmatch unit for PERMITIVITY_OF_DIELECTRIC: " << unit << std::endl;
                 continue;
             }
-            m_PermitivityOfDielectric = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
+            m_PermitivityOfDielectric = std::stod(value);
 
         }else if(key == "PERMEABILITY_OF_VACCUM"){
             if((stdUnit != unit) || (magnitude_map.find(magnitude) == magnitude_map.end())){
@@ -418,10 +419,16 @@ Technology::Technology(const std::string &filePath){
             }
             m_PermeabilityOfVaccum = std::stod(value) * std::pow(10, (magnitude_map[magnitude] - magnitude_map[stdMagnitude]));
 
+        }else if(key == "LOSS_TANGENT"){
+            if(!unit.empty()){
+                std::cout << "[PowerX:TchParser] Unmatch unit for LOSS_TANGENT: " << unit << std::endl;
+                continue;
+            }
+            this->m_LossTangent = std::stod(value);
+
         }
 
     }
-
 
     file.close();
 

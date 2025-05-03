@@ -23,11 +23,14 @@
 #include <cassert>
 #include <string>
 #include <ostream>
+#include <sstream>
 #include <fstream>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
+#include <algorithm>
+#include <cctype>
 
 // 2. Boost Library:
 
@@ -73,20 +76,64 @@ BallOutRotation convertToBallOutRotation(const std::string& str) {
     return (cit != strToRotationMap.end()) ? cit->second : BallOutRotation::UNKNOWN;  // fallback default
 }
 
-BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0), m_rotation(BallOutRotation::EMPTY) {
+const std::unordered_map<std::string, std::string> BallOut::m_privateAttributeStandardUnits = {
+    {"MAX_CURRENT", "A"}
+};
+
+BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0),m_maxCurrent(0) , m_rotation(BallOutRotation::EMPTY) {
 
 }
 
 BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
-    
+    std::unordered_map<char, int> magnitude_map = {{'f', -15}, {'p', -12}, {'n', -9}, {'u', -6}, {'m', -3}, {'c', -2}};
     std::ifstream file(filePath);
     assert(file.is_open());
     
     std::string buffer;
+    while(std::getline(file, buffer)){
+        std::size_t start = 0;
+        while (start < buffer.size() && std::isspace(static_cast<unsigned char>(buffer[start]))) {
+            ++start;
+        }
+        // Trim trailing whitespace
+        size_t end = buffer.size();
+        while (end > start && std::isspace(static_cast<unsigned char>(buffer[end - 1]))) {
+            --end;
+        }
+        buffer = buffer.substr(start, end - start);
 
-    file >> buffer >> this->m_name >> this->m_ballOutWidth >> this->m_ballOutHeight;
-    ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
-        
+        // Split by whitespace
+        std::istringstream iss(buffer);
+        std::vector<std::string> tokens;
+        std::string token;
+        while (iss >> token) {
+            tokens.push_back(token);
+        }
+        if(tokens[0] == "BEGIN_CHIPLET"){
+            this->m_name = tokens[1];
+            this->m_ballOutWidth = std::stoi(tokens[2]);
+            this->m_ballOutHeight = std::stoi(tokens[3]);
+            ballOutArray.resize(this->m_ballOutHeight, std::vector<SignalType>(this->m_ballOutWidth, SignalType::EMPTY));
+            break;
+        }
+
+        std::unordered_map<std::string, std::string>::const_iterator cit = this->m_privateAttributeStandardUnits.find(tokens[0]);
+        if(cit == m_privateAttributeStandardUnits.end()){
+            std::cout << "[PowerX:BallOutParser] Error: Unrocognized private ballout attribute: " << tokens[0]  << std::endl;
+            abort();
+        }
+
+        std::string standardUnit = cit->second;
+        if(tokens[3] != standardUnit){
+            std::cout << "[PowerX:BallOutParser] Error: Private ballout attribute: " << tokens[0] << " using unit " << tokens[3] << " instead of standard unit: " << standardUnit << std::endl;
+            abort();
+        }
+
+        if(tokens[0] == "MAX_CURRENT"){
+            this->m_maxCurrent = std::stod(tokens[2]);
+        }
+    }
+            
     for(int j = 0; j < this->m_ballOutHeight; ++j){
         for(int i = 0; i < this->m_ballOutWidth; ++i){
 
@@ -103,7 +150,6 @@ BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
                 abort();
 
             }
-
 
             SignalType signaltp = convertToSignalType(buffer.substr(position + 1));
 
@@ -130,7 +176,7 @@ BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
     file.close();
 }
 
-BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_rotation(rotation), allSignalTypes(ref.allSignalTypes) {
+BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_maxCurrent(ref.m_maxCurrent), m_rotation(rotation), allSignalTypes(ref.allSignalTypes) {
 
     for(const SignalType &st : this->allSignalTypes){
         this->SignalTypeToAllCords[st] = {};

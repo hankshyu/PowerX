@@ -29,7 +29,7 @@
 
 // 3. Texo Library:
 #include "technology.hpp"
-#include "powerGrid.hpp"
+
 
 
 class EqCktExtractor{
@@ -51,7 +51,7 @@ private:
     double m_InterposerViaResistance;
     double m_InterposerViaInductance;
 
-    inline std::string nodeToString(int z, int x, int y) const {return std::to_string(z)+"_"+std::to_string(x)+"_"+std::to_string(y);}
+    // inline std::string nodeToString(int z, int x, int y) const {return std::to_string(z)+"_"+std::to_string(x)+"_"+std::to_string(y);}
 
 public:
     EqCktExtractor() = delete;
@@ -67,14 +67,11 @@ public:
     inline double getInterposerCapacitanceEdgeCell() const {return m_InterposerCapacitanceEdgeCell;}
     // fF
     inline double getInterposerCapacitanceCornerCell() const {return m_InterposerCapacitanceCornerCell;}
-
-    inline double getInterposerConductance() const {return m_InterposerConductance;}
+    
     //mOhm
     inline double getInterposerViaResistance() const {return m_InterposerViaResistance;}
     //pH
     inline double getInterposerViaInductance() const {return m_InterposerViaInductance;}
-
-    void exportEquivalentCircuit(const PowerGrid &pg, const SignalType &st, const std::string &filePath) const;
 
 };
 

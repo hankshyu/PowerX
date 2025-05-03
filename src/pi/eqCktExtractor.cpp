@@ -32,7 +32,6 @@
 // 3. Texo Library:
 #include "technology.hpp"
 #include "eqCktExtractor.hpp"
-#include "powerGrid.hpp"
 
 
 EqCktExtractor::EqCktExtractor(const Technology &tch): m_Technology(tch){
@@ -68,9 +67,8 @@ EqCktExtractor::EqCktExtractor(const Technology &tch): m_Technology(tch){
     
     m_InterposerViaInductance = (tch.getPermeabilityOfVaccum() * viaRadius * (1 + viaLength / viaRadius)) / 2;
 
-
 }
-
+/*
 void EqCktExtractor::exportEquivalentCircuit(const PowerGrid &pg, const SignalType &st, const std::string &filePath) const {
     
     std::ofstream ofs(filePath, std::ios::out);
@@ -202,3 +200,4 @@ void EqCktExtractor::exportEquivalentCircuit(const PowerGrid &pg, const SignalTy
 
 
 }
+*/

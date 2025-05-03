@@ -66,19 +66,21 @@ std::ostream& operator<<(std::ostream& os, BallOutRotation bor);
 BallOutRotation convertToBallOutRotation (const std::string &str);
 
 
-
 class BallOut{
 private:
+
     std::string m_name;
     int m_ballOutWidth;
     int m_ballOutHeight;
     enum BallOutRotation m_rotation;
-
+    
+    // attributes that not all ballOut share
+    static const std::unordered_map<std::string, std::string> m_privateAttributeStandardUnits;
+    double m_maxCurrent;
 public:
     std::unordered_set<SignalType> allSignalTypes;
     std::vector<std::vector<SignalType>> ballOutArray;
     std::unordered_map<SignalType, std::unordered_set<Cord>> SignalTypeToAllCords;
-
 
     BallOut();
     explicit BallOut(const std::string &filePath);
@@ -87,6 +89,7 @@ public:
     inline std::string getName() const {return this->m_name;}
     inline int getBallOutWidth() const {return this->m_ballOutWidth;}
     inline int getBallOutHeight() const {return this->m_ballOutHeight;}
+    inline double getMaxCurrent() const {return this->m_maxCurrent;}
     inline Rectangle getBallOutSizeRectangle() const {return Rectangle(0, 0, (m_ballOutWidth > 1)? m_ballOutWidth-1 : 0, (m_ballOutHeight > 1)? m_ballOutHeight-1 : 0);}
     inline BallOutRotation getRotation() const {return this->m_rotation;}
     inline std::vector<SignalType> getAllSignalTypes() const {return std::vector<SignalType>(allSignalTypes.begin(), allSignalTypes.end());}

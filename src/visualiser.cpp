@@ -32,129 +32,12 @@
 #include "cord.hpp"
 
 #include "cornerStitching.hpp"
-#include "tile.hpp"
+#include "floorplan.hpp"
+#include "technology.hpp"
 #include "ballOut.hpp"
-#include "microBump.hpp"
-#include "c4Bump.hpp"
-#include "aStarBaseline.hpp"
-#include "voronoiPDNGen.hpp"
-
-bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
-
-    std::ofstream ofs(filePath, std::ios::out);
-
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-    ofs << "BUMPMAP VISUALISATION" << std::endl;
-
-    len_t pitch = tch.getMicrobumpPitch();
-    len_t pinRadius = tch.getMicrobumpRadius();
-
-    len_t ballOutWidth = ballOut.m_ballOutWidth;
-    len_t ballOutHeight = ballOut.m_ballOutHeight;
-    
-    ofs << ballOut.m_name << " " << ballOutWidth << " " << ballOutHeight << std::endl;
-    ofs << ballOutWidth * pitch << " " <<  ballOutHeight * pitch << std::endl;
-
-    ofs << "PINS" << " " << ballOutWidth * ballOutHeight << std::endl;
-    for(int j = 0; j < ballOutHeight; ++j){
-        for(int i = 0; i < ballOutWidth; ++i){
-            len_t centreX = pitch/2 + i*pitch;
-            len_t centreY = pitch/2 + j*pitch;
-            
-            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.ballOutArray[j][i] << std::endl;
-        }
-    }
-
-    ofs.close();
-    return true;
-}
-
-bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath){
-    
-    std::ofstream ofs(filePath, std::ios::out);
-    
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-    ofs << "MICROBUMP VISUALISATION" << std::endl;
-
-    len_t pitch = tch.getMicrobumpPitch();
-    len_t pinRadius = tch.getMicrobumpRadius();
-
-    len_t pinOutWidth = microBump.m_pinMapWidth;
-    len_t pinOutHeight = microBump.m_pinMapHeight;
-
-    ofs << microBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
-    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
-    
-    ofs << "CHIPLETS" << " " << microBump.instanceToRectangleMap.size() << std::endl;
-
-    for(std::unordered_map<std::string, Rectangle>::const_iterator cit = microBump.instanceToRectangleMap.begin(); cit!= microBump.instanceToRectangleMap.end(); ++cit){
-        Rectangle chipletBB = cit->second;
-        ofs << cit->first << " " << microBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
-        ofs << pitch*rec::getXL(chipletBB) << " " << pitch*rec::getYL(chipletBB) << " ";
-        ofs << pitch*(rec::getWidth(chipletBB) + 1)<< " " << pitch*(rec::getHeight(chipletBB) + 1) << std::endl;
-    }
+#include "objectArray.hpp"
 
 
-    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, SignalType>::const_iterator it;
-    for(int j = 0; j < pinOutHeight; ++j){
-        for(int i = 0; i < pinOutWidth; ++i){
-            it = microBump.cordToSignalTypeMap.find(Cord(i, j));
-            len_t centreX = pitch/2 + i*pitch;
-            len_t centreY = pitch/2 + j*pitch;
-            
-            if(it == microBump.cordToSignalTypeMap.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
-            }else{
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
-            }
-        }
-    }
-
-    ofs.close();
-    return true;
-}
-
-bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath){
-    
-    std::ofstream ofs(filePath, std::ios::out);
-    
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-    ofs << "C4 VISUALISATION" << std::endl;
-
-    len_t pitch = tch.getMicrobumpPitch();
-    len_t pinRadius = tch.getMicrobumpRadius();
-
-    len_t pinOutWidth = c4.m_pinMapWidth;
-    len_t pinOutHeight = c4.m_pinMapHeight;
-
-
-    ofs << c4.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
-    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
-    
-
-    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, SignalType>::const_iterator it;
-    for(int j = 0; j < pinOutHeight; ++j){
-        for(int i = 0; i < pinOutWidth; ++i){
-            it = c4.cordToSignalTypeMap.find(Cord(i, j));
-            len_t centreX = pitch/2 + i*pitch;
-            len_t centreY = pitch/2 + j*pitch;
-            
-            if(it == c4.cordToSignalTypeMap.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
-            }else{
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
-            }
-        }
-    }
-
-    ofs.close();
-    return true;
-}
 
 bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath){
     
@@ -226,6 +109,273 @@ bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath){
     return true;
 }
 
+bool visualiseBallOut(const BallOut &ballOut, const Technology &tch, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+    ofs << "BUMPMAP VISUALISATION" << std::endl;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    len_t ballOutWidth = ballOut.m_ballOutWidth;
+    len_t ballOutHeight = ballOut.m_ballOutHeight;
+    
+    ofs << ballOut.m_name << " " << ballOutWidth << " " << ballOutHeight << std::endl;
+    ofs << ballOutWidth * pitch << " " <<  ballOutHeight * pitch << std::endl;
+
+    ofs << "PINS" << " " << ballOutWidth * ballOutHeight << std::endl;
+    for(int j = 0; j < ballOutHeight; ++j){
+        for(int i = 0; i < ballOutWidth; ++i){
+            len_t centreX = pitch/2 + i*pitch;
+            len_t centreY = pitch/2 + j*pitch;
+            
+            ofs << centreX << " " << centreY << " " << pinRadius << " " << ballOut.ballOutArray[j][i] << std::endl;
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualisePinArray(const std::vector<std::vector<SignalType>> &pinArr, const Technology &tch, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    int pinWidth = pinArr[0].size();
+    int pinHeight = pinArr.size();
+
+    int gridWidth = pinWidth -1;
+    int gridHeight = pinHeight - 1;
+
+    ofs << "PIN VISUALISATION" << std::endl;
+    ofs << pitch << " " << pinRadius << " " << gridWidth << " " << gridHeight << " " << pinWidth << " " << pinHeight << std::endl;
+
+    for(int j = 0; j < pinHeight; ++j){
+        for(int i = 0; i < pinWidth; ++i){
+            ofs << i << " " << j << " " << pinArr[j][i] << std::endl; 
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualiseGridArray(const std::vector<std::vector<SignalType>> &gridArr, const Technology &tch, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    int gridWidth = gridArr[0].size();
+    int gridHeight = gridArr.size();
+
+    int pinWidth = gridWidth + 1;
+    int pinHeight = gridHeight + 1;
+
+    ofs << "GRID VISUALISATION" << std::endl;
+    ofs << pitch << " " << pinRadius << " " << gridWidth << " " << gridHeight << " " << pinWidth << " " << pinHeight << std::endl;
+
+    for(int j = 0; j < gridHeight; ++j){
+        for(int i = 0; i < gridWidth; ++i){
+            ofs << i << " " << j << " " << gridArr[j][i] << std::endl;
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualiseGridArrayWithPin(const std::vector<std::vector<SignalType>> &gridArr, const std::vector<std::vector<SignalType>> &pinArr, const Technology &tch, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    int gridWidth = gridArr[0].size();
+    int gridHeight = gridArr.size();
+
+    int pinWidth = pinArr[0].size();
+    int pinHeight = pinArr.size();
+
+    assert(gridWidth == (pinWidth-1));
+    assert(gridHeight == (pinHeight-1));
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    ofs << "GRID_PIN VISUALISATION" << std::endl;
+    ofs << pitch << " " << pinRadius << " " << gridWidth << " " << gridHeight << " " << pinWidth << " " << pinHeight << std::endl;
+    
+    for(int j = 0; j < gridHeight; ++j){
+        for(int i = 0; i < gridWidth; ++i){
+            ofs << i << " " << j << " " << gridArr[j][i] << std::endl;
+        }
+    }
+
+    for(int j = 0; j < pinHeight; ++j){
+        for(int i = 0; i < pinWidth; ++i){
+            ofs << i << " " << j << " " << pinArr[j][i] << std::endl; 
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualiseGridArrayWithPins(const std::vector<std::vector<SignalType>> &gridArr,const std::vector<std::vector<SignalType>> &upPinArr, 
+    const std::vector<std::vector<SignalType>> &downPinArr, const Technology &tch, const std::string &filePath){
+        
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    int gridWidth = gridArr[0].size();
+    int gridHeight = gridArr.size();
+
+    int upPinWidth = upPinArr[0].size();
+    int upPinHeight = upPinArr.size();
+
+    int downPinWidth = downPinArr[0].size();
+    int downPinHeight = downPinArr.size();
+
+    assert(gridWidth == (upPinWidth-1));
+    assert(gridHeight == (upPinHeight-1));
+
+    assert(upPinWidth == downPinWidth);
+    assert(upPinHeight == downPinHeight);
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    ofs << "PIN_GRID_PIN VISUALISATION" << std::endl;
+    ofs << pitch << " " << pinRadius << " " << gridWidth << " " << gridHeight << " " << upPinWidth << " " << upPinHeight << std::endl;
+
+    for(int j = 0; j < gridHeight; ++j){
+        for(int i = 0; i < gridWidth; ++i){
+            ofs << i << " " << j << " " << gridArr[j][i] << std::endl;
+        }
+    }
+
+    for(int j = 0; j < upPinHeight; ++j){
+        for(int i = 0; i < upPinWidth; ++i){
+            ofs << i << " " << j << " " << upPinArr[j][i] << std::endl; 
+        }
+    }
+
+    for(int j = 0; j < downPinHeight; ++j){
+        for(int i = 0; i < downPinWidth; ++i){
+            ofs << i << " " << j << " " << downPinArr[j][i] << std::endl; 
+        }
+    }
+
+
+    ofs.close();
+    return true;
+}
+
+/*
+bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath){
+    
+    std::ofstream ofs(filePath, std::ios::out);
+    
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+    ofs << "MICROBUMP VISUALISATION" << std::endl;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    len_t pinOutWidth = microBump.m_pinMapWidth;
+    len_t pinOutHeight = microBump.m_pinMapHeight;
+
+    ofs << microBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
+    
+    ofs << "CHIPLETS" << " " << microBump.instanceToRectangleMap.size() << std::endl;
+
+    for(std::unordered_map<std::string, Rectangle>::const_iterator cit = microBump.instanceToRectangleMap.begin(); cit!= microBump.instanceToRectangleMap.end(); ++cit){
+        Rectangle chipletBB = cit->second;
+        ofs << cit->first << " " << microBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
+        ofs << pitch*rec::getXL(chipletBB) << " " << pitch*rec::getYL(chipletBB) << " ";
+        ofs << pitch*(rec::getWidth(chipletBB) + 1)<< " " << pitch*(rec::getHeight(chipletBB) + 1) << std::endl;
+    }
+
+
+    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
+    std::unordered_map<Cord, SignalType>::const_iterator it;
+    for(int j = 0; j < pinOutHeight; ++j){
+        for(int i = 0; i < pinOutWidth; ++i){
+            it = microBump.cordToSignalTypeMap.find(Cord(i, j));
+            len_t centreX = pitch/2 + i*pitch;
+            len_t centreY = pitch/2 + j*pitch;
+            
+            if(it == microBump.cordToSignalTypeMap.end()){
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
+            }else{
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
+            }
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+*/
+
+/*
+bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath){
+    
+    std::ofstream ofs(filePath, std::ios::out);
+    
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+    ofs << "C4 VISUALISATION" << std::endl;
+
+    len_t pitch = tch.getMicrobumpPitch();
+    len_t pinRadius = tch.getMicrobumpRadius();
+
+    len_t pinOutWidth = c4.m_pinMapWidth;
+    len_t pinOutHeight = c4.m_pinMapHeight;
+
+
+    ofs << c4.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
+    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
+    
+
+    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
+    std::unordered_map<Cord, SignalType>::const_iterator it;
+    for(int j = 0; j < pinOutHeight; ++j){
+        for(int i = 0; i < pinOutWidth; ++i){
+            it = c4.cordToSignalTypeMap.find(Cord(i, j));
+            len_t centreX = pitch/2 + i*pitch;
+            len_t centreY = pitch/2 + j*pitch;
+            
+            if(it == c4.cordToSignalTypeMap.end()){
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
+            }else{
+                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
+            }
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+*/
+
+/*
 bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps, bool overlayM5uBump, bool overlayM7C4){
     
     std::ofstream ofs(filePath, std::ios::out);
@@ -299,7 +449,9 @@ bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overla
     ofs.close();
     return true;
 }
+*/
 
+/*
 bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps, bool overlayM5uBump, bool overlayM7C4){
       
     std::ofstream ofs(filePath, std::ios::out);
@@ -373,7 +525,9 @@ bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overla
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump, bool overlayM7C4){
           
     std::ofstream ofs(filePath, std::ios::out);
@@ -448,7 +602,9 @@ bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool o
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -487,7 +643,9 @@ bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::strin
     return true; 
 
 }
+*/
 
+/*
 bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
     std::ofstream ofs(filePath, std::ios::out);
 
@@ -524,7 +682,9 @@ bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::strin
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -556,7 +716,9 @@ bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePa
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -588,7 +750,9 @@ bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePa
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -635,7 +799,9 @@ bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &fil
     ofs.close();
     return true; 
 }
+*/
 
+/*
 bool visualiseM7VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -682,5 +848,4 @@ bool visualiseM7VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &fil
     ofs.close();
     return true; 
 }
-
-
+*/

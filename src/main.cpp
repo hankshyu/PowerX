@@ -4,17 +4,16 @@
 #include "colours.hpp"
 #include "timeProfiler.hpp"
 #include "visualiser.hpp"
-
 #include "orderedSegment.hpp"
 
-
+#include "technology.hpp"
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
-#include "ballOut.hpp"
-#include "microBump.hpp"
-#include "c4Bump.hpp"
-#include "aStarBaseline.hpp"
-#include "voronoiPDNGen.hpp"
+// #include "ballOut.hpp"
+// #include "microBump.hpp"
+// #include "c4Bump.hpp"
+// #include "aStarBaseline.hpp"
+// #include "voronoiPDNGen.hpp"
 
 
 
@@ -37,11 +36,37 @@ int main(int argc, char const *argv[]){
 
     printWelcomeBanner();
     TimeProfiler timeProfiler;
-
     Technology technology(FILEPATH_TCH);
-    EqCktExtractor EqCktExtor (technology);
+    EqCktExtractor EqCktExtor(technology);
+
+    BallOut c4("inputs/l2.csv");
+    visualiseBallOut(c4, technology, "outputs/c4_test.ballout");
+
+    ObjectArray m0(5, 5);
+    ObjectArray v0(6, 6);
+    ObjectArray v1(6, 6);
+   
+    m0.readBlockages("inputs/preplaced_m0.csv");
+    v0.readBlockages("inputs/preplaced_v0.csv");
+    v1.readBlockages("inputs/preplaced_v1.csv");
 
 
+    m0.markPreplacedToCanvas();
+    v0.markPreplacedToCanvas();
+    v1.markPreplacedToCanvas();
+
+    // visualiseGridArray(m0.canvas, technology, "outputs/test.txt");
+    visualiseGridArrayWithPins(m0.canvas, v0.canvas, v1.canvas, technology, "outputs/test.txt");
+
+    for(auto at : v0.preplacedCords){
+        std::cout << at.first << ": " << std::endl;
+        for(Cord &c : at.second){
+            std::cout << c << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    /*
     timeProfiler.startTimer("Voronoi Diagram Based P/G");
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
     vpg.initPoints({SignalType::GROUND, SignalType::SIGNAL}, {SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
@@ -88,17 +113,12 @@ int main(int argc, char const *argv[]){
     visualisePGM5(vpg, "outputs/rocket64_m5.m5",false, true, false);
     visualisePGM7(vpg, "outputs/rocket64_m7.m7",false, false, true);
 
-
-
-
     // visualiseM5VoronoiPointsSegments(vpg, "outputs/m5.ps");
     // visualiseM7VoronoiPointsSegments(vpg, "outputs/m7.ps");
 
-
     timeProfiler.pauseTimer("Voronoi Diagram Based P/G");
-
-
-
+    EqCktExtor.exportEquivalentCircuit(vpg, SignalType::POWER_1, "outputs/voroMST.sp")
+    */
     /*
     AStarBaseline AStarBL(FILEPATH_BUMPS);
     visualiseMicroBump(AStarBL.uBump, technology, "outputs/uBump.ub");

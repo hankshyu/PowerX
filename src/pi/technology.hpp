@@ -77,6 +77,7 @@ private:
     double m_PermitivityOfFreeSpace; // fF/m
     double m_PermitivityOfDielectric;
     double m_PermeabilityOfVaccum; // uH/m
+    double m_LossTangent; // 0.002
 
     public:
     Technology();
@@ -126,6 +127,7 @@ private:
     inline double getPermitivityOfFreeSpace() const {return m_PermitivityOfFreeSpace;}
     inline double getPermitivityOfDielectric() const {return m_PermitivityOfDielectric;}
     inline double getPermeabilityOfVaccum() const {return m_PermeabilityOfVaccum;}
+    inline double getLossTangent() const {return m_LossTangent;}
 };
 
 #endif // __TECHNOLOGY_H__
