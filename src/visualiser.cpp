@@ -36,7 +36,7 @@
 #include "technology.hpp"
 #include "ballOut.hpp"
 #include "objectArray.hpp"
-
+#include "microBump.hpp"
 
 
 bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath){
@@ -285,324 +285,42 @@ bool visualiseGridArrayWithPins(const std::vector<std::vector<SignalType>> &grid
     return true;
 }
 
-/*
 bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath){
-    
     std::ofstream ofs(filePath, std::ios::out);
-    
+
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
-    ofs << "MICROBUMP VISUALISATION" << std::endl;
 
     len_t pitch = tch.getMicrobumpPitch();
     len_t pinRadius = tch.getMicrobumpRadius();
 
-    len_t pinOutWidth = microBump.m_pinMapWidth;
-    len_t pinOutHeight = microBump.m_pinMapHeight;
+    int pinWidth = microBump.canvas[0].size();
+    int pinHeight = microBump.canvas.size();
 
-    ofs << microBump.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
-    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
+    int gridWidth = pinWidth -1;
+    int gridHeight = pinHeight - 1;
+
+    ofs << "MICROBUMP VISUALISATION" << std::endl;
+    ofs << pitch << " " << pinRadius << " " << gridWidth << " " << gridHeight << " " << pinWidth << " " << pinHeight << std::endl;
+
+    for(int j = 0; j < pinHeight; ++j){
+        for(int i = 0; i < pinWidth; ++i){
+            ofs << i << " " << j << " " << microBump.canvas[j][i] << std::endl; 
+        }
+    }
     
     ofs << "CHIPLETS" << " " << microBump.instanceToRectangleMap.size() << std::endl;
-
     for(std::unordered_map<std::string, Rectangle>::const_iterator cit = microBump.instanceToRectangleMap.begin(); cit!= microBump.instanceToRectangleMap.end(); ++cit){
         Rectangle chipletBB = cit->second;
         ofs << cit->first << " " << microBump.instanceToBallOutMap.at(cit->first)->getName() << " ";
-        ofs << pitch*rec::getXL(chipletBB) << " " << pitch*rec::getYL(chipletBB) << " ";
-        ofs << pitch*(rec::getWidth(chipletBB) + 1)<< " " << pitch*(rec::getHeight(chipletBB) + 1) << std::endl;
+        ofs << rec::getXL(chipletBB) << " " << rec::getYL(chipletBB) << " ";
+        ofs << rec::getWidth(chipletBB) + 1 << " " << rec::getHeight(chipletBB) + 1 << std::endl;
     }
 
-
-    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, SignalType>::const_iterator it;
-    for(int j = 0; j < pinOutHeight; ++j){
-        for(int i = 0; i < pinOutWidth; ++i){
-            it = microBump.cordToSignalTypeMap.find(Cord(i, j));
-            len_t centreX = pitch/2 + i*pitch;
-            len_t centreY = pitch/2 + j*pitch;
-            
-            if(it == microBump.cordToSignalTypeMap.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
-            }else{
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
-            }
-        }
-    }
 
     ofs.close();
     return true;
 }
-*/
-
-/*
-bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath){
-    
-    std::ofstream ofs(filePath, std::ios::out);
-    
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-    ofs << "C4 VISUALISATION" << std::endl;
-
-    len_t pitch = tch.getMicrobumpPitch();
-    len_t pinRadius = tch.getMicrobumpRadius();
-
-    len_t pinOutWidth = c4.m_pinMapWidth;
-    len_t pinOutHeight = c4.m_pinMapHeight;
-
-
-    ofs << c4.m_name << " " << pinOutWidth << " " << pinOutHeight << std::endl;
-    ofs << pinOutWidth * pitch << " " <<  pinOutHeight * pitch << std::endl;
-    
-
-    ofs << "PINS" << " " << pinOutWidth * pinOutHeight << std::endl;
-    std::unordered_map<Cord, SignalType>::const_iterator it;
-    for(int j = 0; j < pinOutHeight; ++j){
-        for(int i = 0; i < pinOutWidth; ++i){
-            it = c4.cordToSignalTypeMap.find(Cord(i, j));
-            len_t centreX = pitch/2 + i*pitch;
-            len_t centreY = pitch/2 + j*pitch;
-            
-            if(it == c4.cordToSignalTypeMap.end()){
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << "EMPTY" << std::endl;
-            }else{
-                ofs << centreX << " " << centreY << " " << pinRadius << " " << it->second << std::endl;
-            }
-        }
-    }
-
-    ofs.close();
-    return true;
-}
-*/
-
-/*
-bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps, bool overlayM5uBump, bool overlayM7C4){
-    
-    std::ofstream ofs(filePath, std::ios::out);
-
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-
-    ofs << "PGM5 VISUALISATION " << pg.canvasWidth << " " << pg.canvasHeight << " ";
-    ofs << "OVERLAP " << ((overlayOverlaps)? "1" : "0") << " ";
-    ofs << "M5_UBUMP " << ((overlayM5uBump)? "1" : "0") << " ";
-    ofs << "M7_C4 " << ((overlayM7C4)? "1" : "0") << std::endl;
-
-    for(int j = pg.canvasWidth - 1; j >= 0; --j){
-        for(int i = 0; i < pg.canvasWidth; ++i){
-            int baseColor = int(toIdx(pg.canvasM5[j][i]));
-
-            if(overlayOverlaps && (pg.canvasM5[j][i] == pg.canvasM7[j][i])) baseColor += 100;
-            ofs << baseColor << " ";
-        }
-        ofs << std::endl;
-    }
-
-    if(overlayM5uBump){
-        // leave out signal and Ground bumps
-        int displaySignalType = pg.uBump.signalTypeToAllCords.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-    
-        
-        ofs << "M5_UBUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.uBump.signalTypeToAllCords.begin(); cit != pg.uBump.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M5_UBUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    if(overlayM7C4){
-        // leave out signal and ground bumps
-        int displaySignalType = pg.c4.signalTypeToAllClusters.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.c4.signalTypeToAllCords.begin(); cit != pg.c4.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    ofs.close();
-    return true;
-}
-*/
-
-/*
-bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps, bool overlayM5uBump, bool overlayM7C4){
-      
-    std::ofstream ofs(filePath, std::ios::out);
-
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-
-    ofs << "PGM7 VISUALISATION " << pg.canvasWidth << " " << pg.canvasHeight << " ";
-    ofs << "OVERLAP " << ((overlayOverlaps)? "1" : "0") << " ";
-    ofs << "M5_UBUMP " << ((overlayM5uBump)? "1" : "0") << " ";
-    ofs << "M7_C4 " << ((overlayM7C4)? "1" : "0") << std::endl;
-
-    for(int j = pg.canvasWidth - 1; j >= 0; --j){
-        for(int i = 0; i < pg.canvasWidth; ++i){
-            int baseColor = int(toIdx(pg.canvasM7[j][i]));
-
-            if(overlayOverlaps && (pg.canvasM5[j][i] == pg.canvasM7[j][i])) baseColor += 100;
-            ofs << baseColor << " ";
-        }
-        ofs << std::endl;
-    }
-
-    if(overlayM5uBump){
-        // leave out signal and Ground bumps
-        int displaySignalType = pg.uBump.signalTypeToAllCords.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-    
-        
-        ofs << "M5_UBUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.uBump.signalTypeToAllCords.begin(); cit != pg.uBump.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M5_UBUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    if(overlayM7C4){
-        // leave out signal and ground bumps
-        int displaySignalType = pg.c4.signalTypeToAllClusters.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.c4.signalTypeToAllCords.begin(); cit != pg.c4.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    ofs.close();
-    return true; 
-}
-*/
-
-/*
-bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump, bool overlayM7C4){
-          
-    std::ofstream ofs(filePath, std::ios::out);
-
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-
-    ofs << "PGOVERLAP VISUALISATION " << pg.canvasWidth << " " << pg.canvasHeight << " ";
-    ofs << "OVERLAP 1 ";
-    ofs << "M5_UBUMP " << ((overlayM5uBump)? "1" : "0") << " ";
-    ofs << "M7_C4 " << ((overlayM7C4)? "1" : "0") << std::endl;
-
-    for(int j = pg.canvasWidth - 1; j >= 0; --j){
-        for(int i = 0; i < pg.canvasWidth; ++i){
-            if((pg.canvasM5[j][i] == pg.canvasM7[j][i])){
-                ofs << int(toIdx(pg.canvasM7[j][i])) << " ";
-            }else{
-                ofs << int(toIdx(SignalType::EMPTY)) << " ";
-            }
-        }
-        ofs << std::endl;
-    }
-
-    if(overlayM5uBump){
-        // leave out signal and Ground bumps
-        int displaySignalType = pg.uBump.signalTypeToAllCords.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.uBump.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.uBump.signalTypeToAllCords.end()) displaySignalType--;
-    
-        
-        ofs << "M5_UBUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.uBump.signalTypeToAllCords.begin(); cit != pg.uBump.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M5_UBUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    if(overlayM7C4){
-        // leave out signal and ground bumps
-        int displaySignalType = pg.c4.signalTypeToAllClusters.size();
-
-        std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::SIGNAL);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        cit = pg.c4.signalTypeToAllCords.find(SignalType::GROUND);
-        if(cit != pg.c4.signalTypeToAllCords.end()) displaySignalType--;
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << displaySignalType << std::endl;
-        
-        for(cit = pg.c4.signalTypeToAllCords.begin(); cit != pg.c4.signalTypeToAllCords.end(); ++cit){
-            if((cit->first == SignalType::SIGNAL) || (cit->first == SignalType::GROUND)) continue;
-            ofs << (cit->first) << " " << cit->second.size() << std::endl;
-            for(const Cord &c : cit->second){
-                ofs << c << " ";
-            }
-            ofs << std::endl;
-        }
-    }else{
-        ofs << "M7_C4BUMP SIGNAL_TYPES " << 0 << std::endl;
-    }
-
-    ofs.close();
-    return true; 
-}
-*/
 
 /*
 bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){

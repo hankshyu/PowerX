@@ -52,7 +52,6 @@ C4Bump::C4Bump(const std::string &fileName){
     std::ifstream file(fileName);
     assert(file.is_open());
 
-
     std::string lineBuffer;
     
     bool readC4 = false;
@@ -118,6 +117,7 @@ C4Bump::C4Bump(const std::string &fileName){
 
             continue;
         }
+
 
 
         // variables collected during parsing for later processing

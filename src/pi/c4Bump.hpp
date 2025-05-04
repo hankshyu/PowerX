@@ -50,7 +50,6 @@ struct C4PinCluster {
 
 class C4Bump : public ObjectArray{
 private:
-
     BallOut *m_c4BallOut;
 
     int m_clusterPinCountWidth;
@@ -68,9 +67,13 @@ private:
     int m_downBorder;
 
 public:
+    std::unordered_set<SignalType> allSignalTypes;
+    std::unordered_map<SignalType, std::unordered_set<Cord>> signalTypeToAllCords;
 
-    // std::unordered_set<SignalType> m_allSignalTypes;
-    // std::unordered_map<SignalType, std::unordered_set<Cord>> m_signalTypeToAllCords;
+    std::vector<C4PinCluster *> allClusters;
+    std::unordered_map<SignalType, std::unordered_set<C4PinCluster *>> signalTypeToAllClusters;
+    std::unordered_map<Cord, C4PinCluster *> cordToClusterMap;
+    
     C4Bump();
     explicit C4Bump(const std::string &fileName);
     ~C4Bump();
@@ -86,12 +89,7 @@ public:
     inline int getUpBorder() const {return this->m_upBorder;}
     inline int getDownBorder() const {return this->m_downBorder;}
 
-    std::unordered_set<SignalType> allSignalTypes;
-    std::unordered_map<SignalType, std::unordered_set<Cord>> signalTypeToAllCords;
 
-    std::vector<C4PinCluster *> allClusters;
-    std::unordered_map<SignalType, std::unordered_set<C4PinCluster *>> signalTypeToAllClusters;
-    std::unordered_map<Cord, C4PinCluster *> cordToClusterMap;
 
 };
 

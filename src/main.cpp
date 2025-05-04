@@ -11,7 +11,7 @@
 #include "signalType.hpp"
 #include "objectArray.hpp"
 #include "c4Bump.hpp"
-// #include "microBump.hpp"
+#include "microBump.hpp"
 
 // #include "ballOut.hpp"
 // #include "aStarBaseline.hpp"
@@ -41,10 +41,8 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
-    C4Bump c4("inputs/rocket64_0808.pinout");
-    visualisePinArray(c4.canvas, technology, "outputs/test.txt");
-
-
+    MicroBump mb("inputs/rocket64_0808.pinout");
+    visualiseMicroBump(mb, technology, "outputs/test.txt");
 
     /*
     timeProfiler.startTimer("Voronoi Diagram Based P/G");

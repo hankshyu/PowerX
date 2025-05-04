@@ -33,7 +33,7 @@
 #include "technology.hpp"
 #include "ballOut.hpp"
 #include "objectArray.hpp"
-// #include "microBump.hpp"
+#include "microBump.hpp"
 // #include "c4Bump.hpp"
 
 // #include "powerGrid.hpp"
@@ -45,8 +45,7 @@ bool visualiseCornerStitching(const CornerStitching &cs, const std::string &file
 // use "renderFloorplan.py" for render class floorplan 
 bool visualiseFloorplan(const Floorplan &fp, const std::string &filePath);
 
-
-// use "renderPinMap.py" to render ballOut data structure
+// use "renderBallOut.py" to render ballOut data structure
 bool visualiseBallOut(const BallOut &ballout, const Technology &tch, const std::string &filePath);
 
 // use "renderObjectArray" to render pin Arrays, Grid Arrays or integrated visualisation mode
@@ -54,27 +53,15 @@ bool visualisePinArray(const std::vector<std::vector<SignalType>> &pinArr, const
 bool visualiseGridArray(const std::vector<std::vector<SignalType>> &gridArr, const Technology &tch, const std::string &filePath);
 bool visualiseGridArrayWithPin(const std::vector<std::vector<SignalType>> &gridArr, const std::vector<std::vector<SignalType>> &pinArr, const Technology &tch, const std::string &filePath);
 bool visualiseGridArrayWithPins(const std::vector<std::vector<SignalType>> &gridArr,const std::vector<std::vector<SignalType>> &upPinArr, const std::vector<std::vector<SignalType>> &downPinArr, const Technology &tch, const std::string &filePath);
-
-
-/*
-// use "renderPinMap.py" to render UBump data structure
 bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath);
 
-// // use "renderPinMap.py" to render C4 data structure
-bool visualiseC4Bump(const C4Bump &c4, const Technology &tch, const std::string &filePath);
-
-
-
-bool visualisePGM5(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
-bool visualisePGM7(const PowerGrid &pg, const std::string &filePath, bool overlayOverlaps = false, bool overlayM5uBump = false, bool overlayM7C4 = false);
-bool visualisePGOverlap(const PowerGrid &pg, const std::string &filePath, bool overlayM5uBump = false, bool overlayM7C4 = false);
-
+/*
 bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM7voronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
-
 */
+
 #endif // __VISUALIZER_H__

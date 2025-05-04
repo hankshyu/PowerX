@@ -26,9 +26,7 @@ INF_OBJS =	isotropy.o units.o interval.o cord.o fcord.o segment.o rectangle.o do
 			tile.o line.o lineTile.o orderedSegment.o \
 			rectilinear.o cornerStitching.o
 	
-PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o objectArray.o c4Bump.o
-
-# pinMap.o microBump.o  \
+PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o objectArray.o c4Bump.o microBump.o
 # 			powerGrid.o aStarBaseline.o voronoiPDNGen.o
 
 

@@ -64,7 +64,7 @@ if __name__ == '__main__':
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
             
-            if(((LineBuffer[0] == "PIN") or (LineBuffer[0] == "GRID") or (LineBuffer[0] == "GRID_PIN") or (LineBuffer[0] == "PIN_GRID_PIN")) and (LineBuffer[1] == "VISUALISATION")):
+            if(((LineBuffer[0] == "PIN") or (LineBuffer[0] == "GRID") or (LineBuffer[0] == "GRID_PIN") or (LineBuffer[0] == "PIN_GRID_PIN") or (LineBuffer[0] == "MICROBUMP")) and (LineBuffer[1] == "VISUALISATION")):
                 renderMode = LineBuffer[0]
             else:
                 print(f"[RenderPinMap]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[1]}")
@@ -76,6 +76,7 @@ if __name__ == '__main__':
                 if renderMode == "PIN": print("Mode: ", GREEN, "Pin Display mode", COLORRST)
                 elif renderMode == "GRID": print("Mode: ", GREEN, "Grid Display mode", COLORRST)
                 elif renderMode == "GRID_PIN": print("Mode: ", GREEN, "Grid with Pin Display mode", COLORRST)
+                elif renderMode == "MICROBUMP": print("Mode: ", GREEN, "MircoBump Display mode", COLORRST)
                 else: print("Mode: ", GREEN, "Grid with 2 Pins Display mode", COLORRST)
 
                 print("Input File: ", GREEN, args.input, COLORRST)
@@ -143,7 +144,7 @@ if __name__ == '__main__':
                         ax.add_patch(rect)
 
             # Draw the Circular pins
-            if((renderMode == "PIN") or (renderMode == "GRID_PIN")):
+            if((renderMode == "PIN") or (renderMode == "GRID_PIN") or (renderMode == "MICROBUMP")):
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
@@ -168,7 +169,6 @@ if __name__ == '__main__':
                         )
                         ax.add_patch(upper_circle)
                 # draw the lower circle
-
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
@@ -182,6 +182,29 @@ if __name__ == '__main__':
                             facecolor=color
                         )
                         ax.add_patch(upper_circle)
+
+            if renderMode == "MICROBUMP":
+                LineBuffer = filein.readline().strip()
+                wholeLineBuffer = LineBuffer
+                LineBuffer = LineBuffer.split()
+                chipletCount = -0
+                if(LineBuffer[0] != "CHIPLETS"):
+                    print(f"[RenderPinMap]Error: Missing CHIPLET label in Microbump rendering mode: {wholeLineBuffer}")
+                chipletCount = int(LineBuffer[1])
+                
+                for cidx in range(chipletCount):
+                    LineBuffer = filein.readline().strip().split()
+                    llx = (int(LineBuffer[2]) + 0.5) * GRID_MUL 
+                    lly = (int(LineBuffer[3]) + 0.5) * GRID_MUL
+                    width = int(LineBuffer[4]) * GRID_MUL
+                    height = int(LineBuffer[5]) * GRID_MUL
+
+                    rect = plt.Rectangle((llx, lly), width, height, facecolor='none', edgecolor='black', linewidth=1)
+                    ax.add_patch(rect)
+
+
+                
+
 
             if args.output is not None:
                 plt.savefig(args.output, dpi=args.dpi)
