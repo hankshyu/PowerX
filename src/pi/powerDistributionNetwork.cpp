@@ -22,7 +22,8 @@
 #include <cassert>
 #include <vector>
 #include <unordered_map>
-
+#include <fstream>
+#include <queue>
 // 2. Boost Library:
 
 
@@ -68,6 +69,7 @@ const std::unordered_map<SignalType, SignalType> PowerDistributionNetwork::deful
 };
 
 PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName): uBump(fileName), c4(fileName) {
+    
     std::ifstream file(fileName);
     assert(file.is_open());
 
@@ -76,10 +78,6 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
     bool readPDN = false;
     bool readTechnology = false;
     bool finishTechnologyParsing = false;
-
-    len_t gridWidth = -1, gridHeight = -1;
-    len_t pinWidth = -1, pinHeight = -1;
-    len_t metalLayers = -1;
 
     while(std::getline(file, lineBuffer)){
         if (lineBuffer.empty()|| lineBuffer[0] == '#') continue; // whole line comment
@@ -106,18 +104,16 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
             }
 
             if(lineBuffer == "TECHNOLOGY_END"){
-                assert(gridWidth != -1);
-                assert(gridHeight != -1);
-                assert(pinWidth == (gridWidth + 1));
-                assert(pinHeight == (gridHeight + 1));
-                assert(metalLayers >= 2);
+                assert(m_gridWidth != -1);
+                assert(m_gridHeight != -1);
+                assert(m_pinWidth == (m_gridWidth + 1));
+                assert(m_pinHeight == (m_gridHeight + 1));
+                assert(m_metalLayerCount >= 2);
 
-                int m_gridWidth = gridWidth;
-                int m_gridHeight = gridHeight;
-                int m_pinWidth = pinWidth;
-                int m_pinHeight = pinHeight;
-                int m_metalLayerCount = metalLayers;
-                int m_viaLayerCount = metallayers - 1;
+
+                m_viaLayerCount = m_metalLayerCount - 1;
+                m_ubumpLayerIdx = 0;
+                m_c4LayerIdx = m_metalLayerCount - 1;
 
                 this->metalLayers = std::vector<ObjectArray>(m_metalLayerCount, ObjectArray(m_gridWidth, m_gridHeight));
                 this->viaLayers = std::vector<ObjectArray>(m_viaLayerCount, ObjectArray(m_pinWidth, m_pinHeight));
@@ -126,11 +122,11 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
             }
 
             
-            if(splitLine[0] == "GRID_WIDTH") gridWidth = std::stoi(splitLine[2]);
-            else if(splitLine[0] == "GRID_HEIGHT") gridHeight = std::stoi(splitLine[2]);
-            else if(splitLine[0] == "PIN_WIDTH") pinWidth = std::stoi(splitLine[2]);
-            else if(splitLine[0] == "PIN_HEIGHT") pinHeight = std::stoi(splitLine[2]);
-            else if(splitLine[0] == "LAYERS") metalLayers = std::stoi(splitLine[2]);
+            if(splitLine[0] == "GRID_WIDTH") m_gridWidth = std::stoi(splitLine[2]);
+            else if(splitLine[0] == "GRID_HEIGHT") m_gridHeight = std::stoi(splitLine[2]);
+            else if(splitLine[0] == "PIN_WIDTH") m_pinWidth = std::stoi(splitLine[2]);
+            else if(splitLine[0] == "PIN_HEIGHT") m_pinHeight = std::stoi(splitLine[2]);
+            else if(splitLine[0] == "LAYERS") m_metalLayerCount = std::stoi(splitLine[2]);
             else{
                 std::cout << "[PowerX:PDNParser] Error: Unrecognizted Technology details: " << lineBuffer << std::endl;
                 exit(4);
@@ -178,6 +174,34 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
     assert(readTechnology);
     assert(finishTechnologyParsing);
 }
+
+void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalType){
+    len_t gridHeight = gridCanvas.size();
+    assert(gridHeight > 0);
+    len_t gridWidth = gridCanvas[0].size();
+    assert(gridWidth > 0);
+    len_t pinHeight = pinCanvas.size();
+    assert(pinHeight == (gridHeight + 1));
+    len_t pinWidth = pinCanvas[0].size();
+    assert(pinWidth == (gridWidth + 1));
+
+    for(int j = 0; j < pinHeight; ++j){
+        for(int i = 0; i < pinWidth; ++i){
+            SignalType st = pinCanvas[j][i];
+            if(avoidSignalType.count(st)) continue;
+
+            if(i > 0){
+                if(j > 0) gridCanvas[j-1][i-1] = st;
+                if(j < (pinHeight - 1)) gridCanvas[j][i-1] = st;
+            }
+            if(i < (pinWidth - 1)){
+                if(j > 0) gridCanvas[j-1][i] = st;
+                if(j < (pinHeight - 1)) gridCanvas[j][i] = st;
+            }
+        }
+    }
+}
+
 
 void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label){
     const int rows = static_cast<int>(canvas.size());

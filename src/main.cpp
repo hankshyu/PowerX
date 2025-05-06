@@ -12,10 +12,10 @@
 #include "objectArray.hpp"
 #include "c4Bump.hpp"
 #include "microBump.hpp"
+#include "voronoiPDNGen.hpp"
 
 // #include "ballOut.hpp"
 // #include "aStarBaseline.hpp"
-// #include "voronoiPDNGen.hpp"
 
 
 
@@ -40,9 +40,21 @@ int main(int argc, char const *argv[]){
     TimeProfiler timeProfiler;
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
+    
+    VoronoiPDNGen vpg(FILEPATH_BUMPS);
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.metalLayers[i].markPreplacedToCanvas();
+    }
+    for(int i = 0; i < vpg.getViaLayerCount(); ++i){
+        vpg.viaLayers[i].markPreplacedToCanvas();
+    }
 
-    MicroBump mb("inputs/rocket64_0808.pinout");
-    visualiseMicroBump(mb, technology, "outputs/test.txt");
+
+    markPinPads(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, {SignalType::OBSTACLE, SignalType::EMPTY});
+    markPinPads(vpg.metalLayers[1].canvas, vpg.viaLayers[1].canvas, {SignalType::OBSTACLE, SignalType::EMPTY});
+    visualiseGridArray(vpg.metalLayers[1].canvas, technology, "outputs/test.txt");
+
+
 
     /*
     timeProfiler.startTimer("Voronoi Diagram Based P/G");

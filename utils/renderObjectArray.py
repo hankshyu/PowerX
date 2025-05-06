@@ -26,7 +26,7 @@ WHITE       = "\u001b[37m"
 SIGNAL_COLORS = {
     "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
     "EMPTY": "none",
-    "SIGNAL": "#A0A0A0",  # Gray
+    "SIGNAL": "#00ADFF",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",
     "POWER_3": "#ffc107",
@@ -148,6 +148,9 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
+                        if(renderMode == "GRID_PIN" and LineBuffer[2] == "OBSTACLE"):
+                            continue
+                        
                         color = SIGNAL_COLORS[LineBuffer[2]]
                         # Draw the box
                         circle = patches.Circle((GRID_MUL*(i+1), GRID_MUL*(j+1)), PIN_RAD, edgecolor=(0, 0, 0, 0.2), facecolor=color)
@@ -158,6 +161,8 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
+                        if(LineBuffer[2] == "EMPTY"):
+                            continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
                         upper_circle = patches.Wedge(
                             center=(GRID_MUL*(i+1), GRID_MUL*(j+1)), 
@@ -172,6 +177,8 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
+                        if(LineBuffer[2] == "EMPTY"):
+                            continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
                         upper_circle = patches.Wedge(
                             center=(GRID_MUL*(i+1), GRID_MUL*(j+1)), 

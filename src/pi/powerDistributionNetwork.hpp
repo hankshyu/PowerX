@@ -43,6 +43,9 @@ protected:
     int m_metalLayerCount;
     int m_viaLayerCount;
 
+    int m_ubumpLayerIdx;
+    int m_c4LayerIdx;
+
 public:
     MicroBump uBump;
     C4Bump c4;
@@ -61,8 +64,9 @@ public:
     inline int getPinHeight() const {return this->m_pinHeight;}
     inline int getMetalLayerCount() const {return this->m_metalLayerCount;}
     inline int getViaLayerCount() const {return this->m_viaLayerCount;}
-};
 
+};
+void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalType = {SignalType::EMPTY, SignalType::GROUND, SignalType::OVERLAP, SignalType::SIGNAL});
 void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label);
 // void insertPinPads(const PinMap &pm, std::vector<std::vector<SignalType>> &canvas, const std::unordered_map<SignalType, SignalType> &padTypeMap);
 
