@@ -21,6 +21,7 @@
 // 1. C++ STL:
 #include <iostream>
 #include <fstream>
+#include <unordered_set>
 
 // 2. Boost Library:
 #include "boost/geometry.hpp"
@@ -322,85 +323,61 @@ bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const
     return true;
 }
 
-/*
-bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
+bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
 
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
 
+    std::unordered_set<SignalType> allSignals;
     std::unordered_set<Cord> knownCords;
 
-    ofs << "M5 VORONOI VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
-    ofs << "SIGNALS" << " " << vpg.m5Segments.size() << std::endl;
-
-    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = vpg.m5Segments.begin(); cit != vpg.m5Segments.end(); ++cit){
-        SignalType st = cit->first;
+    ofs << "VORONOI_POINTS_SEGMENTS VISUALISATION " << vpg.getPinWidth() << " " << vpg.getPinHeight() << std::endl;
+    // calculate all appear signals in points and segments
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = points.begin(); cit != points.end(); ++cit){
+        allSignals.insert(cit->first);
+    }
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = segments.begin(); cit != segments.end(); ++cit){
+        allSignals.insert(cit->first);
+    }
+    
+    
+    ofs << "SIGNALS" << " " << allSignals.size() << std::endl;
+    for(SignalType st : allSignals){
         ofs << st << std::endl;
-        ofs << "SEGMENTS " << cit->second.size() << std::endl;
-        for(const OrderedSegment &cos : cit->second){
-            Cord c1(cos.getLow());
-            Cord c2(cos.getHigh());
-            knownCords.insert(c1);
-            knownCords.insert(c2);
-            ofs << c1 << " " << c2 << std::endl;
+        if(segments.count(st) != 0){
+            ofs << "SEGMENTS " << segments.at(st).size() << std::endl;
+            for(const OrderedSegment &cos : segments.at(st)){
+                Cord c1(cos.getLow());
+                Cord c2(cos.getHigh());
+                knownCords.insert(c1);
+                knownCords.insert(c2);
+                ofs << c1 << " " << c2 << std::endl;
+            }
+        }else{
+            ofs << "SEGMENTS " << 0 << std::endl;
         }
-        std::unordered_set<Cord> unseenCords;
-        for(const Cord &c : vpg.m5Points.at(st)){
-            if(knownCords.count(c) == 0) unseenCords.insert(c);
+
+        if(points.count(st) != 0){
+            std::unordered_set<Cord> unseenCords;
+            for(const Cord &c : points.at(st)){
+                if(knownCords.count(c) == 0) unseenCords.insert(c);
+            }
+            ofs << "POINTS " << unseenCords.size() << std::endl;
+            for(const Cord &c : unseenCords){
+                ofs << c << std::endl;
+            }
+            knownCords.insert(unseenCords.begin(), unseenCords.end());
+
+        }else{
+            ofs << "POINTS " << 0 << std::endl;
         }
-        ofs << "POINTS " << unseenCords.size() << std::endl;
-        for(const Cord &c : unseenCords){
-            ofs << c << std::endl;
-        }
-        
     }
 
     ofs.close();
-    return true; 
-
+    return true;
 }
-*/
-
-/*
-bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath){
-    std::ofstream ofs(filePath, std::ios::out);
-
-    assert(ofs.is_open());
-    if(!ofs.is_open()) return false;
-
-    std::unordered_set<Cord> knownCords;
-
-    ofs << "M7 VORONOI VISUALISATION " << vpg.nodeWidth << " " << vpg.nodeHeight << std::endl;
-    ofs << "SIGNALS" << " " << vpg.m5Segments.size() << std::endl;
-
-    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::const_iterator cit = vpg.m7Segments.begin(); cit != vpg.m7Segments.end(); ++cit){
-        SignalType st = cit->first;
-        ofs << st << std::endl;
-        ofs << "SEGMENTS " << cit->second.size() << std::endl;
-        for(const OrderedSegment &cos : cit->second){
-            Cord c1(cos.getLow());
-            Cord c2(cos.getHigh());
-            knownCords.insert(c1);
-            knownCords.insert(c2);
-            ofs << c1 << " " << c2 << std::endl;
-        }
-        std::unordered_set<Cord> unseenCords;
-        for(const Cord &c : vpg.m7Points.at(st)){
-            if(knownCords.count(c) == 0) unseenCords.insert(c);
-        }
-        ofs << "POINTS " << unseenCords.size() << std::endl;
-        for(const Cord &c : unseenCords){
-            ofs << c << std::endl;
-        }
-        
-    }
-
-    ofs.close();
-    return true; 
-}
-*/
 
 /*
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){

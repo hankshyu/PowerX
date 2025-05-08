@@ -34,10 +34,7 @@
 #include "ballOut.hpp"
 #include "objectArray.hpp"
 #include "microBump.hpp"
-// #include "c4Bump.hpp"
-
-// #include "powerGrid.hpp"
-// #include "voronoiPDNGen.hpp"
+#include "voronoiPDNGen.hpp"
 
 // use "renderCornerStitching.py" tor render class cornerStitching, which composed of Tiles with pointers
 bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath);
@@ -55,9 +52,11 @@ bool visualiseGridArrayWithPin(const std::vector<std::vector<SignalType>> &gridA
 bool visualiseGridArrayWithPins(const std::vector<std::vector<SignalType>> &gridArr,const std::vector<std::vector<SignalType>> &upPinArr, const std::vector<std::vector<SignalType>> &downPinArr, const Technology &tch, const std::string &filePath);
 bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const std::string &filePath);
 
+// use "renderVoronoiPointsSegments" to render points and segments structures in the voronoi algorithm
+bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
+// bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const )
+// bool VisualisePolygons
 /*
-bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
-bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
 bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);

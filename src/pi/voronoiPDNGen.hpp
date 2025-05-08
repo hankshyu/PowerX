@@ -58,17 +58,20 @@ public:
 
 
     std::vector<std::unordered_map<SignalType, std::vector<Cord>>> pointsOfLayers;
-    std::vector<std::unordered_map<SignalType, std::vector<OrderedSegment>>> segmentOfLayers;
+    std::vector<std::unordered_map<SignalType, std::vector<OrderedSegment>>> segmentsOfLayers;
     std::vector<std::unordered_map<Cord, std::vector<FCord>>> voronoiCellsOfLayers;
     std::vector<std::unordered_map<SignalType, FPGMMultiPolygon>> multiPolygonsOfLayers;
 
     VoronoiPDNGen(const std::string &fileName);
+    
+    
+    /* Mark preplaced points to metal or via layer, insert pads to metal*/
+    void markPreplacedAndInsertPads();
 
-    // fill pointsOfLayers by points of interest:
+    /* Fill pointsOfLayers by points of interest: */ 
     // in uBump and c4 connecting layer by corresponding interconnect pins and ignore sigs
     // in other layers according to to preplaced signals (not obstacles)
-
-    void initPointsAndSegments(const std::unordered_set<SignalType> &ubumpIgnoreSigs, const std::unordered_set<SignalType> &c4IgnoreSigs);
+    void initPointsAndSegments();
 
     /*
     void initPoints(const std::unordered_set<SignalType> &m5IgnoreSigs, const std::unordered_set<SignalType> &m7IgnoreSigs);
@@ -85,17 +88,12 @@ public:
     
     void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon);
     void fixIsolatedCells(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &obstacles);
-    
-    
-    friend bool visualiseM5VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
-    friend bool visualiseM7VoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::string &filePath);
-
-    friend bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
-    friend bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
-
-    friend bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
-    friend bool visualiseM7VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
     */
+    
+    friend bool visualiseVoronoiPointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
+
+    
+
 };
 
 #endif // __VORONOIPDNGEN_H__

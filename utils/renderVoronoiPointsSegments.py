@@ -20,21 +20,21 @@ WHITE       = "\u001b[37m"
 
 # Define a global mapping for pin colors
 SIGNAL_COLORS = {
+    "CHIPLET": "#B8B8B8",
     "EMPTY": "none",
+    "SIGNAL": "#B0B0B0",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",
     "POWER_3": "#ffc107",
     "POWER_4": "#b29dd9",
-    "POWER_5": "#72f2ee",
-    "POWER_6": "#fc83bc",
+    "POWER_5": "#fc83bc",
+    "POWER_6": "#72f2ee",
     "POWER_7": "#c0392b",
     "POWER_8": "#21b2ab",
     "POWER_9": "#b0f294",
     "POWER_10": "#8d57a3",
     "GROUND": "#5cb85c",
-    "OBSTACLE": "#A0A0A0",
-    "OVERLAP": "#ff0000",
-    "UNKNOWN": "#000000",
+    "OBSTACLE": "#663300"
 }
 
 def parse_arguments():
@@ -71,17 +71,13 @@ if __name__ == "__main__":
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if not ((LineBuffer[0] == "M5") or (LineBuffer[0] == "M7")):
+            if not ((LineBuffer[0] == "VORONOI_POINTS_SEGMENTS") and (LineBuffer[1] == "VISUALISATION")):
                 print("Error: Render mode unrecognized")
                 exit()
 
-            if not ((LineBuffer[1] == "VORONOI") and (LineBuffer[2] == "VISUALISATION")):
-                print("Error: Render mode unrecognized")
-                exit()
-                
             renderMode = LineBuffer[0] + " " + LineBuffer[1]
-            planeWidth = int(LineBuffer[3])
-            planeHeight = int(LineBuffer[4])
+            planeWidth = int(LineBuffer[2])
+            planeHeight = int(LineBuffer[3])
 
             # display the arguments if user specifies verbose mode
             if args.verbose:

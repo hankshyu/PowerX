@@ -1,4 +1,10 @@
 BEGIN_PREPLACE
+SIGNAL: SIGNALTYPE::OBSTACLE
+Cord(22, 63) to Cord(26, 63)
+Cord(22, 64) to Cord(26, 64)
+Cord(25, 65) to Cord(25, 69)
+Cord(26, 65) to Cord(26, 69)
+
 SIGNAL: SIGNALTYPE::SIGNAL
 # Line 1
 Cord(22, 45) to Cord(23, 45)

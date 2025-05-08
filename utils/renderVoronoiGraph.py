@@ -20,21 +20,21 @@ WHITE       = "\u001b[37m"
 
 # Define a global mapping for pin colors
 SIGNAL_COLORS = {
+    "CHIPLET": "#B8B8B8",
     "EMPTY": "none",
+    "SIGNAL": "#B0B0B0",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",
     "POWER_3": "#ffc107",
     "POWER_4": "#b29dd9",
-    "POWER_5": "#72f2ee",
-    "POWER_6": "#fc83bc",
+    "POWER_5": "#fc83bc",
+    "POWER_6": "#72f2ee",
     "POWER_7": "#c0392b",
     "POWER_8": "#21b2ab",
     "POWER_9": "#b0f294",
     "POWER_10": "#8d57a3",
     "GROUND": "#5cb85c",
-    "OBSTACLE": "#A0A0A0",
-    "OVERLAP": "#ff0000",
-    "UNKNOWN": "#000000",
+    "OBSTACLE": "#663300"
 }
 
 def parse_arguments():

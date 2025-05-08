@@ -43,8 +43,8 @@ protected:
     int m_metalLayerCount;
     int m_viaLayerCount;
 
-    int m_ubumpLayerIdx;
-    int m_c4LayerIdx;
+    int m_ubumpConnectedMetalLayerIdx;
+    int m_c4ConnectedMetalLayerIdx;
 
 public:
     MicroBump uBump;
@@ -54,7 +54,7 @@ public:
     std::vector<ObjectArray> viaLayers;
 
     const static std::unordered_map<SignalType, SignalType> defulatuBumpSigPadMap;
-    const static std::unordered_map<SignalType, SignalType> defulatC4SigPadMap;
+    const static std::unordered_map<SignalType, SignalType> defulatc4SigPadMap;
 
     PowerDistributionNetwork(const std::string &fileName);
 
@@ -64,9 +64,11 @@ public:
     inline int getPinHeight() const {return this->m_pinHeight;}
     inline int getMetalLayerCount() const {return this->m_metalLayerCount;}
     inline int getViaLayerCount() const {return this->m_viaLayerCount;}
-
+    inline int getuBumpConnectedMetalLayerIdx() const {return this->m_ubumpConnectedMetalLayerIdx;}
+    inline int getc4ConnectedmetalLayerIdx() const {return this->m_c4ConnectedMetalLayerIdx;}
 };
-void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalType = {SignalType::EMPTY, SignalType::GROUND, SignalType::OVERLAP, SignalType::SIGNAL});
+void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes);
+void markPinPadsWithSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &signalTypes);
 void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label);
 // void insertPinPads(const PinMap &pm, std::vector<std::vector<SignalType>> &canvas, const std::unordered_map<SignalType, SignalType> &padTypeMap);
 

@@ -21,40 +21,21 @@ WHITE       = "\u001b[37m"
 
 # Define a global mapping for pin colors
 SIGNAL_COLORS = {
+    "CHIPLET": "#B8B8B8",
     "EMPTY": "none",
+    "SIGNAL": "#B0B0B0",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",
     "POWER_3": "#ffc107",
     "POWER_4": "#b29dd9",
-    "POWER_5": "#72f2ee",
-    "POWER_6": "#fc83bc",
+    "POWER_5": "#fc83bc",
+    "POWER_6": "#72f2ee",
     "POWER_7": "#c0392b",
     "POWER_8": "#21b2ab",
     "POWER_9": "#b0f294",
     "POWER_10": "#8d57a3",
     "GROUND": "#5cb85c",
-    "OBSTACLE": "#A0A0A0",
-    "OVERLAP": "#ff0000",
-    "UNKNOWN": "#000000",
-}
-
-GRID_COLORS = {
-    0: "none",
-    1: "#1e81b0",
-    2: "#e67e22",
-    3: "#ffc107",
-    4: "#b29dd9",
-    5: "#72f2ee",
-    6: "#fc83bc",
-    7: "#c0392b",
-    8: "#21b2ab",
-    9: "#b0f294",
-    10: "#8d57a3",
-    11: "#5cb85c",
-    12: "#B3B3B3",
-    13: "#292929",
-    14: "#ff0000",
-    15: "#000000",
+    "OBSTACLE": "#663300"
 }
 
 

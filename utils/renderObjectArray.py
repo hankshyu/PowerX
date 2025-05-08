@@ -24,21 +24,21 @@ WHITE       = "\u001b[37m"
 
 # Define a global mapping for pin colors
 SIGNAL_COLORS = {
-    "CHIPLET": "#B8B8B8",  # Medium Gray (Darker for better contrast)
+    "CHIPLET": "#B8B8B8",
     "EMPTY": "none",
-    "SIGNAL": "#00ADFF",
+    "SIGNAL": "#B0B0B0",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",
     "POWER_3": "#ffc107",
     "POWER_4": "#b29dd9",
-    "POWER_5": "#72f2ee",
-    "POWER_6": "#fc83bc",
+    "POWER_5": "#fc83bc",
+    "POWER_6": "#72f2ee",
     "POWER_7": "#c0392b",
     "POWER_8": "#21b2ab",
     "POWER_9": "#b0f294",
     "POWER_10": "#8d57a3",
     "GROUND": "#5cb85c",
-    "OBSTACLE": "#888888"
+    "OBSTACLE": "#663300"
 }
 
 if __name__ == '__main__':

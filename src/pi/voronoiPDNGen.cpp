@@ -59,76 +59,217 @@
 
 VoronoiPDNGen::VoronoiPDNGen(const std::string &fileName): PowerDistributionNetwork(fileName) {
     this->pointsOfLayers.resize(this->m_metalLayerCount);
-    this->segmentOfLayers.resize(this->m_metalLayerCount);
+    this->segmentsOfLayers.resize(this->m_metalLayerCount);
     this->voronoiCellsOfLayers.resize(this->m_metalLayerCount);
     this->multiPolygonsOfLayers.resize(this->m_metalLayerCount);
 }
 
-void VoronoiPDNGen::initPointsAndSegments(const std::unordered_set<SignalType> &ubumpIgnoreSigs, const std::unordered_set<SignalType> &c4IgnoreSigs){
-    // prepare the points for uBump connecting layer 
-    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = this->uBump.signalTypeToAllCords.begin(); cit != this->uBump.signalTypeToAllCords.end(); ++cit){
+void VoronoiPDNGen::markPreplacedAndInsertPads(){
+    for(int i = 0; i < m_metalLayerCount; ++i){
+        this->metalLayers[i].markPreplacedToCanvas();
+    }
+    for(int i = 0; i < m_viaLayerCount; ++i){
+        this->viaLayers[i].markPreplacedToCanvas();
+    }
+
+    std::unordered_set<SignalType> viaToMetalSignalTypes(POWER_SIGNAL_SET.begin(), POWER_SIGNAL_SET.end());
+    viaToMetalSignalTypes.insert(SignalType::SIGNAL);
+    // insert pads for the uBump connecting metal layer
+    markPinPadsWithSignals(this->metalLayers[m_ubumpConnectedMetalLayerIdx].canvas, this->uBump.canvas, POWER_SIGNAL_SET);
+    markPinPadsWithSignals(this->metalLayers[m_ubumpConnectedMetalLayerIdx].canvas, this->viaLayers[0].canvas, viaToMetalSignalTypes);
+
+    for(int mLayer = m_ubumpConnectedMetalLayerIdx + 1; mLayer < m_c4ConnectedMetalLayerIdx; ++mLayer){
+        markPinPadsWithSignals(this->metalLayers[mLayer].canvas, this->viaLayers[mLayer-1].canvas,viaToMetalSignalTypes);
+        markPinPadsWithSignals(this->metalLayers[mLayer].canvas, this->viaLayers[mLayer].canvas, viaToMetalSignalTypes);
+    }
+
+    markPinPadsWithSignals(this->metalLayers[m_c4ConnectedMetalLayerIdx].canvas, this->viaLayers[m_viaLayerCount-1].canvas, viaToMetalSignalTypes);
+    markPinPadsWithoutSignals(this->metalLayers[m_c4ConnectedMetalLayerIdx].canvas, this->c4.canvas, {SignalType::EMPTY, SignalType::OBSTACLE});
+}
+
+void VoronoiPDNGen::initPointsAndSegments(){
+    
+    const std::unordered_set<SignalType> uBumpSOI = {
+        SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+        SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
+    };
+    const std::unordered_set<SignalType> c4SOI = {
+        SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+        SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
+    };
+    const std::unordered_set<SignalType> viaSOI = {
+        SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+        SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
+};
+    const std::unordered_set<SignalType> metalSOI = {
+        SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+        SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
+    };
+
+
+    // prepare the points for uBump connecting layer
+    std::unordered_map<SignalType, std::unordered_set<Cord>> ubumpcheckMap;
+    
+    // points on uBump that is POI
+    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = uBump.signalTypeToAllCords.begin(); cit != uBump.signalTypeToAllCords.end(); ++cit){
         SignalType st = cit->first;
-        if(ubumpIgnoreSigs.count(st) != 0) continue;
-        this->pointsOfLayers[m_ubumpLayerIdx].at(st) = std::vector<Cord>(cit->second.begin(), cit->second.end());
-        this->segmentOfLayers[m_ubumpLayerIdx].at(st) = {};
+        if(uBumpSOI.count(st) == 0) continue;
+
+        ubumpcheckMap[st].insert(cit->second.begin(), cit->second.end());
+    }
+
+    // points on the via below uBump connecting layer that's POI
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.begin(); cit != viaLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.end(); ++cit){
+        SignalType st = cit->first;
+        if(viaSOI.count(st) == 0) continue;
+        ubumpcheckMap[st].insert(cit->second.begin(), cit->second.end());
+    }
+
+    // points on the metal layer itself that is POI
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = metalLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.begin(); cit != metalLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.end(); ++cit){
+        SignalType st = cit->first;
+        if(metalSOI.count(st) == 0) continue;
+        for(const Cord &c : cit->second){
+            Cord llPointOfBox(c);
+            Cord lrPointOfBox(c.x() + 1, c.y());
+            Cord ulPointOfBox(c.x(), c.y() + 1);
+            Cord urPointOfBox(c.x() + 1, c.y() + 1);
+            ubumpcheckMap[st].insert(llPointOfBox);
+            ubumpcheckMap[st].insert(lrPointOfBox);
+            ubumpcheckMap[st].insert(ulPointOfBox);
+            ubumpcheckMap[st].insert(urPointOfBox);
+        }
+    }
+
+    // push ubumpCheckMap points into pointsOfLayers and initialise segmentsOflayers
+    std::unordered_set<Cord> ubumpSeenCords;
+    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = ubumpcheckMap.begin(); cit != ubumpcheckMap.end(); ++cit){
+        
+        if(cit->second.empty()) continue;
+        SignalType st = cit->first;
+
+        for(const Cord &c : cit->second){
+            if(ubumpSeenCords.count(c) != 0){
+                std::cout << "[PowerX:VoronoiPDNGen] Warning: Repeated Point of interest found when processing uBump connecting metal layer: " << c << std::endl;
+                exit(4);
+            }else{
+                ubumpSeenCords.insert(c);
+            }
+        }
+
+        this->pointsOfLayers[m_ubumpConnectedMetalLayerIdx][st] = std::vector<Cord>(cit->second.begin(), cit->second.end());
+        this->segmentsOfLayers[m_ubumpConnectedMetalLayerIdx][st] = {};
     }
 
 
     // prepare the points for c4 connecting layer
-    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = this->c4.signalTypeToAllCords.begin(); cit != this->c4.signalTypeToAllCords.end(); ++cit){
+    std::unordered_map<SignalType, std::unordered_set<Cord>> c4checkMap;
+
+    // points on c4 that is POI
+    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = c4.signalTypeToAllCords.begin(); cit != c4.signalTypeToAllCords.end(); ++cit){
         SignalType st = cit->first;
-        if(ubumpIgnoreSigs.count(st) != 0) continue;
-        this->pointsOfLayers[m_c4LayerIdx].at(st) = std::vector<Cord>(cit->second.begin(), cit->second.end());
-        this->segmentOfLayers[m_c4LayerIdx].at(st) = {};
+        if(c4SOI.count(st) == 0) continue;
+        c4checkMap[st].insert(cit->second.begin(), cit->second.end());
+    }
+
+    // points on the via above c4 connecting layer that's POI
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[m_c4ConnectedMetalLayerIdx-1].preplacedCords.begin(); cit != viaLayers[m_c4ConnectedMetalLayerIdx-1].preplacedCords.end(); ++cit){
+        SignalType st = cit->first;
+        if(viaSOI.count(st) == 0) continue;
+        c4checkMap[st].insert(cit->second.begin(), cit->second.end());
+    }
+
+    // points on the metal layer itself that is POI
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = metalLayers[m_c4ConnectedMetalLayerIdx].preplacedCords.begin(); cit != metalLayers[m_c4ConnectedMetalLayerIdx].preplacedCords.end(); ++cit){
+        SignalType st = cit->first;
+        if(metalSOI.count(st) == 0) continue;
+        for(const Cord &c : cit->second){
+            Cord llPointOfBox(c);
+            Cord lrPointOfBox(c.x() + 1, c.y());
+            Cord ulPointOfBox(c.x(), c.y() + 1);
+            Cord urPointOfBox(c.x() + 1, c.y() + 1);
+            c4checkMap[st].insert(llPointOfBox);
+            c4checkMap[st].insert(lrPointOfBox);
+            c4checkMap[st].insert(ulPointOfBox);
+            c4checkMap[st].insert(urPointOfBox);
+        }
+    }
+
+    // push c4checkMap points into pointsOfLayers and initialise segmentsOflayers
+    std::unordered_set<Cord> c4seenCords;
+    for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = c4checkMap.begin(); cit != c4checkMap.end(); ++cit){
+        
+        if(cit->second.empty()) continue;
+        SignalType st = cit->first;
+        
+        for(const Cord &c : cit->second){
+            if(c4seenCords.count(c) != 0){
+                std::cout << "[PowerX:VoronoiPDNGen] Warning: Repeated Point of interest found when processing c4 connecting metal layer: " << c << std::endl;
+                exit(4);
+            }else{
+                c4seenCords.insert(c);
+            }
+        }
+        this->pointsOfLayers[m_c4ConnectedMetalLayerIdx][st] = std::vector<Cord>(cit->second.begin(), cit->second.end());
+        this->segmentsOfLayers[m_c4ConnectedMetalLayerIdx][st] = {};
     }
 
     // prepare points other layers, which comes from:
     // 1. the preplaced grids from such layer
     // 2. the up and down via points
+    // TODO
 
-    for(int mlayer = m_ubumpLayerIdx+1; mlayer < m_c4LayerIdx; ++ mlayer){
+    for(int mLayer = m_ubumpConnectedMetalLayerIdx+1; mLayer < m_c4ConnectedMetalLayerIdx; ++mLayer){
         std::unordered_map<SignalType, std::unordered_set<Cord>> processPoints;
-        // process preplaced grids for the layer (ignore preplaced)
-        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = metalLayers[mlayer].preplacedCords.begin(); cit != metalLayers[mlayer].preplacedCords.end(); ++cit){
+
+        // points on the top via that is POI
+        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[mLayer-1].preplacedCords.begin(); cit != viaLayers[mLayer-1].preplacedCords.end(); ++cit){
             SignalType st = cit->first;
-            if(st == SignalType::OBSTACLE) continue;
+            if(viaSOI.count(st) == 0) continue;
+            processPoints[st].insert(cit->second.begin(), cit->second.end());
+        }
 
-            if(processPoints.count(st) == 0) processPoints[st] = {};
-            if(this->segmentOfLayers[mlayer].count(st) == 0) this->segmentOfLayers[mlayer].at(st) = {};
+        // points on the bottom that that is POI
+        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[mLayer].preplacedCords.begin(); cit != viaLayers[mLayer].preplacedCords.end(); ++cit){
+            SignalType st = cit->first;
+            if(viaSOI.count(st) == 0) continue;
+            processPoints[st].insert(cit->second.begin(), cit->second.end());
+        }
 
+        // points on the metal layer itself that is POI
+        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = metalLayers[mLayer].preplacedCords.begin(); cit != metalLayers[mLayer].preplacedCords.end(); ++cit){
+            SignalType st = cit->first;
+            if(metalSOI.count(st) == 0) continue;
+            for(const Cord &c : cit->second){
+                Cord llPointOfBox(c);
+                Cord lrPointOfBox(c.x() + 1, c.y());
+                Cord ulPointOfBox(c.x(), c.y() + 1);
+                Cord urPointOfBox(c.x() + 1, c.y() + 1);
+                processPoints[st].insert(llPointOfBox);
+                processPoints[st].insert(lrPointOfBox);
+                processPoints[st].insert(ulPointOfBox);
+                processPoints[st].insert(urPointOfBox);
+            }
+        }
+
+        // push ubumpCheckMap points into pointsOfLayers and initialise segmentsOflayers
+        std::unordered_set<Cord> seenCords;
+        for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = processPoints.begin(); cit != processPoints.end(); ++cit){
             
-            for(const Cord &ppgrid : cit->second){
-                processPoints[st].insert(ppgrid);
-                processPoints[st].insert(Cord(ppgrid.x() + 1, ppgrid.y()));
-                processPoints[st].insert(Cord(ppgrid.x(), ppgrid.y() + 1));
-                processPoints[st].insert(Cord(ppgrid.x() + 1, ppgrid.y() + 1));
+            if(cit->second.empty()) continue;
+            SignalType st = cit->first;
+
+            for(const Cord &c : cit->second){
+                if(seenCords.count(c) != 0){
+                    std::cout << "[PowerX:VoronoiPDNGen] Warning: Repeated Point of interest(" << c << ") found when processing metal layer: " << mLayer << std::endl;
+                    exit(4);
+                }else{
+                    seenCords.insert(c);
+                }
             }
 
-        }
-
-        // process the pins above the layer
-        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[mlayer-1].preplacedCords.begin(); cit != viaLayers[mlayer-1].preplacedCords.end(); ++cit){
-            SignalType st = cit->first;
-            if(st == SignalType::OBSTACLE) continue;
-
-            if(processPoints.count(st) == 0) processPoints[st] = std::unordered_set<Cord>(cit->second.begin(), cit->second.end());
-            else processPoints[st].insert(cit->second.begin(), cit->second.end());
-
-            if(this->segmentOfLayers[mlayer].count(st) == 0) this->segmentOfLayers[mlayer].at(st) = {};
-        }
-
-        // process the pins below the layer
-        for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = viaLayers[mlayer].preplacedCords.begin(); cit != viaLayers[mlayer].preplacedCords.end(); ++cit){
-            SignalType st = cit->first;
-            if(st == SignalType::OBSTACLE) continue;
-
-            if(processPoints.count(st) == 0) processPoints[st] = std::unordered_set<Cord>(cit->second.begin(), cit->second.end());
-            else processPoints[st].insert(cit->second.begin(), cit->second.end());
-
-            if(this->segmentOfLayers[mlayer].count(st) == 0) this->segmentOfLayers[mlayer].at(st) = {};
-        }
-        for(std::unordered_map<SignalType, std::unordered_set<Cord>>::const_iterator cit = processPoints.begin(); cit != processPoints.end(); ++cit){
-            this->pointsOfLayers[mlayer].at(cit->first) = std::vector<Cord>(cit->second.begin(), cit->second.end());
+            this->pointsOfLayers[mLayer][st] = std::vector<Cord>(cit->second.begin(), cit->second.end());
+            this->segmentsOfLayers[mLayer][st] = {};
         }
     }
 }

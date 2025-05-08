@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <string>
 #include <ostream>
+#include <unordered_set>
 
 // 2. Boost Library:
 
@@ -47,6 +48,11 @@ enum class SignalType : uint8_t{
     OBSTACLE = 13, OBSTACLES = 13, OBST = 13,
     OVERLAP = 14,
     UNKNOWN = 15,
+};
+
+const std::unordered_set<SignalType> POWER_SIGNAL_SET = {
+    SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+    SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
 };
 
 constexpr inline const char* to_string(SignalType st) {

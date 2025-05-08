@@ -47,12 +47,9 @@ const std::unordered_map<SignalType, SignalType> PowerDistributionNetwork::deful
     { SignalType::POWER_8, SignalType::POWER_8},
     { SignalType::POWER_9, SignalType::POWER_9},
     { SignalType::POWER_10, SignalType::POWER_10},
-    { SignalType::GROUND, SignalType::EMPTY},
-    { SignalType::SIGNAL, SignalType::EMPTY},
-    { SignalType::OBSTACLE, SignalType::EMPTY}
 };
 
-const std::unordered_map<SignalType, SignalType> PowerDistributionNetwork::defulatC4SigPadMap = {
+const std::unordered_map<SignalType, SignalType> PowerDistributionNetwork::defulatc4SigPadMap = {
     { SignalType::POWER_1, SignalType::POWER_1},
     { SignalType::POWER_2, SignalType::POWER_2},
     { SignalType::POWER_3, SignalType::POWER_3},
@@ -64,7 +61,7 @@ const std::unordered_map<SignalType, SignalType> PowerDistributionNetwork::deful
     { SignalType::POWER_9, SignalType::POWER_9},
     { SignalType::POWER_10, SignalType::POWER_10},
     { SignalType::GROUND, SignalType::OBSTACLE},
-    { SignalType::SIGNAL, SignalType::OBSTACLE},
+    { SignalType::SIGNAL, SignalType::SIGNAL},
     { SignalType::OBSTACLE, SignalType::OBSTACLE}
 };
 
@@ -112,8 +109,8 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
 
 
                 m_viaLayerCount = m_metalLayerCount - 1;
-                m_ubumpLayerIdx = 0;
-                m_c4LayerIdx = m_metalLayerCount - 1;
+                m_ubumpConnectedMetalLayerIdx = 0;
+                m_c4ConnectedMetalLayerIdx = m_metalLayerCount - 1;
 
                 this->metalLayers = std::vector<ObjectArray>(m_metalLayerCount, ObjectArray(m_gridWidth, m_gridHeight));
                 this->viaLayers = std::vector<ObjectArray>(m_viaLayerCount, ObjectArray(m_pinWidth, m_pinHeight));
@@ -175,7 +172,7 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
     assert(finishTechnologyParsing);
 }
 
-void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalType){
+void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes){
     len_t gridHeight = gridCanvas.size();
     assert(gridHeight > 0);
     len_t gridWidth = gridCanvas[0].size();
@@ -188,7 +185,7 @@ void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::ve
     for(int j = 0; j < pinHeight; ++j){
         for(int i = 0; i < pinWidth; ++i){
             SignalType st = pinCanvas[j][i];
-            if(avoidSignalType.count(st)) continue;
+            if(avoidSignalTypes.count(st)) continue;
 
             if(i > 0){
                 if(j > 0) gridCanvas[j-1][i-1] = st;
@@ -202,6 +199,32 @@ void markPinPads(std::vector<std::vector<SignalType>> &gridCanvas, const std::ve
     }
 }
 
+void markPinPadsWithSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &signalTypes){
+    len_t gridHeight = gridCanvas.size();
+    assert(gridHeight > 0);
+    len_t gridWidth = gridCanvas[0].size();
+    assert(gridWidth > 0);
+    len_t pinHeight = pinCanvas.size();
+    assert(pinHeight == (gridHeight + 1));
+    len_t pinWidth = pinCanvas[0].size();
+    assert(pinWidth == (gridWidth + 1));
+
+    for(int j = 0; j < pinHeight; ++j){
+        for(int i = 0; i < pinWidth; ++i){
+            SignalType st = pinCanvas[j][i];
+            if(signalTypes.count(st) == 0) continue;
+
+            if(i > 0){
+                if(j > 0) gridCanvas[j-1][i-1] = st;
+                if(j < (pinHeight - 1)) gridCanvas[j][i-1] = st;
+            }
+            if(i < (pinWidth - 1)){
+                if(j > 0) gridCanvas[j-1][i] = st;
+                if(j < (pinHeight - 1)) gridCanvas[j][i] = st;
+            }
+        }
+    }
+}
 
 void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label){
     const int rows = static_cast<int>(canvas.size());
