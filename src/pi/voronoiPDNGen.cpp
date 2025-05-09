@@ -41,6 +41,8 @@
 
 // 3. Texo Library:
 #include "units.hpp"
+#include "cord.hpp"
+#include "fcord.hpp"
 #include "orderedSegment.hpp"
 #include "voronoiPDNGen.hpp"
 
@@ -271,6 +273,200 @@ void VoronoiPDNGen::initPointsAndSegments(){
             this->pointsOfLayers[mLayer][st] = std::vector<Cord>(cit->second.begin(), cit->second.end());
             this->segmentsOfLayers[mLayer][st] = {};
         }
+    }
+}
+
+void VoronoiPDNGen::connectLayers(int upLayerIdx, int downLayerIdx){
+    assert(upLayerIdx >= m_ubumpConnectedMetalLayerIdx);
+    assert(downLayerIdx <= m_c4ConnectedMetalLayerIdx);
+    assert(downLayerIdx == (upLayerIdx+1));
+
+    const std::unordered_set<SignalType> metalSOI = {
+        SignalType::POWER_1, SignalType::POWER_2, SignalType::POWER_3, SignalType::POWER_4, SignalType::POWER_5,
+        SignalType::POWER_6, SignalType::POWER_7, SignalType::POWER_8, SignalType::POWER_9, SignalType::POWER_10
+    };
+
+    // collect all signal of interests
+    std::unordered_set<SignalType> allSigTypes;
+    for(auto at : this->metalLayers[upLayerIdx].preplacedCords){
+        if(!at.second.empty()) allSigTypes.insert(at.first);
+    }
+    for(auto at : this->metalLayers[downLayerIdx].preplacedCords){
+        if(!at.second.empty()) allSigTypes.insert(at.first);
+    }
+    for(std::unordered_set<SignalType>::iterator it = allSigTypes.begin(); it != allSigTypes.end(); ){
+        // erease signal if it's not SOI, or it already apperas in the via (valid)
+        if(metalSOI.count(*it) == 0) it = allSigTypes.erase(it);
+        else if(this->viaLayers[upLayerIdx].preplacedCords.count(*it) != 0) it = allSigTypes.erase(it);
+        else ++it;
+    }
+
+
+
+    for(const SignalType &st : allSigTypes){
+        // check if existing points already exists in the upLayerIdx and downLayerIdx
+        FCord upCordAvg(0, 0);
+        FCord downCordAvg(0, 0);
+
+        if(pointsOfLayers[upLayerIdx].count(st) != 0){
+            for(const Cord &c : pointsOfLayers[upLayerIdx][st]){
+                upCordAvg.x(upCordAvg.x() + c.x());
+                upCordAvg.y(upCordAvg.y() + c.y());
+            }
+            upCordAvg.x(upCordAvg.x() / pointsOfLayers[upLayerIdx][st].size());
+            upCordAvg.y(upCordAvg.y() / pointsOfLayers[upLayerIdx][st].size());
+        }else{
+            upCordAvg = FCord(-1, -1);
+        }
+
+        if(pointsOfLayers[downLayerIdx].count(st) != 0){
+            for(const Cord &c : pointsOfLayers[downLayerIdx][st]){
+                downCordAvg.x(downCordAvg.x() + c.x());
+                downCordAvg.y(downCordAvg.y() + c.y());
+            }
+            downCordAvg.x(downCordAvg.x() / pointsOfLayers[downLayerIdx][st].size());
+            downCordAvg.y(downCordAvg.y() / pointsOfLayers[downLayerIdx][st].size());
+        }else{
+            downCordAvg = FCord(-1, -1);
+        } 
+
+        // select candidates that should not be occupied and pass the pad test
+
+        std::unordered_set<Cord> upLayerBlockingPoints;
+        std::unordered_set<Cord> downLayerBlockingPoints;
+        std::unordered_set<Cord> allEmptyVias;
+        
+        for(auto cit = pointsOfLayers[upLayerIdx].begin(); cit != pointsOfLayers[upLayerIdx].end(); ++cit){
+            if(cit->first == st) continue;
+            upLayerBlockingPoints.insert(cit->second.begin(), cit->second.end());
+        }
+
+        for(auto cit = pointsOfLayers[downLayerIdx].begin(); cit != pointsOfLayers[downLayerIdx].end(); ++cit){
+            if(cit->first == st) continue;
+            downLayerBlockingPoints.insert(cit->second.begin(), cit->second.end());
+        }
+
+        std::unordered_set<Cord> occupiedVias;
+        for(auto cit = viaLayers[upLayerIdx].preplacedCords.begin(); cit != viaLayers[upLayerIdx].preplacedCords.end(); ++cit){
+            occupiedVias.insert(cit->second.begin(), cit->second.end());
+        }
+
+        for(int j = 0; j < getPinHeight(); ++j){
+            for(int i = 0; i < getPinHeight(); ++i){
+                Cord c(i, j);
+                if(occupiedVias.count(c) != 0) continue;
+                if(upLayerBlockingPoints.count(c) != 0) continue;
+                if(downLayerBlockingPoints.count(c) != 0) continue;
+                
+                allEmptyVias.insert(Cord(i, j));
+            }
+        }
+
+        for(std::unordered_set<Cord>::iterator it = allEmptyVias.begin(); it != allEmptyVias.end(); ){
+            // test pads are valid
+            Cord pin(*it);
+            len_t xHigh = pin.x();
+            len_t xLow = (xHigh > 0)? xHigh-1 : xHigh;
+            len_t yHigh = pin.y();
+            len_t yLow = (yHigh > 0)? yHigh-1 : yHigh;
+
+            Cord ll(xLow, yLow);
+            Cord lr(xHigh, yLow);
+            Cord ul(xLow, yHigh);
+            Cord ur(xHigh, yHigh);
+
+            bool pinValid = true;
+            for(auto cit = metalLayers[upLayerIdx].preplacedCords.begin(); cit != metalLayers[upLayerIdx].preplacedCords.end(); ++cit){
+                SignalType findingSt = cit->first;
+                if(findingSt == st){
+                    continue;
+                }else if(metalLayers[upLayerIdx].canvas[ll.y()][ll.x()] != st && metalLayers[upLayerIdx].canvas[ll.y()][ll.x()] != SignalType::EMPTY){
+                    pinValid = false;
+                    break;
+                }else if(metalLayers[upLayerIdx].canvas[lr.y()][lr.x()] != st && metalLayers[upLayerIdx].canvas[lr.y()][lr.x()] != SignalType::EMPTY){
+                    pinValid = false;
+                    break;
+                }else if(metalLayers[upLayerIdx].canvas[ul.y()][ul.x()] != st && metalLayers[upLayerIdx].canvas[ul.y()][ul.x()] != SignalType::EMPTY){
+                    pinValid = false;
+                    break;
+                }else if(metalLayers[upLayerIdx].canvas[ur.y()][ur.x()] != st && metalLayers[upLayerIdx].canvas[ur.y()][ur.x()] != SignalType::EMPTY){
+                    pinValid = false;
+                    break;
+                }
+            }
+
+            if(pinValid){
+                for(auto cit = metalLayers[downLayerIdx].preplacedCords.begin(); cit != metalLayers[downLayerIdx].preplacedCords.end(); ++cit){
+                    SignalType findingSt = cit->first;
+                    if(findingSt == st){
+                        continue;
+                    }else if(metalLayers[downLayerIdx].canvas[ll.y()][ll.x()] != st && metalLayers[downLayerIdx].canvas[ll.y()][ll.x()] != SignalType::EMPTY){
+                        pinValid = false;
+                        break;
+                    }else if(metalLayers[downLayerIdx].canvas[lr.y()][lr.x()] != st && metalLayers[downLayerIdx].canvas[lr.y()][lr.x()] != SignalType::EMPTY){
+                        pinValid = false;
+                        break;
+                    }else if(metalLayers[downLayerIdx].canvas[ul.y()][ul.x()] != st && metalLayers[downLayerIdx].canvas[ul.y()][ul.x()] != SignalType::EMPTY){
+                        pinValid = false;
+                        break;
+                    }else if(metalLayers[downLayerIdx].canvas[ur.y()][ur.x()] != st && metalLayers[downLayerIdx].canvas[ur.y()][ur.x()] != SignalType::EMPTY){
+                        pinValid = false;
+                        break;
+                    }
+                }
+            }
+
+            // erase or increment
+            if(!pinValid) it = allEmptyVias.erase(it);
+            else ++it;
+        }
+        
+        // select the candidates that is closest to upCord
+        flen_t minDistance = FLEN_T_MAX;
+        Cord currBest(-1, -1);
+
+        for(const Cord &c : allEmptyVias){
+            flen_t distance = 0;
+            if(upCordAvg != FCord(-1, -1)) distance += calEuclideanDistance(upCordAvg, c);
+            if(downCordAvg != FCord(-1, -1)) distance += calEuclideanDistance(downCordAvg, c);
+
+            if(distance < minDistance){
+                minDistance = distance;
+                currBest = c;
+            }
+        }
+
+        // ccurrBest is selected to bridge up and down metal layer, push to preplaced
+        viaLayers[upLayerIdx].preplacedCords[st].push_back(currBest);
+        viaLayers[upLayerIdx].setCanvas(currBest, st);
+
+        Cord llPad(currBest.x() - 1, currBest.y() - 1);
+        Cord lrPad(currBest.x(), currBest.y() - 1);
+        Cord ulPad(currBest.x() - 1, currBest.y());
+        Cord urPad(currBest.x(), currBest.y());
+
+        metalLayers[upLayerIdx].preplacedCords[st].push_back(llPad);
+        metalLayers[upLayerIdx].preplacedCords[st].push_back(lrPad);
+        metalLayers[upLayerIdx].preplacedCords[st].push_back(ulPad);
+        metalLayers[upLayerIdx].preplacedCords[st].push_back(urPad);
+        metalLayers[upLayerIdx].setCanvas(llPad, st);
+        metalLayers[upLayerIdx].setCanvas(lrPad, st);
+        metalLayers[upLayerIdx].setCanvas(ulPad, st);
+        metalLayers[upLayerIdx].setCanvas(urPad, st);
+
+        metalLayers[downLayerIdx].preplacedCords[st].push_back(llPad);
+        metalLayers[downLayerIdx].preplacedCords[st].push_back(lrPad);
+        metalLayers[downLayerIdx].preplacedCords[st].push_back(ulPad);
+        metalLayers[downLayerIdx].preplacedCords[st].push_back(urPad);
+        metalLayers[downLayerIdx].setCanvas(llPad, st);
+        metalLayers[downLayerIdx].setCanvas(lrPad, st);
+        metalLayers[downLayerIdx].setCanvas(ulPad, st);
+        metalLayers[downLayerIdx].setCanvas(urPad, st);
+
+        // push to points
+        this->pointsOfLayers[upLayerIdx][st].push_back(currBest);
+        this->pointsOfLayers[downLayerIdx][st].push_back(currBest);
+        
     }
 }
 
