@@ -54,7 +54,7 @@ bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const
 
 // use "renderVoronoiPointsSegments" to render points and segments structures in the voronoi algorithm
 bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
-// bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const )
+bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath);
 // bool VisualisePolygons
 /*
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);

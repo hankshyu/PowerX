@@ -379,6 +379,38 @@ bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<
     return true;
 }
 
+bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "VORONOI_GRAPH VISUALISATION " << vpg.getPinWidth() << " " << vpg.getPinHeight() << std::endl;
+    ofs << "SIGNALS" << " " << points.size() << std::endl;
+
+    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = points.begin(); cit != points.end(); ++cit){
+        SignalType st = cit->first;
+        ofs << st << std::endl;
+        ofs << "POINTS " << cit->second.size() << std::endl;
+        for(const Cord &c : cit->second){
+            ofs << c << std::endl;
+            std::unordered_map<Cord, std::vector<FCord>>::const_iterator fcit = cells.find(c);
+            if(fcit == cells.end()) ofs << 0 << std::endl;
+            else{
+                for(const FCord &fc : fcit->second){
+                    ofs << fc << " ";
+                }
+                ofs << std::endl;
+            }
+        }
+        
+    }
+
+    ofs.close();
+    return true; 
+}
+
 /*
 bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath){
 

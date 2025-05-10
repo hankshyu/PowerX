@@ -632,7 +632,6 @@ void VoronoiPDNGen::runMSTRouting(std::unordered_map<SignalType, std::vector<Cor
     }
 }
 
-// TODO: do this account
 void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     std::vector<std::pair<OrderedSegment, OrderedSegment>> rerouteSegmentArr;
     std::unordered_map<OrderedSegment, SignalType> allSegmentMap;
@@ -844,8 +843,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
     fixRepeatedSegments(layerSegments);
 }
 
-/*
-void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     std::stack<std::pair<OrderedSegment, SignalType>> toFix;
     for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
         SignalType st = it->first;
@@ -948,9 +946,8 @@ void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std
     }
 
     fixRepeatedPoints(layerPoints);
+    fixRepeatedSegments(layerSegments);
 }
-
-
 
 void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells){
     
@@ -983,7 +980,7 @@ void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, 
     std::unique_ptr<Geometry> multipoint = factory->createMultiPoint(*coordSeq);
 
     // Bounding box
-    Envelope clipEnv(0, this->nodeWidth - 1, 0, this->nodeHeight-1);
+    Envelope clipEnv(0, (getPinWidth()-1), 0, (getPinHeight()-1));
     std::unique_ptr<Geometry> canvas = factory->toGeometry(&clipEnv);
 
     // Build Voronoi
@@ -1044,6 +1041,7 @@ void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, 
     }
 }
 
+/*
 void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap){
     // merge polygons
 
