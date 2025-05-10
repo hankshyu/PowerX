@@ -26,6 +26,10 @@
 #include <fstream>
 
 // 2. Boost Library:
+// 2. Boost Library:
+#include "boost/geometry.hpp"
+#include "boost/geometry/geometries/point_xy.hpp"
+#include "boost/geometry/geometries/polygon.hpp"
 
 // 3. Texo Library:
 #include "cornerStitching.hpp"
@@ -35,6 +39,10 @@
 #include "objectArray.hpp"
 #include "microBump.hpp"
 #include "voronoiPDNGen.hpp"
+
+using FPGMPoint = boost::geometry::model::d2::point_xy<flen_t>;
+using FPGMPolygon = boost::geometry::model::polygon<FPGMPoint>;
+using FPGMMultiPolygon = boost::geometry::model::multi_polygon<FPGMPolygon>;
 
 // use "renderCornerStitching.py" tor render class cornerStitching, which composed of Tiles with pointers
 bool visualiseCornerStitching(const CornerStitching &cs, const std::string &filePath);
@@ -55,12 +63,6 @@ bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const
 // use "renderVoronoiPointsSegments" to render points and segments structures in the voronoi algorithm
 bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
 bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath);
-// bool VisualisePolygons
-/*
-bool visualiseM5VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
-bool visualiseM7VoronoiGraph(const VoronoiPDNGen &vpg, const std::string &filePath);
-bool visualiseM5VoronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
-bool visualiseM7voronoiPolygons(const VoronoiPDNGen &vpg, const std::string &filePath);
-*/
+bool visualiseMultiPolygons(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygons, const std::string &filePath);
 
 #endif // __VISUALIZER_H__

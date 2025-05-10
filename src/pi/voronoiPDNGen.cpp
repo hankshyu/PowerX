@@ -69,7 +69,7 @@ void VoronoiPDNGen::fixRepeatedPoints(std::unordered_map<SignalType, std::vector
             if(fit != table.end()){
                 assert(fit->second == st);
                 haveFix = true;
-                std::cout << "[PowerX:FixRepeatedPoints] Repeated points found, fixed " << cord << std::endl;
+                // std::cout << "[PowerX:FixRepeatedPoints] Repeated points found, fixed " << cord << std::endl;
 
             }else{
                 table[cord] = st;
@@ -96,7 +96,7 @@ void VoronoiPDNGen::fixRepeatedSegments(std::unordered_map<SignalType, std::vect
             if(fit != table.end()){
                 assert(fit->second == st);
                 haveFix = true;
-                std::cout << "[PowerX:fixRepeatedSegments] Repeated Segment found, fixed " << os << std::endl;
+                // std::cout << "[PowerX:fixRepeatedSegments] Repeated Segment found, fixed " << os << std::endl;
 
             }else{
                 table[os] = st;
@@ -112,7 +112,6 @@ void VoronoiPDNGen::fixRepeatedSegments(std::unordered_map<SignalType, std::vect
 
     // if(!haveFix) std::cout << "[PowerX:fixRepeatedSegments] Repeated segments not found" << std::endl;
 }
-
 
 VoronoiPDNGen::VoronoiPDNGen(const std::string &fileName): PowerDistributionNetwork(fileName) {
     this->pointsOfLayers.resize(this->m_metalLayerCount);
@@ -700,7 +699,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         SignalType cosSt = allSegmentMap[cos];
         Cord start(cos.getLow());
         Cord goal(cos.getHigh());
-        std::cout << "Attempt BFS Routing From " << start << " -> " << goal << "of type: " << cosSt << std::endl;
+        std::cout << "Attempt BFS Routing From " << start << " -> " << goal << " of type: " << cosSt << std::endl;
 
         std::vector<std::vector<int>> nodeStat(getPinHeight(), std::vector<int>(getPinWidth(), 0));
         
@@ -839,6 +838,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         }
 
     }
+    
     fixRepeatedPoints(layerPoints);
     fixRepeatedSegments(layerSegments);
 }
@@ -1041,49 +1041,12 @@ void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, 
     }
 }
 
-/*
 void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap){
-    // merge polygons
-
-    auto printFPGMMultiPolygon = [&](const FPGMMultiPolygon &mp){
-        std::cout << "MultiPolygon has " << mp.size() << " piece(s)\n";
-
-        for (size_t i = 0; i < mp.size(); ++i) {
-            const FPGMPolygon& poly = mp[i];
-    
-            // Print exterior ring
-            const auto& exterior = poly.outer();
-            std::cout << "\nPiece #" << i << ": Exterior contour with "
-                      << exterior.size() << " point(s):\n";
-            // for (const auto& pt : exterior) {
-            //     std::cout << std::fixed << std::setprecision(3)
-            //               << "  (" << boost::geometry::get<0>(pt)
-            //               << ", " << boost::geometry::get<1>(pt) << ")\n";
-            // }
-    
-            // Print interior rings (holes)
-            const auto& holes = poly.inners();
-            std::cout << "  " << holes.size() << " hole(s):\n";
-            // for (size_t h = 0; h < holes.size(); ++h) {
-            //     std::cout << "    Hole #" << h << " with " << holes[h].size() << " point(s):\n";
-            //     for (const auto& pt : holes[h]) {
-            //         std::cout << std::fixed << std::setprecision(3)
-            //                   << "      (" << boost::geometry::get<0>(pt)
-            //                   << ", " << boost::geometry::get<1>(pt) << ")\n";
-            //     }
-            // }
-        }
-    };
-
-
-    std::vector<SignalType> allSignalTypes;
-    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = layerPoints.begin(); cit != layerPoints.end(); ++cit){
-        allSignalTypes.push_back(cit->first);
-    }
 
     for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cordit = layerPoints.begin(); cordit != layerPoints.end(); ++cordit){
         SignalType rst = cordit->first;
         FPGMMultiPolygon merged;
+
         for(const Cord &voronoiMidCords : cordit->second){
             std::unordered_map<Cord, std::vector<FCord>>::iterator vcmit = voronoiCellMap.find(voronoiMidCords);
             if(vcmit == voronoiCellMap.end()) continue;
@@ -1093,23 +1056,19 @@ void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector
                 boost::geometry::append(voronoiPoly, FPGMPoint(fc.x(), fc.y()));
             }
             boost::geometry::correct(voronoiPoly);
-            FPGMMultiPolygon tmp; 
-            boost::geometry::union_(merged, voronoiPoly, tmp);
+            FPGMMultiPolygon voronoiMPoly;
+            voronoiMPoly.push_back(voronoiPoly);
+            
+            FPGMMultiPolygon tmp;
+            boost::geometry::union_(merged, voronoiMPoly, tmp);
             merged = std::move(tmp);
         }
-
+        
         multiPolygonMap[rst]= merged;
     }
-
-    // for(const SignalType rst : allSignalTypes){
-    //     FPGMMultiPolygon fpmp = multiPolygonMap[rst];
-    //     std::cout << rst << std::endl;
-    //     printFPGMMultiPolygon(fpmp);
-    // }
-
-
 }
 
+/*
 void VoronoiPDNGen::enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &m7PolygonMap){
     
     auto calculateSignalArea = [&]() -> std::unordered_map<SignalType, farea_t> {
@@ -1219,10 +1178,9 @@ void VoronoiPDNGen::enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMulti
                 }
             }
         }
-
     }
-
 }
+
 
 void VoronoiPDNGen::exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon){
     // std::cout << "Export: " << std::endl;
@@ -1256,6 +1214,9 @@ void VoronoiPDNGen::exportToCanvas(std::vector<std::vector<SignalType>> &canvas,
                 signalOverlapArea[i] = boost::geometry::area(resultPolygon[i]);
                 // std::cout << i << " " << signalOverlapArea[i];
             }
+
+
+            
             int largestIdx = 0;
             farea_t largestVal = FAREA_T_MIN;
             for(int i = 0; i < allSigType.size(); ++i){
@@ -1347,9 +1308,6 @@ void VoronoiPDNGen::fixIsolatedCells(std::vector<std::vector<SignalType>> &canva
     //     std::cout << std::endl;
     // }
 
-    // fix 
-
-
+    // fix
 }
-
 */

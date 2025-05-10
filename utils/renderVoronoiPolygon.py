@@ -83,17 +83,13 @@ if __name__ == "__main__":
             renderMode = ""
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
-            if not ((LineBuffer[0] == "M5") or (LineBuffer[0] == "M7")):
-                print("Error: Render mode unrecognized" + LineBuffer[0])
-                exit()
-
-            if not ((LineBuffer[1] == "VORONOI_POLYGON") and (LineBuffer[2] == "VISUALISATION")):
-                print("Error: Render mode unrecognized" + LineBuffer[1] + " " + LineBuffer[2])
+            if not ((LineBuffer[0] == "VORONOI_POLYGON") and (LineBuffer[1] == "VISUALISATION")):
+                print("Error: Render mode unrecognized")
                 exit()
                 
             renderMode = LineBuffer[0] + " " + LineBuffer[1]
-            planeWidth = int(LineBuffer[3]) - 1
-            planeHeight = int(LineBuffer[4]) - 1
+            planeWidth = int(LineBuffer[2]) - 1
+            planeHeight = int(LineBuffer[3]) - 1
 
             # display the arguments if user specifies verbose mode
             if args.verbose:
