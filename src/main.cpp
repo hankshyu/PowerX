@@ -42,6 +42,9 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor(technology);
     
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
+
+    timeProfiler.startTimer("Voronoi Diagram Based P/G");
+
     vpg.markPreplacedAndInsertPads();
     vpg.initPointsAndSegments();
 
@@ -49,18 +52,25 @@ int main(int argc, char const *argv[]){
         vpg.connectLayers(i, i+1);
     }
 
-    visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.runFLUTERouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+    }
+
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.ripAndReroute(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+    }
+
+    // visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    // visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    // visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
     visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
     visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");
     visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
+    timeProfiler.pauseTimer("Voronoi Diagram Based P/G");
+    timeProfiler.printTimingReport();
     
-
-
     /*
-    timeProfiler.startTimer("Voronoi Diagram Based P/G");
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
     vpg.initPoints({SignalType::GROUND, SignalType::SIGNAL}, {SignalType::GROUND, SignalType::SIGNAL, SignalType::OBSTACLE});
     vpg.connectLayers();
@@ -140,11 +150,6 @@ int main(int argc, char const *argv[]){
     visualisePGOverlap(AStarBL, "outputs/rocket64_ov.ov", true, true);
     
     */
-
-
-    timeProfiler.printTimingReport();
-
-   
 }
 
 void printWelcomeBanner(){

@@ -49,6 +49,8 @@ private:
     const char *ROUTING_TREE_FILE = "./lib/flute/PORT9.dat";
 
     void fixRepeatedPoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints);
+    void fixRepeatedSegments(std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+
 public:
 
     // Boost::geometry definitions
@@ -75,10 +77,12 @@ public:
 
     void connectLayers(int upLayerIdx, int downLayerIdx);
 
-    /*
     void runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     void runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    
     void ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
+    
+    /*
     
     void generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     void generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells);

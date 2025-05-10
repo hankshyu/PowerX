@@ -59,6 +59,61 @@
 #include "geos/geom/MultiPoint.h"
 #include "geos/triangulate/VoronoiDiagramBuilder.h"
 
+void VoronoiPDNGen::fixRepeatedPoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints){
+    bool haveFix = false;
+    std::unordered_map<Cord, SignalType> table;
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
+        SignalType st = it->first;
+        for(const Cord &cord : it->second){
+            std::unordered_map<Cord, SignalType>::iterator fit = table.find(cord);
+            if(fit != table.end()){
+                assert(fit->second == st);
+                haveFix = true;
+                std::cout << "[PowerX:FixRepeatedPoints] Repeated points found, fixed " << cord << std::endl;
+
+            }else{
+                table[cord] = st;
+            }
+        }
+    }
+    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
+        it->second.clear();
+    }
+    for(std::unordered_map<Cord, SignalType>::const_iterator cit = table.begin(); cit != table.end(); ++cit){
+        layerPoints[cit->second].push_back(cit->first);
+    }
+
+    // if(!haveFix) std::cout << "[PowerX:FixRepeatedPoints] Repeated points not found" << std::endl;
+}
+
+void VoronoiPDNGen::fixRepeatedSegments(std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    bool haveFix = false;
+    std::unordered_map<OrderedSegment, SignalType> table;
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
+        SignalType st = it->first;
+        for(const OrderedSegment &os : it->second){
+            std::unordered_map<OrderedSegment, SignalType>::iterator fit = table.find(os);
+            if(fit != table.end()){
+                assert(fit->second == st);
+                haveFix = true;
+                std::cout << "[PowerX:fixRepeatedSegments] Repeated Segment found, fixed " << os << std::endl;
+
+            }else{
+                table[os] = st;
+            }
+        }
+    }
+    for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
+        it->second.clear();
+    }
+    for(std::unordered_map<OrderedSegment, SignalType>::const_iterator cit = table.begin(); cit != table.end(); ++cit){
+        layerSegments[cit->second].push_back(cit->first);
+    }
+
+    // if(!haveFix) std::cout << "[PowerX:fixRepeatedSegments] Repeated segments not found" << std::endl;
+}
+
+
 VoronoiPDNGen::VoronoiPDNGen(const std::string &fileName): PowerDistributionNetwork(fileName) {
     this->pointsOfLayers.resize(this->m_metalLayerCount);
     this->segmentsOfLayers.resize(this->m_metalLayerCount);
@@ -470,46 +525,6 @@ void VoronoiPDNGen::connectLayers(int upLayerIdx, int downLayerIdx){
     }
 }
 
-/*
-void VoronoiPDNGen::connectLayers(){
-    // for each signalType. These must at least be one point overlaap between m5 and m7
-    for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cit = this->m5Points.begin(); cit != m5Points.end(); ++cit){
-        SignalType st = cit->first;
-        std::vector<Segment> links;
-
-        for(const Cord &up : cit->second){
-            for(const Cord &dn : this->m7Points[st]){
-                links.push_back(Segment(dn, up));
-            }
-        }
-
-        std::sort(links.begin(), links.end(), [](Segment o1, Segment o2){
-            return calEuclideanDistance(o1.low(), o1.high()) < calEuclideanDistance(o2.low(), o2.high());
-        });
-
-        if(links[0].low() == links[0].high()) continue;
-
-        bool connectSuccess = false;
-        for(int osidx = 0; osidx < links.size(); ++osidx){
-            Segment pos = links[osidx];
-            Cord up(pos.high());
-            Cord down(pos.low());
-            SignalType downSig = this->m7NodeArr[up.y()][up.x()]->sig;
-            if((downSig == st) || (downSig == SignalType::EMPTY)){
-                // attempt to add a point on m7
-                connectSuccess = true;
-                m7NodeArr[up.y()][up.x()]->sig = st;
-                m7Points[st].push_back(up);
-            }
-
-            if(connectSuccess) break;
-        }
-
-        // if there is overlap point, skip the signal
-    }
-    
-}
-
 void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     const int FLUTE_ACC = 9; // 0 ~ 9
     for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
@@ -550,20 +565,7 @@ void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<C
                 if(os == newos) foundos = true;
             }
             if(!foundos) layerSegments[targetSig].push_back(newos);
-
         }
-
-        // std::cout << "after: " << layerPoints[targetSig].size() << std::endl;
-        // std::cout << "segs: " << layerSegments[targetSig].size() << std::endl; 
-
-        // std::cout << "Wirelength: " << tree.length << std::endl;
-        // std::cout << "Branches:" << std::endl;
-        // for (int i = 0; i < tree.deg * 2 - 2; ++i) {
-        //     int n = tree.branch[i].n;
-        //     std::cout << "Branch " << i << " at (" << tree.branch[i].x << ", " << tree.branch[i].y << ") "
-        //             << "is connected to Branch " << n << " at ("
-        //             << tree.branch[n].x << ", " << tree.branch[n].y << ")\n";
-        // }
 
         // Free resources
         free_tree(state, tree);
@@ -572,6 +574,7 @@ void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<C
 }
 
 void VoronoiPDNGen::runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    
     for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
         SignalType targetSig = it->first;
         int pointCount = it->second.size();
@@ -629,6 +632,7 @@ void VoronoiPDNGen::runMSTRouting(std::unordered_map<SignalType, std::vector<Cor
     }
 }
 
+// TODO: do this account
 void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     std::vector<std::pair<OrderedSegment, OrderedSegment>> rerouteSegmentArr;
     std::unordered_map<OrderedSegment, SignalType> allSegmentMap;
@@ -699,7 +703,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         Cord goal(cos.getHigh());
         std::cout << "Attempt BFS Routing From " << start << " -> " << goal << "of type: " << cosSt << std::endl;
 
-        std::vector<std::vector<int>> nodeStat(this->nodeHeight, std::vector<int>(this->nodeWidth, 0));
+        std::vector<std::vector<int>> nodeStat(getPinHeight(), std::vector<int>(getPinWidth(), 0));
         
         using P45Data = boost::polygon::polygon_45_data<len_t>;
         std::vector<P45Data> blockingObjects;
@@ -740,8 +744,8 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             }
         }
 
-        for(int j = 0; j < this->nodeHeight; ++j){
-            for(int i = 0; i < this->nodeWidth; ++i){
+        for(int j = 0; j < getPinHeight(); ++j){
+            for(int i = 0; i <getPinWidth(); ++i){
                 Cord c(i, j);
                 for(const P45Data &dt : blockingObjects){
                     if(boost::polygon::contains(dt, c)){
@@ -777,8 +781,8 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             {
                 std::vector<Cord> local_candidates;
                 #pragma omp for nowait
-                for(int j = 0; j < this->nodeHeight; ++j){
-                    for(int i = 0; i < this->nodeWidth; ++i){
+                for(int j = 0; j < getPinHeight(); ++j){
+                    for(int i = 0; i < getPinWidth(); ++i){
                         if(nodeStat[j][i] != 0) continue;
                         Cord cand(i, j);
                         Segment candSeg(curr, cand);
@@ -837,8 +841,10 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
 
     }
     fixRepeatedPoints(layerPoints);
+    fixRepeatedSegments(layerSegments);
 }
 
+/*
 void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
     std::stack<std::pair<OrderedSegment, SignalType>> toFix;
     for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
@@ -944,27 +950,7 @@ void VoronoiPDNGen::generateInitialPowerPlane(std::unordered_map<SignalType, std
     fixRepeatedPoints(layerPoints);
 }
 
-void VoronoiPDNGen::fixRepeatedPoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints){
-    std::unordered_map<Cord, SignalType> table;
-    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
-        SignalType st = it->first;
-        for(const Cord &cord : it->second){
-            std::unordered_map<Cord, SignalType>::iterator fit = table.find(cord);
-            if(fit != table.end()){
-                assert(fit->second == st);
-            }else{
-                table[cord] = st;
-            }
-        }
-    }
-    for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
-        it->second.clear();
-    }
-    for(std::unordered_map<Cord, SignalType>::const_iterator cit = table.begin(); cit != table.end(); ++cit){
-        layerPoints[cit->second].push_back(cit->first);
-    }
-    
-}
+
 
 void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells){
     
