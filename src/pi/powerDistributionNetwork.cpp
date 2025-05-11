@@ -25,7 +25,7 @@
 #include <fstream>
 #include <queue>
 // 2. Boost Library:
-
+#include "boost/polygon/polygon.hpp"
 
 // 3. Texo Library:
 #include "powerDistributionNetwork.hpp"
@@ -172,6 +172,17 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
     assert(finishTechnologyParsing);
 }
 
+bool PowerDistributionNetwork::checkOnePiece(int metalLayerIdx){
+    std::unordered_map<SignalType, DoughnutPolygonSet> dpsMap = collectDoughnutPolygons(metalLayers[metalLayerIdx].canvas);
+    for(std::unordered_map<SignalType, DoughnutPolygonSet>::const_iterator cit = dpsMap.begin(); cit != dpsMap.end(); ++cit){
+        SignalType st = cit->first;
+        if(POWER_SIGNAL_SET.count(st) == 0) continue;
+        if(dps::getShapesCount(cit->second) > 1) return false;
+    }
+
+    return true;
+}
+
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes){
     len_t gridHeight = gridCanvas.size();
     assert(gridHeight > 0);
@@ -282,3 +293,25 @@ void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vect
         }
     }
 }
+
+std::unordered_map<SignalType, DoughnutPolygonSet> collectDoughnutPolygons(const std::vector<std::vector<SignalType>> &canvas){
+    using namespace boost::polygon::operators;
+    std::unordered_map<SignalType, DoughnutPolygonSet> dpSetMap;
+    int canvasHeight = canvas.size();
+    int canvasWidth = canvas[0].size();
+    
+    for(int j = 0; j < canvasHeight; ++j){
+        for(int i = 0; i < canvasWidth; ++i){
+            SignalType st = canvas[j][i];
+            Rectangle rect(i, j, i+1, j+1);
+
+            std::unordered_map<SignalType, DoughnutPolygonSet>::iterator it = dpSetMap.find(st);
+
+            dpSetMap[st] += rect;
+        }
+    }
+
+    return dpSetMap;
+}
+
+

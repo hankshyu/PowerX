@@ -28,7 +28,11 @@
 
 // 2. Boost Library:
 
+
 // 3. Texo Library:
+#include "doughnutPolygon.hpp"
+#include "doughnutPolygonSet.hpp"
+
 #include "signalType.hpp"
 #include "objectArray.hpp"
 #include "microBump.hpp"
@@ -66,10 +70,21 @@ public:
     inline int getViaLayerCount() const {return this->m_viaLayerCount;}
     inline int getuBumpConnectedMetalLayerIdx() const {return this->m_ubumpConnectedMetalLayerIdx;}
     inline int getc4ConnectedmetalLayerIdx() const {return this->m_c4ConnectedMetalLayerIdx;}
+
+
+    bool checkOnePiece(int layer);
+    bool checkPinPadValid(int layer);
+
 };
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes);
 void markPinPadsWithSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &signalTypes);
 void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vector<std::vector<int>> &cluster, std::unordered_map<SignalType, std::vector<int>> &label);
+
 // void insertPinPads(const PinMap &pm, std::vector<std::vector<SignalType>> &canvas, const std::unordered_map<SignalType, SignalType> &padTypeMap);
+
+std::unordered_map<SignalType, DoughnutPolygonSet> collectDoughnutPolygons(const std::vector<std::vector<SignalType>> &canvas);
+
+
+
 
 #endif // __POWER_DISTRIBUTION_NETWORK_H__

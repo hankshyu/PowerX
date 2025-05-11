@@ -58,7 +58,7 @@ public:
     typedef boost::geometry::model::polygon<FPGMPoint> FPGMPolygon;
     typedef boost::geometry::model::multi_polygon<FPGMPolygon> FPGMMultiPolygon;
 
-
+    std::vector<std::vector<std::vector<SignalType>>> preplaceOfLayers;
     std::vector<std::unordered_map<SignalType, std::vector<Cord>>> pointsOfLayers;
     std::vector<std::unordered_map<SignalType, std::vector<OrderedSegment>>> segmentsOfLayers;
     std::vector<std::unordered_map<Cord, std::vector<FCord>>> voronoiCellsOfLayers;
@@ -86,9 +86,11 @@ public:
     void generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells);
     void mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap);
     
-    /*    
-    void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon);
+    void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon, bool overlayEmtpyGrids = true);
+    void obstacleAwareLegalisation(int layerIdx);
+    void floatingPlaneReconnection(int layerIdx);
 
+    /*
     void enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &PolygonMap);    
     void fixIsolatedCells(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &obstacles);
     */

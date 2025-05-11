@@ -69,6 +69,9 @@ namespace dp{
         return bbox;
     }
 
+    std::vector<Cord> getContainedCords(const DoughnutPolygon &dp);
+    std::vector<Cord> getContainedGrids(const DoughnutPolygon &dp);
+
     void acquireWinding(const DoughnutPolygon &rectilinearShape, std::vector<Cord> &winding, Direction1D direction = eDirection1D::CLOCKWISE);
 
 }

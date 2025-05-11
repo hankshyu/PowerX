@@ -24,6 +24,8 @@
 // Dependencies
 // 1. C++ STL:
 #include <ostream>
+#include <unordered_set>
+#include <algorithm>
 
 // 2. Boost Library:
 #include "boost/polygon/polygon.hpp"
@@ -73,4 +75,40 @@ void dp::acquireWinding(const DoughnutPolygon &rectilinearShape, std::vector<Cor
             winding.push_back(*it);
         }
     }
+}
+std::vector<Cord> dp::getContainedCords(const DoughnutPolygon &dp){
+    std::vector<Cord> containedCords;
+
+    Rectangle bbox = getBoundingBox(dp);
+    for(int j = rec::getYL(bbox); j <= rec::getYH(bbox); ++j){
+        for(int i = rec::getXL(bbox); i <= rec::getXH(bbox); ++i){
+            Cord c(i, j);
+            if(boost::polygon::contains(dp, c, true)) containedCords.emplace_back(c);
+        }
+    }
+
+    return containedCords;
+}
+
+std::vector<Cord> dp::getContainedGrids(const DoughnutPolygon &dp){
+    std::vector<Cord> containedGrids;
+
+    // using namespace boost::polygon::operators;
+    
+    std::vector<DoughnutPolygon> dpset;
+    dpset.push_back(dp);
+    // dpset += dp;
+    std::vector<Rectangle> fragments;
+    boost::polygon::get_rectangles(fragments, dpset);
+
+    for(const Rectangle &rect : fragments){
+        Cord rectll(rec::getLL(rect));
+        for(int j = 0; j < rec::getHeight(rect); ++j){
+            for(int i = 0; i < rec::getWidth(rect); ++i){
+                containedGrids.emplace_back(Cord(rectll.x() + i, rectll.y() + j));
+            }
+        }
+    }
+
+    return containedGrids;
 }

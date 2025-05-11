@@ -148,7 +148,7 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
-                        if(renderMode == "GRID_PIN" and LineBuffer[2] == "OBSTACLE"):
+                        if(LineBuffer[2] == "OBSTACLE"):
                             continue
                         
                         color = SIGNAL_COLORS[LineBuffer[2]]
@@ -161,7 +161,7 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
-                        if(LineBuffer[2] == "EMPTY"):
+                        if(LineBuffer[2] == "OBSTACLE"):
                             continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
                         upper_circle = patches.Wedge(
@@ -177,7 +177,7 @@ if __name__ == '__main__':
                 for j in range(pinHeight):
                     for i in range(pinWidth):
                         LineBuffer = filein.readline().strip().split()
-                        if(LineBuffer[2] == "EMPTY"):
+                        if(LineBuffer[2] == "OBSTACLE"):
                             continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
                         upper_circle = patches.Wedge(
