@@ -41,6 +41,8 @@ int main(int argc, char const *argv[]){
 
     printWelcomeBanner();
     TimeProfiler timeProfiler;
+    timeProfiler.startTimer("Voronoi Diagram Based P/G");
+
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
@@ -65,7 +67,13 @@ int main(int argc, char const *argv[]){
         std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
         vpg.floatingPlaneReconnection(i);
     }
+    vpg.enhanceCrossLayerPI();
 
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.obstacleAwareLegalisation(i);
+        std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
+        vpg.floatingPlaneReconnection(i);
+    }
 
     visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
     visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");

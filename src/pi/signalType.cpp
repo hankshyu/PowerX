@@ -19,6 +19,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <cstdint>
+#include <vector>
 #include <cctype>
 #include <string>
 #include <ostream>
@@ -29,6 +30,21 @@
 
 // 3. Texo Library:
 #include "signalType.hpp"
+
+std::unordered_map<SignalType, int> countSignalTypeOccurrences(const std::vector<std::vector<SignalType>> &canvas){
+    std::unordered_map<SignalType, int> occurrences;
+    int canvasHeight = canvas.size();
+    int canvasWidth = canvas[0].size();
+    for(int j = 0; j < canvasHeight; ++j){
+        for(int i = 0; i < canvasWidth; ++i){
+            SignalType st = canvas[j][i];
+            ++occurrences[st];
+        }
+    }
+
+    return occurrences;
+}
+
 
 std::ostream& operator<<(std::ostream& os, SignalType st) {
     return os << to_string(st);

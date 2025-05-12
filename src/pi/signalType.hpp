@@ -25,6 +25,7 @@
 #include <string>
 #include <ostream>
 #include <unordered_set>
+#include <unordered_map>
 
 // 2. Boost Library:
 
@@ -76,6 +77,8 @@ constexpr inline const char* to_string(SignalType st) {
         default:                    return "UNKNOWN";
     }
 };
+
+std::unordered_map<SignalType, int> countSignalTypeOccurrences(const std::vector<std::vector<SignalType>> &canvas);
 
 std::ostream& operator<<(std::ostream& os, SignalType st);
 SignalType convertToSignalType (const std::string &str);

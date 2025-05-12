@@ -89,7 +89,7 @@ public:
     void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon, bool overlayEmtpyGrids = true);
     void obstacleAwareLegalisation(int layerIdx);
     void floatingPlaneReconnection(int layerIdx);
-
+    
     void enhanceCrossLayerPI();
 
     /*

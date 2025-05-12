@@ -27,6 +27,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 #include <queue>
 #include <stack>
 #include <memory>
@@ -1236,6 +1237,172 @@ void VoronoiPDNGen::floatingPlaneReconnection(int layerIdx){
             metalLayers[layerIdx].setCanvas(c, maxVoteSig);
         }
     }
+
+}
+
+void VoronoiPDNGen::enhanceCrossLayerPI(){
+    
+    enum class PowerPlaneType{
+        PREPLACED, STACKED, HARD, SOFT 
+    };
+    
+    // initialise marking to PowerPlaneType::SOFT
+    std::vector<std::vector<std::vector<PowerPlaneType>>> marking(
+        m_metalLayerCount, 
+        std::vector<std::vector<PowerPlaneType>>(m_gridHeight, std::vector<PowerPlaneType>(m_gridWidth, PowerPlaneType::SOFT))
+    );
+
+    for(int mLayer = 0; mLayer < m_metalLayerCount; ++mLayer){
+        for(int j = 0; j < m_gridHeight; ++j){
+            for(int i = 0; i < m_gridWidth; ++i){
+                // std::cout << "(" << mLayer << ", " << j << ", " << i << ")" << std::endl;
+
+                if(marking[mLayer][j][i] != PowerPlaneType::SOFT) continue;
+                if(this->preplaceOfLayers[mLayer][j][i] != SignalType::EMPTY){
+                    marking[mLayer][j][i] = PowerPlaneType::PREPLACED;
+                    continue;
+                }
+                // check if could mark as STACKED or HARD
+                SignalType targetSt = metalLayers[mLayer].canvas[j][i];
+                
+                int upSearchLayer = mLayer;
+                int downSearchLayer = mLayer;
+                while(true){
+                    // std::cout << "ups: " << upSearchLayer << std::endl;
+                    if(metalLayers[upSearchLayer].canvas[j][i] != targetSt){
+                        upSearchLayer++;
+                        break;
+                    }
+                    if(upSearchLayer == 0) break;
+                    else upSearchLayer--;
+                }
+
+                while(true){
+                    // std::cout << "dps: " << upSearchLayer << std::endl;
+
+                    if(metalLayers[downSearchLayer].canvas[j][i] != targetSt){
+                        downSearchLayer--;
+                        break;
+                    }
+                    if(downSearchLayer == (m_metalLayerCount-1)) break;
+                    else downSearchLayer++;
+                }
+
+                assert(upSearchLayer >= 0);
+                assert(upSearchLayer < m_metalLayerCount);
+
+                assert(downSearchLayer >= 0);
+                assert(downSearchLayer < m_metalLayerCount);
+
+                assert(downSearchLayer >= upSearchLayer);
+
+                int overlapLayerCount = (downSearchLayer - upSearchLayer + 1);
+                
+                if(overlapLayerCount == 1) marking[mLayer][j][i] = PowerPlaneType::SOFT;
+                else if(overlapLayerCount == 2) marking[mLayer][j][i] = PowerPlaneType::HARD;
+                else marking[mLayer][j][i] = PowerPlaneType::STACKED;
+
+            }
+        }
+    }
+
+    
+
+    // start trading
+    for(int upLayerIdx = 0; upLayerIdx < (m_metalLayerCount-1); ++upLayerIdx){
+        int downLayerIdx = upLayerIdx + 1;
+
+        std::cout << "Trading layers " << upLayerIdx << " " << downLayerIdx << std::endl;
+
+        // calculate the signal area as a trading reference
+        std::unordered_map<SignalType, int> upOccurence = countSignalTypeOccurrences(metalLayers[upLayerIdx].canvas);
+        std::unordered_map<SignalType, int> downOccurence = countSignalTypeOccurrences(metalLayers[downLayerIdx].canvas);
+
+        std::unordered_map<SignalType, int> totalOccurrence = upOccurence;
+        for (std::unordered_map<SignalType, int>::const_iterator cit = downOccurence.begin(); cit != downOccurence.end(); ++cit) {
+            const SignalType& sig = cit->first;
+            int count = cit->second;
+
+            // Add count to totalOccurrence (insert with default 0 if not present)
+            totalOccurrence[sig] += count;
+        }
+        for(auto at : totalOccurrence){
+            std::cout << at.first << " " << at.second << std::endl;
+        }
+
+        for(int j = 0; j < m_gridHeight; ++j){
+            std::cout << "Trading row "  << j << std::endl;
+            for(int i = 0; i < m_gridWidth; ++i){
+                SignalType upSigType = metalLayers[upLayerIdx].canvas[j][i];
+                SignalType downSigType =  metalLayers[downLayerIdx].canvas[j][i];
+                bool diffSignal = (upSigType != downSigType);
+                
+                PowerPlaneType upPPType = marking[upLayerIdx][j][i];
+                PowerPlaneType downPPType = marking[downLayerIdx][j][i];
+                bool upSoftDownTradable = (upPPType == PowerPlaneType::SOFT) && ((downPPType == PowerPlaneType::SOFT)||(downPPType == PowerPlaneType::STACKED));
+                bool downSoftUpTradable = (downPPType == PowerPlaneType::SOFT) && ((upPPType == PowerPlaneType::SOFT)||(upPPType == PowerPlaneType::STACKED));
+
+                if(diffSignal && (upSoftDownTradable || downSoftUpTradable)){
+                    // start trading
+                    if(totalOccurrence[upSigType] >= totalOccurrence[downSigType]){
+                        --totalOccurrence[upSigType];
+                        metalLayers[upLayerIdx].setCanvas(j, i, downSigType);
+                    }else{
+                        -- totalOccurrence[downSigType];
+                        metalLayers[downLayerIdx].setCanvas(j, i, upSigType);
+                    }
+
+                    // refresh the markings of the two place
+                    marking[upLayerIdx][j][i] = marking[downLayerIdx][j][i] = PowerPlaneType::SOFT;
+
+
+                    // check if could mark as STACKED or HARD
+                    SignalType targetSt = metalLayers[upLayerIdx].canvas[j][i];
+                    // search up
+                    for(int mLayer = upLayerIdx; mLayer <= downLayerIdx; ++mLayer){
+                        int upSearchLayer = mLayer;
+                        int downSearchLayer = mLayer;
+                        while(true){
+                            if(metalLayers[upSearchLayer].canvas[j][i] != targetSt){
+                                upSearchLayer++;
+                                break;
+                            }
+                            if(upSearchLayer == 0) break;
+                            else upSearchLayer--;
+                        }
+    
+                        while(true){
+                            if(metalLayers[downSearchLayer].canvas[j][i] != targetSt){
+                                downSearchLayer--;
+                                break;
+                            }
+                            if(downSearchLayer == (m_metalLayerCount-1)) break;
+                            else downSearchLayer++;
+                        }
+    
+                        assert(upSearchLayer >= 0);
+                        assert(upSearchLayer < m_metalLayerCount);
+                        assert(downSearchLayer >= 0);
+                        assert(downSearchLayer < m_metalLayerCount);
+                        assert(downSearchLayer >= upSearchLayer);
+    
+                        int overlapLayerCount = (downSearchLayer - upSearchLayer + 1);
+    
+                        if(overlapLayerCount == 1) marking[mLayer][j][i] = PowerPlaneType::SOFT;
+                        else if(overlapLayerCount == 2) marking[mLayer][j][i] = PowerPlaneType::HARD;
+                        else marking[mLayer][j][i] = PowerPlaneType::STACKED;
+                    }
+       
+
+                }
+
+            }
+        }
+
+
+    }
+
+
 
 }
 
