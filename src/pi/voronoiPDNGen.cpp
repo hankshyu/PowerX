@@ -43,6 +43,7 @@
 #include "units.hpp"
 #include "cord.hpp"
 #include "fcord.hpp"
+#include "line.hpp"
 #include "orderedSegment.hpp"
 #include "voronoiPDNGen.hpp"
 #include "doughnutPolygon.hpp"
@@ -705,7 +706,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         SignalType cosSt = allSegmentMap[cos];
         Cord start(cos.getLow());
         Cord goal(cos.getHigh());
-        std::cout << "Attempt BFS Routing From " << start << " -> " << goal << " of type: " << cosSt << std::endl;
+        std::cout << "Attempt BFS Routing From " << start << " -> " << goal << " of type: " << cosSt << " ";
 
         std::vector<std::vector<int>> nodeStat(getPinHeight(), std::vector<int>(getPinWidth(), 0));
         
@@ -820,7 +821,6 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             // std::cout << "Done " << curr << std::endl;
         }
 
-        std::cout << "Finish Routing!" << std::endl;
         assert(nodeStat[goal.y()][goal.x()] != 0);
         std::vector<Cord> path;
 
@@ -829,7 +829,7 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
         }
         path.push_back(start);
         std::reverse(path.begin(), path.end());
-        std::cout << "Path: ";
+        std::cout << ", chosen path: ";
         for(Cord &c : path){
             std::cout <<  c << " ";
         }
@@ -1166,12 +1166,75 @@ void VoronoiPDNGen::floatingPlaneReconnection(int layerIdx){
     DoughnutPolygonSet targetdps = dpSetMap.at(SignalType::EMPTY);
     for(int fragidx = 0; fragidx < dps::getShapesCount(targetdps); ++fragidx){
         DoughnutPolygon frag = targetdps.at(fragidx);
-        std::cout << "Fragidx = " << fragidx << ": " << std::endl;
+        std::unordered_map<SignalType, int> poll;
+        std::vector<Cord> winding;
         for(auto it = frag.begin(); it != frag.end(); ++it){
-            std::cout << Cord(*it) << " ";
+            winding.push_back(Cord(*it));
         }
-        std::cout << std::endl;
+        winding.push_back(winding[0]);
+        for(int widx = 0; widx < (winding.size() - 1); ++widx){
+            Line longLine(winding.at(widx), winding.at(widx + 1));
+            if(longLine.getOrient() == eOrientation2D::HORIZONTAL){
+                len_t sy = longLine.getLow().y();
+                for(len_t vx = longLine.getLow().x(); vx < longLine.getHigh().x(); ++vx){
+                    Cord upCord(vx, sy);
+                    Cord downCord(vx, sy-1);
 
+                    bool upCordValid = ((vx >= 0) && (vx < m_gridWidth) && (sy >= 0) && (sy < m_gridHeight));
+                    bool downCordValid =  ((vx >= 0) && (vx < m_gridWidth) && ((sy-1) >= 0) && ((sy-1) < m_gridHeight));
+
+                    if(!upCordValid || !downCordValid) continue;
+
+                    SignalType uptype = metalLayers[layerIdx].canvas[upCord.y()][upCord.x()];
+                    SignalType downtype = metalLayers[layerIdx].canvas[downCord.y()][downCord.x()];
+
+                    poll[uptype] = (poll.count(uptype) == 0)? 1 : (poll[uptype] + 1);
+                    poll[downtype] = (poll.count(downtype) == 0)? 1 : (poll[downtype] + 1);
+                }
+
+            }else{ // eOrientation2D::VERTICAL
+                len_t sx = longLine.getLow().x();
+                for(len_t vy = longLine.getLow().y(); vy < longLine.getHigh().y(); ++vy){
+                    Cord rightCord(sx, vy);
+                    Cord leftCord(sx-1, vy);
+
+                    bool rightCordValid = ((sx >= 0) && (sx < m_gridWidth) && (vy >= 0) && (vy < m_gridHeight));
+                    bool leftCordValid = (((sx-1) >= 0) && ((sx-1) < m_gridWidth) && (vy >= 0) && (vy < m_gridHeight));
+
+                    if(!rightCordValid || ! leftCordValid) continue;
+
+                    SignalType righttype = metalLayers[layerIdx].canvas[rightCord.y()][rightCord.x()];
+                    SignalType lefttype = metalLayers[layerIdx].canvas[leftCord.y()][leftCord.x()];
+
+                    poll[righttype] = (poll.count(righttype) == 0)? 1 : (poll[righttype] + 1) ;
+                    poll[lefttype] = (poll.count(lefttype) == 0)? 1 : (poll[lefttype] + 1);
+
+                }
+
+            }
+        }
+        
+        // start painting to new color
+        for(const SignalType st : ignoreSignalType){
+            poll.erase(st);
+        }
+
+        if(poll.empty()) continue;
+
+        int maxVote = 0;
+        SignalType maxVoteSig = SignalType::EMPTY;
+
+        for(std::unordered_map<SignalType, int>::const_iterator cit = poll.begin(); cit != poll.end(); ++cit){
+            if(cit->second > maxVote){
+                maxVote = cit->second;
+                maxVoteSig = cit->first;
+            }
+        }
+
+        std::vector<Cord> paintTarget = dp::getContainedGrids(frag);
+        for(const Cord & c : paintTarget){
+            metalLayers[layerIdx].setCanvas(c, maxVoteSig);
+        }
     }
 
 }

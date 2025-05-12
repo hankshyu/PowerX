@@ -16,7 +16,7 @@
 
 // #include "ballOut.hpp"
 // #include "aStarBaseline.hpp"
-
+#include "line.hpp"
 #include "rectangle.hpp"
 #include "doughnutPolygon.hpp"
 #include "doughnutPolygonSet.hpp"
@@ -46,8 +46,6 @@ int main(int argc, char const *argv[]){
 
     
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
-
-    timeProfiler.startTimer("Voronoi Diagram Based P/G");
 
     vpg.markPreplacedAndInsertPads();
     vpg.initPointsAndSegments();

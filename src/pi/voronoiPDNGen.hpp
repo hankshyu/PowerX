@@ -90,6 +90,8 @@ public:
     void obstacleAwareLegalisation(int layerIdx);
     void floatingPlaneReconnection(int layerIdx);
 
+    void enhanceCrossLayerPI();
+
     /*
     void enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &PolygonMap);    
     void fixIsolatedCells(std::vector<std::vector<SignalType>> &canvas, const std::unordered_set<SignalType> &obstacles);
