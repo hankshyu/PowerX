@@ -21,17 +21,13 @@
 #include "doughnutPolygon.hpp"
 #include "doughnutPolygonSet.hpp"
 
-
 // #include "doughnutPolygon.hpp"
-
-
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
 std::string FILEPATH_BUMPS = "inputs/rocket64_0808.pinout";
 
 const std::string TIMERTAG_ASTAR_M5 = "Run A* Baseline Algo on M5";
 const std::string TIMERTAG_ASTAR_M7 = "Run A* Baseline Algo on M7";
-
 
 void printWelcomeBanner();
 void printExitBanner();
@@ -46,7 +42,6 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
-    
     VoronoiPDNGen vpg(FILEPATH_BUMPS);
 
     vpg.markPreplacedAndInsertPads();
@@ -57,7 +52,7 @@ int main(int argc, char const *argv[]){
     }
 
     for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-        vpg.runFLUTERouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+        vpg.runMSTRouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
         vpg.ripAndReroute(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
         vpg.generateInitialPowerPlanePoints(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
         vpg.generateVoronoiDiagram(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
@@ -67,13 +62,25 @@ int main(int argc, char const *argv[]){
         std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
         vpg.floatingPlaneReconnection(i);
     }
+
     vpg.enhanceCrossLayerPI();
+
 
     for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
         vpg.obstacleAwareLegalisation(i);
         std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
+        
         vpg.floatingPlaneReconnection(i);
     }
+    vpg.assignVias();
+
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.removeFloatingPlanes(i);
+    }
+
+    
+    vpg.exportEquivalentCircuit(SignalType::POWER_1, technology, EqCktExtor, "outputs/POWER1.sp");
+
 
     visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
     visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");

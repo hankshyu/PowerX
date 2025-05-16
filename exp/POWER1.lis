@@ -1,0 +1,90 @@
+Using: /nfs/home/cad/synopsys/hspice/2024.09-sp1/hspice/linux64/hspice PowerS/POWER1.sp
+ ****** PrimeSim HSPICE -- W-2024.09-SP1 linux64 (Dec 01 2024 9404553) ******
+  Copyright (c) 1986 - 2025 by Synopsys, Inc. All Rights Reserved.
+  This software and the associated documentation are proprietary
+  to Synopsys, Inc. This software may only be used in accordance
+  with the terms and conditions of a written license agreement with
+  Synopsys, Inc. All other use, reproduction, or distribution of
+  this software is strictly prohibited.
+  Input File: PowerS/POWER1.sp                                                  
+  Command line options: /nfs/home/cad/synopsys/hspice/2024.09-sp1/hspice/linux64/hspice PowerS/POWER1.sp
+  Start time: Sat May 17 01:11:01 2025
+ lic:  
+ lic: FLEXlm: SDK_14.4 
+ lic: USER:   orange               HOSTNAME: IRISLAB-73 
+ lic: HOSTID: ffffffffa8c04930     PID:      3637624 
+ lic: Using FLEXlm license file: 
+ lic: 26585@lstc 
+ lic: Checkout 1 hspice 
+ lic: License/Maintenance for hspice will expire on 14-jun-2027/2024.09 
+ lic: 553(in_use)/600(total) FLOATING license(s) on SERVER 26585@lstc 
+ lic:   
+  **warning** (PowerS/POWER1.sp:33255) Global net name "gnd" in subckt pin list. The pin will be connected to the local net. Recommend to not use global net names in subckt pin lists.
+  **error** (PowerS/POWER1.sp:33272) Definition of model/subckt "params:" is not found for the element "xchiplet0". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33273) Definition of model/subckt "params:" is not found for the element "xchiplet1". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33274) Definition of model/subckt "params:" is not found for the element "xchiplet2". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33275) Definition of model/subckt "params:" is not found for the element "xchiplet3". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33276) Definition of model/subckt "params:" is not found for the element "xchiplet4". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33277) Definition of model/subckt "params:" is not found for the element "xchiplet5". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33278) Definition of model/subckt "params:" is not found for the element "xchiplet6". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33279) Definition of model/subckt "params:" is not found for the element "xchiplet7". Please specify a defined model/subckt name.
+  **error** (PowerS/POWER1.sp:33127) Number of nodes mismatch between instance "xvia0n0_81_119" and subcircuit "via". Subcircuit definition has    2 node(s) whereas subckt instance has    1 node(s). Please specify same number of nodes.
+
+          ***** job aborted
+1****** PrimeSim HSPICE -- W-2024.09-SP1 linux64 (Dec 01 2024 9404553) ******
+ ******  
+ ****** equivalent circuit components ******
+
+ ****** job statistics summary tnom=  25.000 temp=  25.000 ******
+  
+ ******  Machine Information  ******
+ CPU:
+ model name	: Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz
+ cpu MHz	: 4000.000
+ CPU(s)		: 104
+  
+ OS:
+ Linux version 4.18.0-527.el8.x86_64 (mockbuild@x86-05.stream.rdu2.redhat.com) (gcc version 8.5.0 20210514 (Red Hat 8.5.0-21) (GCC)) #1 SMP Thu Nov 23 14:16:19 UTC 2023
+
+ System loadavg : 3.09 3.05 3.03 4/3425 3637657
+
+
+  ******  PrimeSim HSPICE Threads Information  ******
+
+  Command Line Threads Count :     1
+  Available CPU Count        :   104
+  Actual Threads Count       :     1
+
+
+  ******  Circuit Statistics  ******
+  # nodes       =       0 # elements   =   66197
+  # resistors   =   33098 # capacitors =       1 # inductors   =   33097
+  # mutual_inds =       0 # vccs       =       0 # vcvs        =       0
+  # cccs        =       0 # ccvs       =       0 # volt_srcs   =       1
+  # curr_srcs   =       0 # diodes     =       0 # bjts        =       0
+  # jfets       =       0 # mosfets    =       0 # U elements  =       0
+  # T elements  =       0 # W elements =       0 # B elements  =       0
+  # S elements  =       0 # P elements =       0 # va device   =       0
+  # vector_srcs =       0 # N elements =       0
+
+
+  ******  Runtime Statistics (seconds)  ******
+
+  analysis           time    # points   tot. iter  conv.iter
+  op point           0.00           1           0
+  readin             0.35
+  errchk             0.00
+  setup              0.00
+  output             0.00
+
+
+           peak memory used        634.48 megabytes
+           total cpu time            0.64 seconds
+           total elapsed time        1.26 seconds
+           job started at     01:11:01 05/17/2025
+           job ended   at     01:11:02 05/17/2025
+           job total runtime         1.26 seconds
+
+
+ lic: Release hspice token(s) 
+ lic: total license checkout elapse time:        0.60(s)

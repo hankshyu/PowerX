@@ -77,10 +77,10 @@ BallOutRotation convertToBallOutRotation(const std::string& str) {
 }
 
 const std::unordered_map<std::string, std::string> BallOut::m_privateAttributeStandardUnits = {
-    {"MAX_CURRENT", "A"}
+    {"MAX_CURRENT", "A"}, {"SERIES_RESISTANCE", "mOhm"}, {"SERIES_INDUCTANCE", "nH"}, {"SHUNT_CAPACITANCE", "pF"}
 };
 
-BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0),m_maxCurrent(0) , m_rotation(BallOutRotation::EMPTY) {
+BallOut::BallOut(): m_name(""), m_ballOutWidth(0), m_ballOutHeight(0),m_maxCurrent(0), m_seriesResistance(0), m_seriesInductance(0), m_shuntCapacitance(0), m_rotation(BallOutRotation::EMPTY) {
 
 }
 
@@ -131,6 +131,12 @@ BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
 
         if(tokens[0] == "MAX_CURRENT"){
             this->m_maxCurrent = std::stod(tokens[2]);
+        }else if(tokens[0] == "SERIES_RESISTANCE"){
+            this->m_seriesResistance = std::stod(tokens[2]);
+        }else if(tokens[0] == "SERIES_INDUCTANCE"){
+            this->m_seriesInductance = std::stod(tokens[2]);
+        }else if(tokens[0] == "SHUNT_CAPACITANCE"){
+            this->m_shuntCapacitance = std::stod(tokens[2]);
         }
     }
             

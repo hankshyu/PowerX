@@ -30,8 +30,11 @@
 // 3. Texo Library:
 #include "powerDistributionNetwork.hpp"
 #include "cord.hpp"
+#include "line.hpp"
 #include "signalType.hpp"
 #include "objectArray.hpp"
+#include "technology.hpp"
+#include "eqCktExtractor.hpp"
 #include "microBump.hpp"
 #include "c4Bump.hpp"
 
@@ -181,6 +184,308 @@ bool PowerDistributionNetwork::checkOnePiece(int metalLayerIdx){
     }
 
     return true;
+}
+
+void PowerDistributionNetwork::assignVias(){
+    for(int vLayer = 0; vLayer < m_viaLayerCount; ++vLayer){
+        int upMetalLayerIndex = vLayer;
+        int downMetalLayerIndex = vLayer + 1;
+        // leave the surronding blank
+        for(int j = 1; j < (m_pinHeight-1); ++j){
+            for(int i = 1; i < (m_pinWidth-1); ++i){
+                if(viaLayers[vLayer].canvas[j][i] != SignalType::EMPTY) continue;
+
+                SignalType upLLst = metalLayers[upMetalLayerIndex].canvas[j-1][i-1];
+                SignalType upLRst = metalLayers[upMetalLayerIndex].canvas[j-1][i];
+                SignalType upULst = metalLayers[upMetalLayerIndex].canvas[j][i-1];
+                SignalType upURst = metalLayers[upMetalLayerIndex].canvas[j][i];
+                if((upLLst != upLRst) || (upLRst != upULst) || (upULst != upURst)) continue;
+
+                SignalType downLLst = metalLayers[downMetalLayerIndex].canvas[j-1][i-1];
+                SignalType downLRst = metalLayers[downMetalLayerIndex].canvas[j-1][i];
+                SignalType downULst = metalLayers[downMetalLayerIndex].canvas[j][i-1];
+                SignalType downURst = metalLayers[downMetalLayerIndex].canvas[j][i];
+                if((upLLst != downLLst) || (downLLst != downLRst) || (downLRst != downULst) || (downULst != downURst)) continue;
+
+                viaLayers[vLayer].setCanvas(j, i, upLLst);
+            }
+        }
+    }
+}
+
+void PowerDistributionNetwork::removeFloatingPlanes(int layer){
+    
+    assert(layer >= m_ubumpConnectedMetalLayerIdx);
+    assert(layer <= m_c4ConnectedMetalLayerIdx);
+
+
+    std::unordered_map<SignalType, std::unordered_set<Cord>> requiredCords;
+    
+    // insert the preplaced
+    for(auto cit = metalLayers[layer].preplacedCords.begin(); cit != metalLayers[layer].preplacedCords.end(); ++cit){
+        requiredCords[cit->first] = std::unordered_set<Cord>(cit->second.begin(), cit->second.end());
+    }
+    // check the vias from up/down layers
+    const std::vector<std::vector<SignalType>> &upperPinCanvas = (layer == m_ubumpConnectedMetalLayerIdx)? uBump.canvas : viaLayers[layer-1].canvas;
+    const std::vector<std::vector<SignalType>> &lowerPinCanvas = (layer == m_c4ConnectedMetalLayerIdx)? c4.canvas : viaLayers[layer].canvas;
+    Rectangle pinCanvasSizeRectangle(0, 0, m_pinWidth-1, m_pinHeight-1);
+    for(int i = 0; i < m_pinHeight; ++i){
+        for(int j = 0; j < m_pinWidth; ++j){
+            SignalType ust = upperPinCanvas[j][i];
+            if((ust != SignalType::EMPTY) && (ust != SignalType::OBSTACLE)){
+                Cord ll(i-1, j-1);
+                Cord lr(i, j-1);
+                Cord ul(i-1, j);
+                Cord ur(i, j);
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ll, true)){
+                    requiredCords[ust].insert(ll);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, lr, true)){
+                    requiredCords[ust].insert(lr);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ul, true)){
+                    requiredCords[ust].insert(ul);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ur, true)){
+                    requiredCords[ust].insert(ur);
+                }
+            }
+
+            SignalType dst = lowerPinCanvas[j][i];
+            if((dst != SignalType::EMPTY) && (dst != SignalType::OBSTACLE)){
+                Cord ll(i-1, j-1);
+                Cord lr(i, j-1);
+                Cord ul(i-1, j);
+                Cord ur(i, j);
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ll, true)){
+                    requiredCords[dst].insert(ll);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, lr, true)){
+                    requiredCords[dst].insert(lr);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ul, true)){
+                    requiredCords[dst].insert(ul);
+                }
+                if(boost::polygon::contains(pinCanvasSizeRectangle, ur, true)){
+                    requiredCords[dst].insert(ur);
+                }
+            } 
+        }
+    }
+
+    std::unordered_map<SignalType, DoughnutPolygonSet> layerDPS = collectDoughnutPolygons(metalLayers[layer].canvas);
+    for(std::unordered_map<SignalType, DoughnutPolygonSet>::iterator it = layerDPS.begin(); it != layerDPS.end(); ++it){
+        SignalType st = it->first;
+        if((st == SignalType::EMPTY) || (st == SignalType::OBSTACLE)) continue;
+
+
+        for(int dpidx = 0; dpidx < dps::getShapesCount(it->second); ++dpidx){
+            std::vector<Cord>fragmentGrids = dp::getContainedGrids(it->second.at(dpidx));
+            if(requiredCords.count(st) == 0){
+                for(const Cord &c : fragmentGrids) metalLayers[layer].setCanvas(c, SignalType::EMPTY);
+            }else{
+                bool isRequired = false;
+                for(const Cord &c : fragmentGrids){
+                    if(requiredCords[st].count(c) != 0){
+                        isRequired = true;
+                        break;
+                    }
+                }
+                if(!isRequired){
+                    for(const Cord &c : fragmentGrids) metalLayers[layer].setCanvas(c, SignalType::EMPTY);
+                }
+            }
+        }
+    }
+    
+}
+
+void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath){
+ 
+    std::ofstream ofs(filePath, std::ios::out);
+    assert(ofs.is_open());
+
+    auto pointToNode = [](int layer, const Cord &c) -> std::string {
+        return "n" + std::to_string(layer) + "_" + std::to_string(c.y()) + "_" + std::to_string(c.x());
+    };
+
+    ofs << "****** Equivalent Circuit Components ******" << std::endl;
+    ofs << ".SUBCKT ubump in out" << std::endl;
+    ofs << "R1 in mid " << tch.getMicrobumpResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getMicrobumpInductance() << "p" << std::endl;
+    ofs << ".ENDS ubump" << std::endl;
+    
+    ofs << std::endl;
+
+    ofs << ".SUBCKT via in out" << std::endl;
+    ofs << "R1 in mid " << extor.getInterposerViaResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << extor.getInterposerViaInductance() << "p" << std::endl;
+    ofs << ".ENDS ubump" << std::endl;
+
+    ofs << std::endl;
+
+    ofs << ".SUBCKT edge in out" << std::endl;
+    ofs << "R1 in mid " << 2*extor.getInterposerResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << 2*extor.getInterposerInductance() << "p" << std::endl;
+    ofs << ".ENDS edge" << std::endl;
+
+    ofs << std::endl;
+
+    ofs << ".SUBCKT tsv in out" << std::endl;
+    ofs << "R1 in mid " << tch.getTsvResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getTsvInductance() << "p" << std::endl;
+    ofs << ".ENDS tsv" << std::endl;
+
+    ofs << std::endl;
+
+    ofs << ".SUBCKT cfour in out" << std::endl;
+    ofs << "R1 in mid " << tch.getC4Resistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getC4Inductance() << "p" << std::endl;
+    ofs << ".ENDS cfour" << std::endl;
+    
+    ofs << std::endl;
+
+    ofs << "****** Equivalent Circuit ******" << std::endl;
+    int chipletcount = uBump.signalTypeToInstances[st].size();
+    assert(chipletcount > 0);
+    std::vector<std::string> chipletTitles(uBump.signalTypeToInstances[st].begin(), uBump.signalTypeToInstances[st].end());
+
+    int uBumpCounter = 0;
+    int viaCounter = 0;
+    int edgeCounter = 0;
+    int tsvCounter = 0;
+    int c4Counter = 0;
+
+    ofs << ".SUBCKT eqckt in ";
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << chipletTitles[i] << "_o ";
+    }
+
+    ofs << std::endl;
+    ofs << "*** MicroBumps ***" << std::endl;
+    for(int ubidx = 0; ubidx < chipletcount; ++ubidx){
+        std::string instanceName = chipletTitles[ubidx];
+        Cord llbase(rec::getLL(uBump.instanceToRectangleMap.at(instanceName)));
+        for(const Cord &c : uBump.instanceToBallOutMap[instanceName]->SignalTypeToAllCords[st]){
+            ofs << "Xubump" << uBumpCounter++ << " " <<  chipletTitles[ubidx] << "_o " << pointToNode(0, c) << " ubump" << std::endl;
+        }
+    }
+
+    ofs << "*** C4 Bumps ***" << std::endl;
+    for(const C4PinCluster *cluster : c4.signalTypeToAllClusters[st]){
+        std::string c4Node = pointToNode(m_metalLayerCount, cluster->representation);
+        ofs << "Xcfour" << c4Counter++ << " in " << c4Node << " cfour" << std::endl;
+        for(const Cord &c : cluster->pins){
+            ofs << "Xtsv" << tsvCounter++ << " " << c4Node << " " << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " tsv" << std::endl;
+        }
+    }
+
+    ofs << "*** Metal Layers ***" << std::endl;
+    for(int mLayerIdx = m_ubumpConnectedMetalLayerIdx; mLayerIdx <= m_c4ConnectedMetalLayerIdx; ++mLayerIdx){
+        std::unordered_set<Line> collectedLines;
+        std::unordered_map<SignalType, DoughnutPolygonSet> stDPS = collectDoughnutPolygons(metalLayers[mLayerIdx].canvas);
+        for(int dpidx = 0; dpidx < dps::getShapesCount(stDPS[st]); ++dpidx){
+            DoughnutPolygon fragment = stDPS[st][dpidx];
+            std::vector<Cord> containedCords = dp::getContainedCords(fragment);
+            std::unordered_set<Cord> containedCordsSet(containedCords.begin(), containedCords.end());
+            for(const Cord &centerCord : containedCords){
+                Cord up(centerCord.x(), centerCord.y()+1);
+                Cord down(centerCord.x(), centerCord.y()-1);
+                Cord left(centerCord.x()-1, centerCord.y());
+                Cord right(centerCord.x()-1, centerCord.y());
+
+                Line lup(centerCord, up);
+                Line ldown(centerCord, down);
+                Line lleft(centerCord, left);
+                Line lright(centerCord, right);
+
+                if(containedCordsSet.count(up) && !collectedLines.count(lup)){
+                    collectedLines.insert(lup);
+                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lup.getLow()) << " " << pointToNode(mLayerIdx, lup.getHigh()) << " edge" << std::endl;
+                }
+                if(containedCordsSet.count(down) && !collectedLines.count(ldown)){
+                    collectedLines.insert(ldown);
+                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, ldown.getLow()) << " " << pointToNode(mLayerIdx, ldown.getHigh()) << " edge" << std::endl;
+                }
+                if(containedCordsSet.count(left) && !collectedLines.count(lleft)){
+                    collectedLines.insert(lleft);
+                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lleft.getLow()) << " " << pointToNode(mLayerIdx, lleft.getHigh()) << " edge" << std::endl;
+                }
+                if(containedCordsSet.count(right) && !collectedLines.count(lright)){
+                    collectedLines.insert(lright);
+                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lright.getLow()) << " " << pointToNode(mLayerIdx, lright.getHigh()) << " edge" << std::endl;
+                }
+            }
+        }
+    }
+
+    ofs << "*** Vias ***" << std::endl;
+    for(int viaLayerIdx = 0; viaLayerIdx < m_viaLayerCount; ++ viaLayerIdx){
+        for(int j = 0; j < m_pinHeight; ++j){
+            for(int i = 0; i < m_pinWidth; ++i){
+                if(viaLayers[viaLayerIdx].canvas[j][i] == st){
+                    ofs << "Xvia" << viaCounter++ << pointToNode(viaLayerIdx, Cord(i, j)) << " " << pointToNode(viaLayerIdx+1, Cord(i, j)) << " via" << std::endl;
+                }
+            }
+        }
+    }
+    ofs << ".ENDS eqckt" << std::endl;
+    ofs << std::endl;
+
+    ofs << "****** Chiplet Load Model ******" << std::endl;
+    ofs << ".SUBCKT chiplet in gnd PARAMS: Rval=50m Lval=200n Cval=30p Iload=1.0" << std::endl;
+    ofs << "Rpath in n1 R=\'Rval\'" << std::endl;
+    ofs << "Lpath n1 n2 L=\'Lval\'" << std::endl;
+    ofs << "Cpath n2 n3 C=\'Cval'" << std::endl;
+    ofs << "ILOAD n3 gnd DC Iload" << std::endl;
+    ofs << ".ENDS chiplet" << std::endl;
+
+    ofs << std::endl;
+
+    ofs << "****** Input PCB model Model ******" << std::endl;
+    ofs << ".SUBCKT pcb vrm_low vrm_high out gnd" << std::endl;
+    ofs << "Lpcbh vrm_high n1 " << tch.getPCBInductance() << "p" << std::endl;
+    ofs << "Rpcbh n1 out " << tch.getPCBResistance() << "u" << std::endl;
+    ofs << "Ldecaph out n2 " << tch.getPCBDecapInductance() <<  "n" << std::endl;
+    ofs << "Cdecap n2 n3 " << tch.getPCBDecapCapacitance() << "u" << std::endl;
+    ofs << "Rdecapl n3 gnd " << tch.getPCBDecapResistance() << "u" << std::endl;
+    ofs << "Rpcbl n4 gnd " << tch.getPCBResistance() << "u" << std::endl;
+    ofs << "Lpcbl vrm_low n4 " << tch.getPCBInductance() << "p" << std::endl;
+    ofs << ".ENDS pcb" << std::endl;
+
+    ofs << std::endl << std::endl;
+    ofs << "****** Main ******" << std::endl;
+    ofs << ".PARAM VDD=1.0" << std::endl;
+    ofs << "VVRM vrm_pos vrm_neg DC \'VDD\'" << std::endl;
+    ofs << "Rvrm vrm_pos vrm_neg 1m" << std::endl;
+    ofs << "Xpdn vrm_pos vrm_neg pcb_out 0 pcb" << std::endl;
+    
+    ofs << "Xeqckt pcb_out ";
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << chipletTitles[i] << "_o ";
+    }
+    ofs << "eqckt" << std::endl;
+    
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << "Xchiplet" << i << " " << chipletTitles[i] << "_o " << "0 chiplet ";
+        BallOut *bt = uBump.instanceToBallOutMap.at(chipletTitles[i]);
+        assert(bt != nullptr);
+        ofs << "PARAMS: Rval=" << bt->getSeriesResistance() << "m Lval=" << bt->getSeriesInductance() << "n Cval=" << bt->getShuntCapacitance() << "p ";
+        ofs << "Iload=" << bt->getMaxCurrent() << std::endl;
+    }
+
+    ofs << std::endl;
+    ofs << "****** DC IR-Drop test ******" << std::endl;
+    // ofs << ".DC VDD " << std::endl;
+    // ofs << ".PRINT DC I(Xeqckt)" << std::endl;
+    ofs << ".PRINT DC V(vrm_pos) V(vrm_neg) V(pcb_out)" << std::endl;
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << ".PRINT DC V(" << chipletTitles[i] << "_o" << ") I(" << "Xchiplet" << i << ")" << std::endl;
+    }
+
+    ofs << ".OPTIONS RELTOL=1e-4 ABSTOL=1e-8 VNTOL=1e-6" << std::endl;
+    ofs << ".END" << std::endl;
+    ofs.close();
 }
 
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes){

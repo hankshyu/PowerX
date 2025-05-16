@@ -77,6 +77,10 @@ private:
     // attributes that not all ballOut share
     static const std::unordered_map<std::string, std::string> m_privateAttributeStandardUnits;
     double m_maxCurrent;
+    double m_seriesResistance;
+    double m_seriesInductance;
+    double m_shuntCapacitance;
+
 public:
     std::unordered_set<SignalType> allSignalTypes;
     std::vector<std::vector<SignalType>> ballOutArray;
@@ -89,7 +93,11 @@ public:
     inline std::string getName() const {return this->m_name;}
     inline int getBallOutWidth() const {return this->m_ballOutWidth;}
     inline int getBallOutHeight() const {return this->m_ballOutHeight;}
-    inline double getMaxCurrent() const {return this->m_maxCurrent;}
+    inline double getMaxCurrent() const {return this->m_maxCurrent;} // A
+    inline double getSeriesResistance() const {return this->m_seriesResistance;} // mOhm
+    inline double getSeriesInductance() const {return this->m_seriesInductance;} // nH
+    inline double getShuntCapacitance() const {return this->m_shuntCapacitance;} // pF
+
     inline Rectangle getBallOutSizeRectangle() const {return Rectangle(0, 0, (m_ballOutWidth > 1)? m_ballOutWidth-1 : 0, (m_ballOutHeight > 1)? m_ballOutHeight-1 : 0);}
     inline BallOutRotation getRotation() const {return this->m_rotation;}
     inline std::vector<SignalType> getAllSignalTypes() const {return std::vector<SignalType>(allSignalTypes.begin(), allSignalTypes.end());}

@@ -32,7 +32,8 @@
 // 3. Texo Library:
 #include "doughnutPolygon.hpp"
 #include "doughnutPolygonSet.hpp"
-
+#include "technology.hpp"
+#include "eqCktExtractor.hpp"
 #include "signalType.hpp"
 #include "objectArray.hpp"
 #include "microBump.hpp"
@@ -72,11 +73,15 @@ public:
     inline int getc4ConnectedmetalLayerIdx() const {return this->m_c4ConnectedMetalLayerIdx;}
 
     
-
     bool checkOnePiece(int layer);
     bool checkPinPadValid(int layer);
 
+
+    void assignVias();
+    void removeFloatingPlanes(int layer);
+    void exportEquivalentCircuit(const SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
 };
+
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes);
 void markPinPadsWithSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &signalTypes);
 
