@@ -14,4 +14,6 @@ outputs/*
 !outputs/.gitkeep
 archive/*
 myenv/*
+exp/*
+!exp/.gitkeep
 
