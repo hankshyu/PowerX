@@ -306,42 +306,42 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
     assert(ofs.is_open());
 
     auto pointToNode = [](int layer, const Cord &c) -> std::string {
-        return "n" + std::to_string(layer) + "_" + std::to_string(c.y()) + "_" + std::to_string(c.x());
+        return "n" + std::to_string(c.x()) + "_" + std::to_string(c.y()) + "_" + std::to_string(layer);
     };
 
     ofs << "****** Equivalent Circuit Components ******" << std::endl;
     ofs << ".SUBCKT ubump in out" << std::endl;
     ofs << "R1 in mid " << tch.getMicrobumpResistance() << "m" << std::endl;
     ofs << "L1 mid out " << tch.getMicrobumpInductance() << "p" << std::endl;
-    ofs << ".ENDS ubump" << std::endl;
+    ofs << ".ENDS" << std::endl;
     
     ofs << std::endl;
 
     ofs << ".SUBCKT via in out" << std::endl;
     ofs << "R1 in mid " << extor.getInterposerViaResistance() << "m" << std::endl;
     ofs << "L1 mid out " << extor.getInterposerViaInductance() << "p" << std::endl;
-    ofs << ".ENDS ubump" << std::endl;
+    ofs << ".ENDS" << std::endl;
 
     ofs << std::endl;
 
     ofs << ".SUBCKT edge in out" << std::endl;
     ofs << "R1 in mid " << 2*extor.getInterposerResistance() << "m" << std::endl;
     ofs << "L1 mid out " << 2*extor.getInterposerInductance() << "p" << std::endl;
-    ofs << ".ENDS edge" << std::endl;
+    ofs << ".ENDS" << std::endl;
 
     ofs << std::endl;
 
     ofs << ".SUBCKT tsv in out" << std::endl;
     ofs << "R1 in mid " << tch.getTsvResistance() << "m" << std::endl;
     ofs << "L1 mid out " << tch.getTsvInductance() << "p" << std::endl;
-    ofs << ".ENDS tsv" << std::endl;
+    ofs << ".ENDS" << std::endl;
 
     ofs << std::endl;
 
     ofs << ".SUBCKT cfour in out" << std::endl;
     ofs << "R1 in mid " << tch.getC4Resistance() << "m" << std::endl;
     ofs << "L1 mid out " << tch.getC4Inductance() << "p" << std::endl;
-    ofs << ".ENDS cfour" << std::endl;
+    ofs << ".ENDS" << std::endl;
     
     ofs << std::endl;
 
@@ -355,19 +355,21 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
     int edgeCounter = 0;
     int tsvCounter = 0;
     int c4Counter = 0;
+    int capCounter = 0;
 
     ofs << ".SUBCKT eqckt in ";
     for(int i = 0; i < chipletcount; ++i){
         ofs << chipletTitles[i] << "_o ";
     }
 
-    ofs << std::endl;
+    ofs << "vss" << std::endl;
     ofs << "*** MicroBumps ***" << std::endl;
     for(int ubidx = 0; ubidx < chipletcount; ++ubidx){
         std::string instanceName = chipletTitles[ubidx];
         Cord llbase(rec::getLL(uBump.instanceToRectangleMap.at(instanceName)));
         for(const Cord &c : uBump.instanceToBallOutMap[instanceName]->SignalTypeToAllCords[st]){
-            ofs << "Xubump" << uBumpCounter++ << " " <<  chipletTitles[ubidx] << "_o " << pointToNode(0, c) << " ubump" << std::endl;
+            ofs << "Xubump" << uBumpCounter++ << "_" <<  pointToNode(m_ubumpConnectedMetalLayerIdx, Cord(c.x() + llbase.x(), c.y() + llbase.y())) << " ";
+            ofs << chipletTitles[ubidx] << "_o " << pointToNode(m_ubumpConnectedMetalLayerIdx, Cord(c.x() + llbase.x(), c.y() + llbase.y())) << " ubump" << std::endl;
         }
     }
 
@@ -376,44 +378,65 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
         std::string c4Node = pointToNode(m_metalLayerCount, cluster->representation);
         ofs << "Xcfour" << c4Counter++ << " in " << c4Node << " cfour" << std::endl;
         for(const Cord &c : cluster->pins){
-            ofs << "Xtsv" << tsvCounter++ << " " << c4Node << " " << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " tsv" << std::endl;
+            ofs << "Xtsv" << tsvCounter++ << "_" << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " ";
+            ofs << c4Node << " " << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " tsv" << std::endl;
         }
     }
 
     ofs << "*** Metal Layers ***" << std::endl;
+    len_t pinXMin = 0;
+    len_t pinXMax = m_pinWidth-1;
+    len_t pinYMin = 0;
+    len_t pinYMax = m_pinHeight-1;
+    // Cord borderLL(pinXMin, pinYMin);
+    // Cord borderLR(pinXMax, pinYMin);
+    // Cord borderUL(pinXMin, pinYMax);
+    // Cord borderUR(pinXMax, pinYMax);
     for(int mLayerIdx = m_ubumpConnectedMetalLayerIdx; mLayerIdx <= m_c4ConnectedMetalLayerIdx; ++mLayerIdx){
         std::unordered_set<Line> collectedLines;
+        std::unordered_set<Cord> collectedCords;
         std::unordered_map<SignalType, DoughnutPolygonSet> stDPS = collectDoughnutPolygons(metalLayers[mLayerIdx].canvas);
         for(int dpidx = 0; dpidx < dps::getShapesCount(stDPS[st]); ++dpidx){
             DoughnutPolygon fragment = stDPS[st][dpidx];
-            std::vector<Cord> containedCords = dp::getContainedCords(fragment);
-            std::unordered_set<Cord> containedCordsSet(containedCords.begin(), containedCords.end());
-            for(const Cord &centerCord : containedCords){
-                Cord up(centerCord.x(), centerCord.y()+1);
-                Cord down(centerCord.x(), centerCord.y()-1);
-                Cord left(centerCord.x()-1, centerCord.y());
-                Cord right(centerCord.x()-1, centerCord.y());
+            std::vector<Cord> fragmentLLs = dp::getContainedGrids(fragment);
+            for(const Cord &llCord : fragmentLLs){
+                Cord ll(llCord.x(), llCord.y());
+                Cord lr(llCord.x() + 1, llCord.y());
+                Cord ul(llCord.x(), llCord.y() + 1);
+                Cord ur(llCord.x() + 1, llCord.y() + 1);
+                
+                Line lup(ul, ur);
+                Line ldown(ll, lr);
+                Line lleft(ll, ul);
+                Line lright(lr, ur);
 
-                Line lup(centerCord, up);
-                Line ldown(centerCord, down);
-                Line lleft(centerCord, left);
-                Line lright(centerCord, right);
+                std::vector<Cord> candCords = {ll, lr, ul, ur};
+                std::vector<Line> candLines = {lup, ldown, lleft, lright};
 
-                if(containedCordsSet.count(up) && !collectedLines.count(lup)){
-                    collectedLines.insert(lup);
-                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lup.getLow()) << " " << pointToNode(mLayerIdx, lup.getHigh()) << " edge" << std::endl;
+                // capacitors
+                for(const Cord &candc : candCords){
+                    if(collectedCords.count(candc) != 0) continue;
+                    collectedCords.insert(candc);
+
+                    bool xOnEdge = (candc.x() == pinXMin) || (candc.x() == pinXMax);
+                    bool yOnEdge = (candc.y() == pinYMin) || (candc.y() == pinYMax);
+
+                    if(xOnEdge && yOnEdge){
+                        ofs << "C" << capCounter++ << " " << pointToNode(mLayerIdx, candc) << " vss " << extor.getInterposerCapacitanceCornerCell()/4.0 << "f" << std::endl;
+                    }else if(xOnEdge || yOnEdge){
+                        ofs << "C" << capCounter++ << " " << pointToNode(mLayerIdx, candc) << " vss " << extor.getInterposerCapacitanceEdgeCell()/4.0 << "f" << std::endl;
+                    }else{
+                        ofs << "C" << capCounter++ << " " << pointToNode(mLayerIdx, candc) << " vss " << extor.getInterposerCapacitanceCenterCell()/4.0 << "f" << std::endl;
+                    }
                 }
-                if(containedCordsSet.count(down) && !collectedLines.count(ldown)){
-                    collectedLines.insert(ldown);
-                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, ldown.getLow()) << " " << pointToNode(mLayerIdx, ldown.getHigh()) << " edge" << std::endl;
-                }
-                if(containedCordsSet.count(left) && !collectedLines.count(lleft)){
-                    collectedLines.insert(lleft);
-                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lleft.getLow()) << " " << pointToNode(mLayerIdx, lleft.getHigh()) << " edge" << std::endl;
-                }
-                if(containedCordsSet.count(right) && !collectedLines.count(lright)){
-                    collectedLines.insert(lright);
-                    ofs << "Xedge" << edgeCounter++ << " " << pointToNode(mLayerIdx, lright.getLow()) << " " << pointToNode(mLayerIdx, lright.getHigh()) << " edge" << std::endl;
+
+                // Edges
+
+                for(const Line &candl : candLines){
+                    if(collectedLines.count(candl) != 0) continue;
+                    collectedLines.insert(candl);
+                    ofs << "Xedge" << edgeCounter++ << "_" << pointToNode(mLayerIdx, candl.getLow()) << "_" << pointToNode(mLayerIdx, candl.getHigh()) << " ";
+                    ofs << pointToNode(mLayerIdx, candl.getLow()) << " " << pointToNode(mLayerIdx, candl.getHigh()) << " edge" << std::endl;
                 }
             }
         }
@@ -424,67 +447,106 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
         for(int j = 0; j < m_pinHeight; ++j){
             for(int i = 0; i < m_pinWidth; ++i){
                 if(viaLayers[viaLayerIdx].canvas[j][i] == st){
-                    ofs << "Xvia" << viaCounter++ << pointToNode(viaLayerIdx, Cord(i, j)) << " " << pointToNode(viaLayerIdx+1, Cord(i, j)) << " via" << std::endl;
+                    ofs << "Xvia" << viaCounter++ << "_" << pointToNode(viaLayerIdx, Cord(i, j)) << "_" << pointToNode(viaLayerIdx+1, Cord(i, j)) << " ";
+                    ofs << pointToNode(viaLayerIdx, Cord(i, j)) << " " << pointToNode(viaLayerIdx+1, Cord(i, j)) << " via" << std::endl;
                 }
             }
         }
     }
-    ofs << ".ENDS eqckt" << std::endl;
+    // ofs << "Xubump1 in R8_o ubump" << std::endl;
+    // ofs << "Xubump2 in R7_o ubump" << std::endl;
+    // ofs << "Xubump3 in R6_o ubump" << std::endl;
+    // ofs << "Xubump4 in R5_o ubump" << std::endl;
+    // ofs << "Xubump5 in R4_o ubump" << std::endl;
+    // ofs << "Xubump6 in R3_o ubump" << std::endl;
+    // ofs << "Xubump7 in R2_o ubump" << std::endl;
+    // ofs << "Xubump8 in R1_o ubump" << std::endl;
+    ofs << ".ENDS" << std::endl;
     ofs << std::endl;
 
     ofs << "****** Chiplet Load Model ******" << std::endl;
-    ofs << ".SUBCKT chiplet in gnd PARAMS: Rval=50m Lval=200n Cval=30p Iload=1.0" << std::endl;
-    ofs << "Rpath in n1 R=\'Rval\'" << std::endl;
-    ofs << "Lpath n1 n2 L=\'Lval\'" << std::endl;
-    ofs << "Cpath n2 n3 C=\'Cval'" << std::endl;
-    ofs << "ILOAD n3 gnd DC Iload" << std::endl;
-    ofs << ".ENDS chiplet" << std::endl;
+    ofs << ".SUBCKT chiplet in vss Rval=50m Lval=200n Cval=30p Iload=1.0" << std::endl;
+    ofs << "Rpath in n1 Rval" << std::endl;
+    ofs << "Lpath n1 n2 Lval" << std::endl;
+    ofs << "Cpath n2 vss Cval" << std::endl;
+    ofs << "ILOAD n2 vss DC Iload" << std::endl;
+    ofs << ".ENDS" << std::endl;
 
     ofs << std::endl;
 
     ofs << "****** Input PCB model Model ******" << std::endl;
-    ofs << ".SUBCKT pcb vrm_low vrm_high out gnd" << std::endl;
+    ofs << ".SUBCKT pcb vrm_low vrm_high out vss" << std::endl;
     ofs << "Lpcbh vrm_high n1 " << tch.getPCBInductance() << "p" << std::endl;
     ofs << "Rpcbh n1 out " << tch.getPCBResistance() << "u" << std::endl;
     ofs << "Ldecaph out n2 " << tch.getPCBDecapInductance() <<  "n" << std::endl;
     ofs << "Cdecap n2 n3 " << tch.getPCBDecapCapacitance() << "u" << std::endl;
-    ofs << "Rdecapl n3 gnd " << tch.getPCBDecapResistance() << "u" << std::endl;
-    ofs << "Rpcbl n4 gnd " << tch.getPCBResistance() << "u" << std::endl;
+    ofs << "Rdecapl n3 vss " << tch.getPCBDecapResistance() << "u" << std::endl;
+    ofs << "Rpcbl n4 vss " << tch.getPCBResistance() << "u" << std::endl;
     ofs << "Lpcbl vrm_low n4 " << tch.getPCBInductance() << "p" << std::endl;
-    ofs << ".ENDS pcb" << std::endl;
+    
+    ofs << "* --- Decap Bank for Broadband Z(f) Control ---" << std::endl;
+    ofs << "* 1 μF decap (low freq bulk, moderately damped)" << std::endl;
+    ofs << "Rdecap1u out n1u 0.05" << std::endl;
+    ofs << "Cdecap1u n1u vss 1u" << std::endl;
+    ofs << "* 100 nF decap (mid-low freq)" << std::endl;
+    ofs << "Rdecap100n out n100n 0.1" << std::endl;
+    ofs << "Cdecap100n n100n vss 100n" << std::endl;
+    ofs << "* 10 nF decap (mid freq)" << std::endl;
+    ofs << "Rdecap10n out n10n 0.2" << std::endl;
+    ofs << "Cdecap10n n10n vss 10n" << std::endl;
+    ofs << "* 1 nF decap (high freq)" << std::endl;
+    ofs << "Rdecap1n out n1n 0.3" << std::endl;
+    ofs << "Cdecap1n n1n vss 1n" << std::endl;
+    ofs << "* 100 pF decap (GHz damping)" << std::endl;
+    ofs << "Rdecap100p out n100p 0.5" << std::endl;
+    ofs << "Cdecap100p n100p vss 100p" << std::endl;
+    
+    ofs << ".ENDS" << std::endl;
 
     ofs << std::endl << std::endl;
     ofs << "****** Main ******" << std::endl;
-    ofs << ".PARAM VDD=1.0" << std::endl;
-    ofs << "VVRM vrm_pos vrm_neg DC \'VDD\'" << std::endl;
-    ofs << "Rvrm vrm_pos vrm_neg 1m" << std::endl;
-    ofs << "Xpdn vrm_pos vrm_neg pcb_out 0 pcb" << std::endl;
+    ofs << ".param VDD=1.0" << std::endl;
+    ofs << "VVRM vrm_high vrm_low DC VDD" << std::endl;
+    ofs << "Xpcb vrm_low vrm_high pcb_out 0 pcb" << std::endl;
     
     ofs << "Xeqckt pcb_out ";
     for(int i = 0; i < chipletcount; ++i){
         ofs << chipletTitles[i] << "_o ";
     }
-    ofs << "eqckt" << std::endl;
+    ofs << "0" << " " << "eqckt" << std::endl;
     
     for(int i = 0; i < chipletcount; ++i){
         ofs << "Xchiplet" << i << " " << chipletTitles[i] << "_o " << "0 chiplet ";
         BallOut *bt = uBump.instanceToBallOutMap.at(chipletTitles[i]);
         assert(bt != nullptr);
-        ofs << "PARAMS: Rval=" << bt->getSeriesResistance() << "m Lval=" << bt->getSeriesInductance() << "n Cval=" << bt->getShuntCapacitance() << "p ";
+        ofs << "Rval=" << bt->getSeriesResistance() << "m Lval=" << bt->getSeriesInductance() << "n Cval=" << bt->getShuntCapacitance() << "p ";
         ofs << "Iload=" << bt->getMaxCurrent() << std::endl;
     }
 
     ofs << std::endl;
     ofs << "****** DC IR-Drop test ******" << std::endl;
-    // ofs << ".DC VDD " << std::endl;
-    // ofs << ".PRINT DC I(Xeqckt)" << std::endl;
-    ofs << ".PRINT DC V(vrm_pos) V(vrm_neg) V(pcb_out)" << std::endl;
+    ofs << ".OPTION POST=2 INGOLD=2 RUNLVL=6" << std::endl;
+    ofs << std::endl << ".op" << std::endl;
+    ofs << ".DC VDD 1.5 1.5 0.5" << std::endl;
+    
+    ofs << ".print V(vrm_low) V(vrm_high) V(pcb_out) ";
     for(int i = 0; i < chipletcount; ++i){
-        ofs << ".PRINT DC V(" << chipletTitles[i] << "_o" << ") I(" << "Xchiplet" << i << ")" << std::endl;
+        ofs << "V(" << chipletTitles[i] << "_o" << ") ";
     }
+    ofs << std::endl;
 
-    ofs << ".OPTIONS RELTOL=1e-4 ABSTOL=1e-8 VNTOL=1e-6" << std::endl;
-    ofs << ".END" << std::endl;
+    ofs << ".measure DC irdroppcb param=\'V(vrm_high) - V(pcb_out)\'" << std::endl;
+    for(int i = 0; i < chipletcount; ++i){
+        Rectangle chpletPlacement = uBump.instanceToRectangleMap[chipletTitles[i]];
+        Cord chipletLL = rec::getLL(chpletPlacement);
+
+        ofs << ".measure DC IRDrop" << chipletTitles[i] << "_" <<  chipletLL.x() << "_" << chipletLL.y() << "_" << rec::getWidth(chpletPlacement) << "_" << rec::getHeight(chpletPlacement);
+        ofs << " param=\'V(pcb_out) - V(" << chipletTitles[i] << "_o" << ")\'" << std::endl;
+    }
+    ofs << std::endl;
+
+    // ofs << ".OPTION RELTOL=1e-4 ABSTOL=1e-8 VNTOL=1e-6" << std::endl;
+    ofs << ".end" << std::endl;
     ofs.close();
 }
 

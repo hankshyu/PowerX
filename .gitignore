@@ -13,3 +13,5 @@ obj/*
 outputs/*
 !outputs/.gitkeep
 archive/*
+myenv/*
+
