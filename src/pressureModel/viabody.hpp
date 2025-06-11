@@ -25,9 +25,7 @@
 
 // 3. Texo Library:
 #include "signalType.hpp"
-
 #include "fpoint.hpp"
-
 
 class ViaBody{
 private:
@@ -36,10 +34,14 @@ private:
     FPoint location;
 
 public:
+    
+    SignalType upSigType;
+    SignalType downSigType;
+    
     ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location);
-    int getUpIdx();
-    int getDownIdx();
-    FPoint getLocation();
+    int getUpIdx() const;
+    int getDownIdx() const;
+    FPoint getLocation() const;
 
 };
 

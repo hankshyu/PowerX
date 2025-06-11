@@ -9,8 +9,10 @@ obj/*
 !obj/.gitkeep
 outputs/*
 !outputs/.gitkeep
-archive/*
 myenv/*
 exp/*
 !exp/.gitkeep
-
+venv/*
+archive/photos/*
+!archive/photos/.gitkeep
+utils/__pycache__

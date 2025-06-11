@@ -26,6 +26,7 @@
 #include "fpolygon.hpp"
 #include "fmultipolygon.hpp"
 
+#include "binSystem.hpp"
 
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
@@ -38,14 +39,50 @@ void printWelcomeBanner();
 void printExitBanner();
 
 
+// Dummy object to store
+struct TestObj {
+    std::string name;
+    TestObj(std::string n) : name(std::move(n)) {}
+};
+
 int main(int argc, char const *argv[]){
 
     printWelcomeBanner();
     TimeProfiler timeProfiler;
     timeProfiler.startTimer("My Algorithm");
 
-    Technology technology(FILEPATH_TCH);
-    EqCktExtractor EqCktExtor(technology);
+    // Technology technology(FILEPATH_TCH);
+    // EqCktExtractor EqCktExtor(technology);
+    std::cout << "hello world" << std::endl;
+
+ using Scalar = float;
+
+    // Define bin grid
+    Scalar binSize = 1.0f;
+
+
+    BinSystem<Scalar, TestObj> grid(1.5, 0, 0, 7.25, 7.25);
+
+    // Create test objects
+    TestObj a("A"), b("B"), c("C");
+
+    // Insert objects into the bin system
+    grid.insert(1.0f, 1.0f, &a);  // In the middle of bin
+    grid.insert(2.0f, 2.0f, &b);  // Exactly on corner of a bin
+    grid.insert(3.0f, 1.5f, &c);  // Normal insertion
+
+    // Query box that exactly touches point b (on corner)
+    Scalar qxmin = 2.0f, qxmax = 2.0f;
+    Scalar qymin = 2.0f, qymax = 2.0f;
+
+    auto results = grid.query(1, 1, 2, 3);
+
+    std::cout << "Query at exact point (2.0, 2.0):\n";
+    for (TestObj* obj : results) {
+        std::cout << " - Found object: " << obj->name << '\n';
+    }
+
+
 
 
     timeProfiler.pauseTimer("My Algorithm");

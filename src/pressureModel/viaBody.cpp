@@ -27,14 +27,14 @@
 ViaBody::ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location)
     : upIdx(uplayerIdx), downIdx(downlayerIdx), location(location) {}
 
-int ViaBody::getUpIdx() {
+int ViaBody::getUpIdx() const {
     return upIdx;
 }
 
-int ViaBody::getDownIdx() {
+int ViaBody::getDownIdx() const {
     return downIdx;
 }
 
-FPoint ViaBody::getLocation() {
+FPoint ViaBody::getLocation() const {
     return location;
 }

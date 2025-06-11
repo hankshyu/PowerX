@@ -37,21 +37,22 @@
 #include "softBody.hpp"
 #include "viaBody.hpp"
 
+#include "binSystem.hpp"
 
 class PressureSimulator: public PowerDistributionNetwork{
 private:
-    FBox InterposerBox;
+    std::vector<std::vector<SoftBody *>> ownerSoftBodies;
+
+    std::vector<std::vector<ViaBody *>> ownerViasBodies;
     
-    //ownership Arrays
-    std::vector<std::unique_ptr<SoftBody>> allSoftBodies;
-    std::vector<std::unique_ptr<ViaBody>> allViaBodies;
 
 public:
-    
-    std::vector<std::unordered_map<SignalType, std::vector<SoftBody>>> softBodyArr;
-    std::vector<std::vector<FPoint>> viaBodyArr;
+    std::vector<BinSystem<flen_t, ViaBody>> viaBins;
+   
 
     PressureSimulator(const std::string &fileName);
+
+    void inflate();
 
 };
 

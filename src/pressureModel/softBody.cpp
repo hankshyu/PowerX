@@ -20,18 +20,18 @@
 #include "softBody.hpp"
 
 // Constructor
-SoftBody::SoftBody(int layer, SignalType sig, double expectCurrent, int id): layer(layer), sigType(sig), expectCurrent(expectCurrent), id(id) {
+SoftBody::SoftBody(SignalType sig, double expectCurrent, int id): sigType(sig), expectCurrent(expectCurrent) {
     
     //calculate initial pressure
     pressure = 0;
 
 }
 // Getter for signal type
-SignalType SoftBody::getSigType() {
+SignalType SoftBody::getSigType() const {
     return sigType;
 }
 
 // Getter for expected current
-double SoftBody::getExpectCurrent() {
+double SoftBody::getExpectCurrent() const {
     return expectCurrent;
 }

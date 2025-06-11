@@ -34,11 +34,9 @@
 
 class SoftBody{
 private:
-    int layer;
+
     SignalType sigType;
     double expectCurrent;
-    int id;
-
 
 public:
     double pressure;
@@ -47,10 +45,10 @@ public:
     std::vector<FPoint> hardVias;
     FPolygon hardViaFPolygon;
 
-    SoftBody(int layer, SignalType sig, double expectCurrent, int id);
+    SoftBody(SignalType sig, double expectCurrent, int id);
 
-    SignalType getSigType();
-    double getExpectCurrent();
+    SignalType getSigType() const;
+    double getExpectCurrent() const;
 
 };
 
