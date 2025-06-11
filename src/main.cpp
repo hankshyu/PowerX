@@ -21,7 +21,10 @@
 
 //
 
-# include "fpoint.hpp"
+#include "fpoint.hpp"
+#include "fbox.hpp"
+#include "fpolygon.hpp"
+#include "fmultipolygon.hpp"
 
 
 
@@ -44,13 +47,10 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
-    FPoint f4(2, 3.3);
-    FPoint f2(4.3, 4.7);
-    std::cout << f2.x() << f2.y() << std::endl;
-    std::cout << f4 << std::endl;
-    std::cout << calManhattanDistance(f4, f2) << std::endl;
-    std::cout << calEuclideanDistance(f4, f2) << std::endl;
-    std::cout << calDistanceSquared(f4, f2) << std::endl;
+
+
+
+
 
 
     timeProfiler.pauseTimer("My Algorithm");

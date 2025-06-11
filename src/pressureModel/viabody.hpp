@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        06/04/2025 17:09:56
-//  Module Name:        softBody.hpp
+//  Create Date:        06/07/2025 16:56:06
+//  Module Name:        viaBody.hpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -9,15 +9,14 @@
 //  Thread model:       posix
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:        The object that expands, shrink and merge due to
-//                      pressure-driven forces
+//  Description:        An Object Representing a via on the pressure system
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
 /////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __SOFT_BODY_H__
-#define __SOFT_BODY_H__
+#ifndef __VIA_BODY_H__
+#define __VIA_BODY_H__
 
 // Dependencies
 // 1. C++ STL:
@@ -28,31 +27,20 @@
 #include "signalType.hpp"
 
 #include "fpoint.hpp"
-#include "fbox.hpp"
-#include "fpolygon.hpp"
-#include "fmultipolygon.hpp"
 
-class SoftBody{
+
+class ViaBody{
 private:
-    int layer;
-    SignalType sigType;
-    double expectCurrent;
-    int id;
-
+    int upIdx;
+    int downIdx;
+    FPoint location;
 
 public:
-    double pressure;
-    std::vector<FPoint> contour;
-    
-    std::vector<FPoint> hardVias;
-    FPolygon hardViaFPolygon;
-
-    SoftBody(int layer, SignalType sig, double expectCurrent, int id);
-
-    SignalType getSigType();
-    double getExpectCurrent();
+    ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location);
+    int getUpIdx();
+    int getDownIdx();
+    FPoint getLocation();
 
 };
 
-
-#endif // __SOFT_BODY_H__
+#endif // __VIA_BODY_H__

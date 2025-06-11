@@ -134,7 +134,7 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
             continue;
         }
 
-        // parse PDN_START ... PDN_END part (preplaced part)
+        // parse PDN_PREPLACE_START ... PDN_PREPLACE_END part (preplaced part)
         if(splitLine[0] == "PDN_PREPLACE_START"){
             readPDN = true;
             continue;
