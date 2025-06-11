@@ -4,13 +4,13 @@ PI_SRCPATH = $(SRCPATH)/pi
 PRESSUREMODEL_SRCPATH = $(SRCPATH)/pressureModel
 BINPATH = ./bin
 OBJPATH = ./obj
-BOOSTPATH = ./lib/boost_1_87_0
+BOOSTPATH = ./lib/boost_1_88_0
 
 FLUTE_LIB_PATH = ./lib/flute/build
 FLUTE_HEADER_PATH = ./lib/flute
 
-GEOS_LIB_PATH = ./lib/geos/geos-install/lib
-GEOS_HEADER_PATH = ./lib/geos/geos-install/include
+GEOS_LIB_PATH = ./lib/geos/build/lib
+GEOS_HEADER_PATH = ./lib/geos/include
 
 OPENMP_OPT = -fopenmp
 
@@ -21,7 +21,7 @@ OPTFLAGS = -O3
 FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH)\
 		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) $(OPENMP_OPT) -D_Alignof=alignof
 
-LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -lm -lflute -lgeos -Wl,-rpath,lib/geos/geos-install/lib
+LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -lm $(FLUTE_LIB_PATH)/libflute.a $(GEOS_LIB_PATH)/libgeos.a $(GEOS_LIB_PATH)/libgeos_c.a
 
 INF_OBJS =	isotropy.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
 			tile.o line.o lineTile.o orderedSegment.o \

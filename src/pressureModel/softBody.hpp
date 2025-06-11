@@ -54,5 +54,4 @@ public:
 
 };
 
-
 #endif // __SOFT_BODY_H__

@@ -48,11 +48,6 @@ int main(int argc, char const *argv[]){
     EqCktExtractor EqCktExtor(technology);
 
 
-
-
-
-
-
     timeProfiler.pauseTimer("My Algorithm");
     timeProfiler.printTimingReport();
     

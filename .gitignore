@@ -2,9 +2,6 @@
 .vscode/
 bin/*
 !bin/.gitkeep
-inputs/*
-!inputs/*.txt
-!inputs/.gitkeep
 lib/*
 !lib/.gitkeep
 !lib/boost*/.gitkeep

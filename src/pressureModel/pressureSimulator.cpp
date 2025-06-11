@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        06/04/2025 16:58:37
-//  Module Name:        pressureSimulator.hpp
+//  Create Date:        06/04/2025 13:34:29
+//  Module Name:        pressureSimulator.cpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -15,14 +15,10 @@
 //  Revision:
 /////////////////////////////////////////////////////////////////////////////////
 
-#ifndef __PRESSURE_SIMULATOR_H__
-#define __PRESSURE_SIMULATOR_H__
-
 // Dependencies
 // 1. C++ STL:
 #include <vector>
-#include <unordered_map>
-#include <memory>
+
 
 // 2. Boost Library:
 
@@ -36,26 +32,8 @@
 #include "fmultipolygon.hpp"
 #include "softBody.hpp"
 #include "viaBody.hpp"
+#include "pressureSimulator.hpp"
 
-
-class PressureSimulator: public PowerDistributionNetwork{
-private:
-    FBox InterposerBox;
-    
-    //ownership Arrays
-    std::vector<std::unique_ptr<SoftBody>> allSoftBodies;
-    std::vector<std::unique_ptr<ViaBody>> allViaBodies;
-
-public:
-    
-    std::vector<std::unordered_map<SignalType, std::vector<SoftBody>>> softBodyArr;
-    std::vector<std::vector<FPoint>> viaBodyArr;
-
-    PressureSimulator(const std::string &fileName);
-
-};
-
-// friend bool visualisePressureSimulator(const PressureSimulator &ps, std::string &filePath);
-
-
-#endif // __PRESSURE_SIMULATOR_H__
+PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistributionNetwork(fileName) {
+    std::cout << "hello world!" << std::endl;
+}
