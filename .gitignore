@@ -5,9 +5,9 @@ bin/*
 inputs/*
 !inputs/*.txt
 !inputs/.gitkeep
+lib/*
 !lib/.gitkeep
 !lib/boost*/.gitkeep
-lib/*
 obj/*
 !obj/.gitkeep
 outputs/*
