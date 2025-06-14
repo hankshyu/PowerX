@@ -73,6 +73,10 @@ namespace fbox{
     inline bool isContained(const FPoint &point, const FBox &box, bool consierTouch=true){
         return (consierTouch)? boost::geometry::covered_by(point, box) : boost::geometry::within(point, box);
     }
+
+    inline bool isContained(const FBox &smallBox, const FBox &largeBox, bool considerTouch=true){
+        return (considerTouch)? boost::geometry::covered_by(smallBox, largeBox) : boost::geometry::within(smallBox, largeBox);
+    }
 }
 
 

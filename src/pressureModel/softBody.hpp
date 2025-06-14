@@ -25,6 +25,7 @@
 // 2. Boost Library:
 
 // 3. Texo Library:
+#include "units.hpp"
 #include "signalType.hpp"
 
 #include "fpoint.hpp"
@@ -34,9 +35,11 @@
 
 class SoftBody{
 private:
-
+    int id;
     SignalType sigType;
+    
     double expectCurrent;
+    farea_t initialArea;
 
 public:
     double pressure;
@@ -45,10 +48,12 @@ public:
     std::vector<FPoint> hardVias;
     FPolygon hardViaFPolygon;
 
-    SoftBody(SignalType sig, double expectCurrent, int id);
+    SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea);
 
     SignalType getSigType() const;
     double getExpectCurrent() const;
+    double calculatePressure() const;
+    void remeshContour(flen_t minDelta);
 
 };
 

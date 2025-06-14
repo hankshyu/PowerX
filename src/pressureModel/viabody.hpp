@@ -26,19 +26,25 @@
 // 3. Texo Library:
 #include "signalType.hpp"
 #include "fpoint.hpp"
+#include "softBody.hpp"
 
 class ViaBody{
 private:
+
     int upIdx;
     int downIdx;
     FPoint location;
+    
 
 public:
-    
-    SignalType upSigType;
-    SignalType downSigType;
+    bool upIsFixed;
+    SoftBody *upSoftBody;
+
+    bool downIsFixed;
+    SoftBody *downSoftBody;
     
     ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location);
+    
     int getUpIdx() const;
     int getDownIdx() const;
     FPoint getLocation() const;

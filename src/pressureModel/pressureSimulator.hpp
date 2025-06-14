@@ -41,11 +41,12 @@
 
 class PressureSimulator: public PowerDistributionNetwork{
 private:
-    std::vector<std::vector<SoftBody *>> ownerSoftBodies;
 
+    flen_t pointsMinDelta = 0.2;
+
+    std::vector<std::vector<SoftBody *>> ownerSoftBodies;
     std::vector<std::vector<ViaBody *>> ownerViasBodies;
     
-
 public:
     std::vector<BinSystem<flen_t, ViaBody>> viaBins;
    

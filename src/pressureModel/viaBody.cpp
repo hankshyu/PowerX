@@ -25,7 +25,13 @@
 
 
 ViaBody::ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location)
-    : upIdx(uplayerIdx), downIdx(downlayerIdx), location(location) {}
+    : upIdx(uplayerIdx), downIdx(downlayerIdx), location(location),
+        upIsFixed(false), upSoftBody(nullptr),
+        downIsFixed(false), downSoftBody(nullptr) {
+    
+    
+
+}
 
 int ViaBody::getUpIdx() const {
     return upIdx;
