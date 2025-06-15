@@ -35,6 +35,7 @@
 SoftBody::SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea):
     id(id), sigType(sig), expectCurrent(expectCurrent), initialArea(initArea){
     
+    // TODO: calculate initial pressure
 }
 // Getter for signal type
 SignalType SoftBody::getSigType() const {

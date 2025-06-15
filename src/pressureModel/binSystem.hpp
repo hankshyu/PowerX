@@ -41,8 +41,6 @@ private:
     std::vector<std::vector<Entry>> bins;
 
 public:
-
-public:
     BinSystem(Scalar binSize, Scalar xmin, Scalar ymin, Scalar xmax, Scalar ymax)
         : binSize(binSize), originX(xmin), originY(ymin)
     {

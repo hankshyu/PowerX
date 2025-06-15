@@ -22,6 +22,7 @@
 
 
 // 2. Boost Library:
+#include "boost/geometry.hpp"
 
 // 3. Texo Library:
 #include "signalType.hpp"
@@ -41,25 +42,24 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
     int viaBodyIdx = 0;
     const flen_t INITIAL_MARGIN = 0.5; // be a value between 0 ~ 0.5
     
-    this->ownerSoftBodies.resize(m_metalLayerCount);
-    this->ownerViasBodies.resize(m_viaLayerCount);
+    this->m_OwnerSoftBodies.resize(m_metalLayerCount);
+    this->m_OwnerViasBodies.resize(m_viaLayerCount);
     
-    // start gathering softBodies, 
+    /* Insert SoftBodies */
+
     std::unordered_set<SignalType> currentRequiringSignals;
     std::unordered_map<SignalType, double> signalCurrentRequirements;
-    std::unordered_map<SignalType, farea_t> signalTotalArea;
-    std::unordered_map<SignalType, std::vector<FBox>> layer0InitBallons;
     
+    std::vector<std::unordered_map<SignalType, std::vector<FBox>>> layerInitBoxes(m_metalLayerCount);
+
+    // Porcess Ubump related informations
     for(auto cit = uBump.signalTypeToInstances.begin(); cit != uBump.signalTypeToInstances.end(); ++cit){
         
         SignalType st = cit->first;
         if(st == SignalType::EMPTY || st == SignalType::GROUND || st == SignalType::SIGNAL || st == SignalType::OBSTACLE) continue;
-
         currentRequiringSignals.insert(st);
-        std::cout << "Processing signal type: " << st << std::endl;
         
-        for(std::string instance : cit->second){
-            std::cout << "Instance: " << instance << std::endl;
+        for(const std::string &instance : cit->second){
             BallOut *ballout = uBump.instanceToBallOutMap.at(instance);
             
             double balloutCurrent = ballout->getMaxCurrent();
@@ -69,7 +69,7 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                 if(at.first == SignalType::SIGNAL || at.first == SignalType::GROUND) continue;
                 len_t xMin = LEN_T_MAX, xMax = LEN_T_MIN;
                 len_t yMin = LEN_T_MAX, yMax = LEN_T_MIN;
-                for(Cord c : at.second){
+                for(const Cord &c : at.second){
                     len_t x = c.x();
                     len_t y = c.y();
                     if(x < xMin) xMin = x;
@@ -88,130 +88,172 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                 yMin -= INITIAL_MARGIN;
                 yMax += INITIAL_MARGIN;
 
-                layer0InitBallons[cit->first].emplace_back(FBox(FPoint(xMin, yMin), FPoint(xMax, yMax)));
+                layerInitBoxes.at(m_ubumpConnectedMetalLayerIdx)[st].emplace_back(FPoint(xMin, yMin), FPoint(xMax, yMax));
             }
         }
-        
     }
 
-    // add preplaced metal into planning
-    for(auto cit = metalLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.begin(); cit != metalLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.end(); ++cit){
+    // Process C4 related information
+    for(auto cit = c4.signalTypeToAllClusters.begin(); cit != c4.signalTypeToAllClusters.end(); ++cit){
         SignalType st = cit->first;
-        if(currentRequiringSignals.find(st) == currentRequiringSignals.end()) continue;
+        if(currentRequiringSignals.count(st) == 0) continue;
 
-        std::vector<FBox> addedBox;
-        for(const Cord &c : cit->second){
-            len_t CordX = c.x();
-            len_t CordY = c.y();
-            FPoint preplacedBoxLL(CordX, CordY);
-            FPoint preplacedBoxUR(CordX + 1, CordY + 1);
-
-            FBox preplacedBox(preplacedBoxLL, preplacedBoxUR);
-            bool completelyWithin = false;
-            for(const FBox &existedFBox : layer0InitBallons[st]){
-                if(fbox::isContained(preplacedBoxLL, existedFBox) && fbox::isContained(preplacedBoxUR, existedFBox)){
-                    completelyWithin = true;
-                    break;
-                }
+        for(const C4PinCluster *c4cluster : cit->second){
+            len_t xMin = LEN_T_MAX, xMax = LEN_T_MIN;
+            len_t yMin = LEN_T_MAX, yMax = LEN_T_MIN;
+            for(const Cord &c : c4cluster->pins){
+                len_t x = c.x();
+                len_t y = c.y();
+                if(x < xMin) xMin = x;
+                if(x > xMax) xMax = x;
+                if(y < yMin) yMin = y;
+                if(y > yMax) yMax = y;
             }
-
-            if(!completelyWithin) addedBox.emplace_back(FBox(preplacedBoxLL, preplacedBoxUR));
-        }
-        layer0InitBallons[st].insert(layer0InitBallons[st].end(), std::make_move_iterator(addedBox.begin()), std::make_move_iterator(addedBox.end()));
-
-    }
-
-    // add preplaced via into planning
-    for(auto cit = viaLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.begin(); cit != viaLayers[m_ubumpConnectedMetalLayerIdx].preplacedCords.end(); ++ cit){
-        SignalType st = cit->first;
-        if(currentRequiringSignals.find(st) == currentRequiringSignals.end()) continue;
-
-        std::vector<FBox> addedPoints;
-        for(const Cord &c : cit->second){
-            len_t CordX = c.x();
-            len_t CordY = c.y();
-            FPoint preplacedCentre(CordX, CordY);
-
-            bool completelyWithin = false;
-            for(const FBox &existedFBox : layer0InitBallons[st]){
-                if(fbox::isContained(preplacedCentre, existedFBox)){
-                    completelyWithin = true;
-                    break;
-                }
-            }
-
-            if(!completelyWithin){
-                FPoint preplacedBoxLL(CordX - INITIAL_MARGIN, CordY - INITIAL_MARGIN);
-                FPoint preplacedBoxUR(CordX + INITIAL_MARGIN, CordY + INITIAL_MARGIN);
-                std::cout << "New point added: " << preplacedCentre << std::endl;
-                addedPoints.emplace_back(FBox(preplacedBoxLL, preplacedBoxUR));
-
-            }
-        }
-        layer0InitBallons[st].insert(layer0InitBallons[st].end(), std::make_move_iterator(addedPoints.begin()), std::make_move_iterator(addedPoints.end()));
-    }
-
-    // remove completely within boxes
-    for(auto it = layer0InitBallons.begin(); it != layer0InitBallons.end(); ++it){
-        SignalType st = it->first;
-
-        // Track which boxes to keep
-        std::vector<bool> toRemove(it->second.size(), false);
-        
-        for (size_t i = 0; i < it->second.size()-1; ++i) {
-            for (size_t j = i+1; j < it->second.size(); ++j) {
-                if(fbox::isContained(it->second.at(i), it->second.at(j)) || fbox::isContained(it->second.at(j), it->second.at(i))){
-                    toRemove[i] = true;
-                    continue;
-                }
-            }
-        }
-
-        // Read/Write pointer loop compacts the vector in-place by moving unremoved elements forward and then resizing to discard the rest.
-        size_t writeIdx = 0;
-        for (size_t readIdx = 0; readIdx < it->second.size(); ++readIdx) {
-            if (!toRemove[readIdx]){
-                signalTotalArea[st] += fbox::getArea(it->second[readIdx]);
-                it->second[writeIdx++] = std::move(it->second[readIdx]);
-            }
-        }
-
-        it->second.resize(writeIdx);
-
-    }
-
-    // insert into ownerSoftBodies vector
-    for(auto it = layer0InitBallons.begin(); it != layer0InitBallons.end(); ++it){
-        SignalType st = it->first;
-        double perUnitCurrent = signalCurrentRequirements.at(st) / signalTotalArea.at(st);
-        for(const FBox &fb : it->second){
-            farea_t fbArea = fbox::getArea(fb);
-            double initCurrent = perUnitCurrent * fbArea;
-
-            SoftBody *sb = new SoftBody(softBodyIdx++, st, initCurrent, fbArea);
+            assert(xMin != LEN_T_MAX);
+            assert(xMax != LEN_T_MIN);
+            assert(yMin != LEN_T_MAX);
+            assert(yMax != LEN_T_MIN);
             
-            // wind clockwise, pushing in points using linear interpolation keeping delta < 0.2
-            // start pusing in
-            FPoint boxLL(fb.min_corner());
-            FPoint boxUR(fb.max_corner());
+            //give little margin to the bounding box
+            xMin -= INITIAL_MARGIN;
+            xMax += INITIAL_MARGIN;
+            yMin -= INITIAL_MARGIN;
+            yMax += INITIAL_MARGIN;
 
-            flen_t minX = boxLL.x();
-            flen_t minY = boxLL.y();
-            flen_t maxX = boxUR.x();
-            flen_t maxY = boxUR.y();
-
-            sb->contour.emplace_back(FPoint(minX, minY));
-            sb->contour.emplace_back(FPoint(minX, maxY));
-            sb->contour.emplace_back(FPoint(maxX, maxY));
-            sb->contour.emplace_back(FPoint(maxX, minY));
-
-
-            ownerSoftBodies[m_ubumpConnectedMetalLayerIdx].push_back(sb);
-
+            layerInitBoxes.at(m_c4ConnectedMetalLayerIdx)[st].emplace_back(FPoint(xMin, yMin), FPoint(xMax, yMax));
         }
     }
 
+
+    for(int constructLayer = m_ubumpConnectedMetalLayerIdx; constructLayer <= m_c4ConnectedMetalLayerIdx; ++constructLayer){
+
+        // add preplaced metal into planning (doesn't check overlap)
+        for(auto cit = metalLayers[constructLayer].preplacedCords.begin(); cit != metalLayers[constructLayer].preplacedCords.end(); ++cit){
+            SignalType st = cit->first;
+            if(currentRequiringSignals.count(st) == 0) continue;
+
+            for(const Cord &c : cit->second){
+                len_t CordX = c.x();
+                len_t CordY = c.y();
+                FPoint preplacedBoxLL(CordX, CordY);
+                FPoint preplacedBoxUR(CordX + 1, CordY + 1);
+
+                layerInitBoxes.at(constructLayer)[st].emplace_back(preplacedBoxLL, preplacedBoxUR);
+            }
+        }
+
+        // add preplaced via into planning (check insertion before insertion)
+        for(auto cit = viaLayers[constructLayer].preplacedCords.begin(); cit != viaLayers[constructLayer].preplacedCords.end(); ++ cit){
+            SignalType st = cit->first;
+            if(currentRequiringSignals.count(st) == 0) continue;
+
+            for(const Cord &c : cit->second){
+                len_t CordX = c.x();
+                len_t CordY = c.y();
+                FPoint preplacedCentre(CordX, CordY);
+
+                bool pointCovered = false;
+                for(const FBox &existedFBox : layerInitBoxes.at(constructLayer)[st]){
+                    if(fbox::isContained(preplacedCentre, existedFBox)){
+                        pointCovered = true;
+                        break;
+                    }
+                }
+
+                if(!pointCovered){
+                    FPoint preplacedBoxLL(CordX - INITIAL_MARGIN, CordY - INITIAL_MARGIN);
+                    FPoint preplacedBoxUR(CordX + INITIAL_MARGIN, CordY + INITIAL_MARGIN);
+                    layerInitBoxes.at(constructLayer)[st].emplace_back(preplacedBoxLL, preplacedBoxUR);
+                }
+            }
+        }
+
+        // merge collected layerInitBoxes, union them and create corresponding Softbody object
+        for(auto it = layerInitBoxes.at(constructLayer).begin(); it != layerInitBoxes.at(constructLayer).end(); ++it){
+            SignalType st = it->first;
+            std::vector<FPolygon> polygons;
+            for (const FBox& box : it->second) {
+                FPolygon poly;
+                boost::geometry::convert(box, poly);
+                boost::geometry::correct(poly);
+                polygons.push_back(std::move(poly));
+            }
+            
+            FMultiPolygon unionResult;
+            for (const FPolygon& poly : polygons) {
+                FMultiPolygon temp;
+                boost::geometry::union_(unionResult, poly, temp);
+                unionResult = std::move(temp);
+            }
+
+            farea_t signalArea = fmp::getArea(unionResult);
+            double perUnitCurrent = signalCurrentRequirements.at(st) / signalArea;
+
+            for (const FPolygon& poly : unionResult) {
+                double polyArea = fp::getArea(poly);
+                double initCurrent = perUnitCurrent * polyArea;
+                
+
+                SoftBody *sb = new SoftBody(softBodyIdx++, st, initCurrent, polyArea);
+                
+                // fill in points bt. A(ax, ay), B(bx, by) s.t. |A-B| < delta, use only interpolation
+                auto interpolationFillPoints = [&](const flen_t &ax, const flen_t &ay, const flen_t &bx, const flen_t &by){
+
+                    flen_t dx = bx - ax;
+                    flen_t dy = by - ay;
+                    flen_t distance = std::hypot(dx, dy);
+                    if(distance <= m_PointsMinDelta) return;
+
+                    int newPoints = int(distance / m_PointsMinDelta) + 1;
+                    int newSegments = newPoints + 1; // 1 points -> 2 segments
+
+                    dx /= newSegments;
+                    dy /= newSegments;
+
+                    flen_t movex = ax;
+                    flen_t movey = ay;
+
+                    for(int i = 0; i < newPoints; ++i){
+                        movex += dx;
+                        movey += dy;
+                        sb->contour.emplace_back(movex, movey);
+
+                    }
+                };
+
+                for(int i = 0; i < fp::getOuterEdgesCount(poly); ++i){
+                    sb->contour.emplace_back(poly.outer().at(i));
+                    FPoint mainPoint = poly.outer().at(i);
+                    FPoint nextPoint = poly.outer().at(i+1);
+                    interpolationFillPoints(mainPoint.x(), mainPoint.y(), nextPoint.x(), nextPoint.y());
+                }
+
+                m_OwnerSoftBodies.at(constructLayer).push_back(sb);
+                softBodyBoundingBox.at(constructLayer).push_back(fp::getBBox(poly));
+            }
+        }
     
+    }
+
+    /* Insert Vias, link to softbodies*/
+
+
+
+}
+
+PressureSimulator::~PressureSimulator(){
+    
+    for (auto &row : m_OwnerSoftBodies) {
+        for (SoftBody* ptr : row) {
+            delete ptr;
+        }
+    }
+
+    for (auto &row : m_OwnerViasBodies) {
+        for (ViaBody* ptr : row) {
+            delete ptr;
+        }
+    }
 }
 
 void PressureSimulator::inflate(){
@@ -227,8 +269,8 @@ void PressureSimulator::inflate(){
 
             
             BinSystem<flen_t, SoftBody> layerPointsBin(1.0, 0, 0, m_gridWidth-1, m_gridHeight-1);
-            for(int softBodyIdx = 0; softBodyIdx < ownerSoftBodies.size(); ++softBodyIdx){
-                SoftBody *sbTarget = ownerSoftBodies.at(layer).at(softBodyIdx);
+            for(int softBodyIdx = 0; softBodyIdx < m_OwnerSoftBodies.size(); ++softBodyIdx){
+                SoftBody *sbTarget = m_OwnerSoftBodies.at(layer).at(softBodyIdx);
                 
                 for(int pointIdx = 0; pointIdx < sbTarget->contour.size(); ++pointIdx){
                     FPoint &fp = sbTarget->contour.at(pointIdx);
@@ -238,8 +280,8 @@ void PressureSimulator::inflate(){
 
             // parallel
 
-            for(int softBodyIdx = 0; softBodyIdx < ownerSoftBodies.size(); ++softBodyIdx){
-                SoftBody *sbTarget = ownerSoftBodies.at(layer).at(softBodyIdx);
+            for(int softBodyIdx = 0; softBodyIdx < m_OwnerSoftBodies.size(); ++softBodyIdx){
+                SoftBody *sbTarget = m_OwnerSoftBodies.at(layer).at(softBodyIdx);
                 const int sbCounterSize = sbTarget->contour.size();
                 double sbPressure = sbTarget->pressure;
 
@@ -261,10 +303,6 @@ void PressureSimulator::inflate(){
                     normalY = (normalY / normalMagnitude);
                     
                     // calculate Curvature Restoration force 
- 
-
-
-
 
                 }
 
