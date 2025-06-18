@@ -23,24 +23,44 @@
 // 3. Texo Library:
 #include "viaBody.hpp"
 
+std::ostream& operator<<(std::ostream& os, ViaBodyStatus st){
+    switch (st) {
+    case ViaBodyStatus::UNKNOWN:
+        return os << "ViaBodyStatus::UNKNOWN";
+        break;
+    case ViaBodyStatus::EMPTY:
+        return os << "ViaBodyStatus::EMPTY";
+        break;
+    case ViaBodyStatus::TOP_OCCUPIED:
+        return os << "ViaBodyStatus::TOP_OCCUPIED";
+        break;
+    case ViaBodyStatus::DOWN_OCCUPIED:
+        return os << "ViaBodyStatus::DOWN_OCCUPIED";
+        break;
+    case ViaBodyStatus::UNSTABLE:
+        return os << "ViaBodyStatus::UNSTABLE";
+        break;
+    case ViaBodyStatus::STABLE:
+        return os << "ViaBodyStatus::STABLE";
+        break;
 
-ViaBody::ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location)
-    : upIdx(uplayerIdx), downIdx(downlayerIdx), location(location),
+    default:
+        return os;
+        break;
+    }
+}
+
+ViaBody::ViaBody(int viaLayerIdx, flen_t x, flen_t y, SignalType preplacedType)
+    : m_viaLayerIdx(viaLayerIdx), m_x(x), m_y(y),
         upIsFixed(false), upSoftBody(nullptr),
-        downIsFixed(false), downSoftBody(nullptr) {
-    
-    
+        downIsFixed(false), downSoftBody(nullptr), status(ViaBodyStatus::UNKNOWN) {}
 
-}
+ViaBody::ViaBody(int viaLayerIdx, flen_t x, flen_t y)
+    : ViaBody(viaLayerIdx, x, y, SignalType::EMPTY) {}
 
-int ViaBody::getUpIdx() const {
-    return upIdx;
-}
+ViaBody::ViaBody(int viaLayerIdx, const FPoint &location, SignalType preplacedType)
+    : ViaBody(viaLayerIdx, location.x(), location.y(), preplacedType) {}
 
-int ViaBody::getDownIdx() const {
-    return downIdx;
-}
+ViaBody::ViaBody(int viaLayerIdx, const FPoint &location)
+    : ViaBody(viaLayerIdx, location.x(), location.y(), SignalType::EMPTY) {}
 
-FPoint ViaBody::getLocation() const {
-    return location;
-}

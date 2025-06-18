@@ -35,11 +35,11 @@
 
 class SoftBody{
 private:
-    int id;
-    SignalType sigType;
+    int m_id;
+    SignalType m_sigType;
     
-    double expectCurrent;
-    farea_t initialArea;
+    double m_expectCurrent;
+    farea_t m_initialArea;
 
 public:
     double pressure;

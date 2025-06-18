@@ -35,15 +35,18 @@
 #include "softBody.hpp"
 #include "viaBody.hpp"
 #include "pressureSimulator.hpp"
-#include "binSystem.hpp"
+#include "pointBinSystem.hpp"
 
 PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistributionNetwork(fileName) {
     int softBodyIdx = 0;
     int viaBodyIdx = 0;
     const flen_t INITIAL_MARGIN = 0.5; // be a value between 0 ~ 0.5
+    const flen_t POINT_BIN_SIZE = 2.0;
+    const flen_t GRID_BIN_SIZE = 5.0;
+
     
     this->m_OwnerSoftBodies.resize(m_metalLayerCount);
-    this->m_OwnerViasBodies.resize(m_viaLayerCount);
+    this->softBodyBoundingBox.resize(m_metalLayerCount);
     
     /* Insert SoftBodies */
 
@@ -123,7 +126,6 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
             layerInitBoxes.at(m_c4ConnectedMetalLayerIdx)[st].emplace_back(FPoint(xMin, yMin), FPoint(xMax, yMax));
         }
     }
-
 
     for(int constructLayer = m_ubumpConnectedMetalLayerIdx; constructLayer <= m_c4ConnectedMetalLayerIdx; ++constructLayer){
 
@@ -235,8 +237,39 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
     
     }
 
-    /* Insert Vias, link to softbodies*/
 
+    /* Create Vias, link to softbodies*/
+    this->m_OwnerViasBodies.resize(m_viaLayerCount);
+    this->viaBins.resize(m_viaLayerCount, PointBinSystem<flen_t, ViaBody>(POINT_BIN_SIZE, 0, 0, m_pinWidth, m_pinHeight));
+
+    for(int layer = 0; layer < m_viaLayerCount; ++layer){
+        
+        std::vector<std::vector<bool>> isPreplacedVia(m_pinHeight, std::vector<bool>(m_pinWidth, false));
+
+        const ObjectArray &oa = viaLayers.at(layer);
+        for(const auto &[st, cords] : oa.preplacedCords){
+            if(st == SignalType::OBSTACLE || st == SignalType::SIGNAL){
+                for(const Cord &c : cords){
+                    isPreplacedVia[c.y()][c.x()] == true;
+                }
+            }else{
+                // preplaced cords for specific signals
+                for(const Cord &c : cords){
+                    ViaBody *vb = new ViaBody(layer, static_cast<flen_t>(c.x()), static_cast<flen_t>(c.y()), st);
+
+                    isPreplacedVia[c.y()][c.x()] == true;
+                }
+            }
+
+            
+
+        }
+        // process those viaCandidates which is not preplaced
+
+    
+        
+    }
+    
 
 
 }
@@ -257,8 +290,9 @@ PressureSimulator::~PressureSimulator(){
 }
 
 void PressureSimulator::inflate(){
+
     const int maxInflateIteration = 100;
-    const flen_t binSize = 1.0;
+    const flen_t binSize = 2.0;
     
     for(int inflateIteration = 0; inflateIteration < maxInflateIteration; ++inflateIteration){
         std::cout << "[Inflation BroadCast] Iteration " << inflateIteration << " starts" << std::endl;
@@ -268,7 +302,7 @@ void PressureSimulator::inflate(){
         std::cout << "[Inflation BroadCast] Layer " << layer << " starts" << std::endl;
 
             
-            BinSystem<flen_t, SoftBody> layerPointsBin(1.0, 0, 0, m_gridWidth-1, m_gridHeight-1);
+            PointBinSystem<flen_t, SoftBody> layerPointsBin(binSize, 0, 0, m_gridWidth-1, m_gridHeight-1);
             for(int softBodyIdx = 0; softBodyIdx < m_OwnerSoftBodies.size(); ++softBodyIdx){
                 SoftBody *sbTarget = m_OwnerSoftBodies.at(layer).at(softBodyIdx);
                 
@@ -302,7 +336,7 @@ void PressureSimulator::inflate(){
                     normalX = (normalX / normalMagnitude);
                     normalY = (normalY / normalMagnitude);
                     
-                    // calculate Curvature Restoration force 
+                    // calculate Curvature Restoration force
 
                 }
 

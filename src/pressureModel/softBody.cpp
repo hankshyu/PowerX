@@ -23,6 +23,7 @@
 
 // 2. Boost Library:
 #include "boost/geometry.hpp"
+#include <boost/math/constants/constants.hpp>
 
 // 3. Texo Library:
 #include "units.hpp"
@@ -33,23 +34,23 @@
 
 // Constructor
 SoftBody::SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea):
-    id(id), sigType(sig), expectCurrent(expectCurrent), initialArea(initArea){
+    m_id(id), m_sigType(sig), m_expectCurrent(expectCurrent), m_initialArea(initArea){
     
     // TODO: calculate initial pressure
 }
 // Getter for signal type
 SignalType SoftBody::getSigType() const {
-    return sigType;
+    return m_sigType;
 }
 
 // Getter for expected current
 double SoftBody::getExpectCurrent() const {
-    return expectCurrent;
+    return m_expectCurrent;
 }
 
 double SoftBody::calculatePressure() const{
     FPolygon fpcontour = fp::createFPolygon(contour);
-    return expectCurrent * (fp::getArea(fpcontour)/initialArea);
+    return m_expectCurrent * (fp::getArea(fpcontour)/m_initialArea);
 }
 
 void SoftBody::remeshContour(flen_t minDelta){
@@ -57,11 +58,11 @@ void SoftBody::remeshContour(flen_t minDelta){
     size_t rawContourSize = contour.size();
     if(rawContourSize < 4) return;
     
-    // Estimate L2 using L1:
-    // Székely, G. J., Rizzo, M. L., & Bakirov, N. K. (2007). Measuring and testing dependence by correlation of distances. 
-    // The Annals of Statistics, 35(6), 2769–2794. https://doi.org/10.1214/009053607000000505
-        
-    const flen_t L2_MIN_DELTA = minDelta * 1.12;
+    // Estimate L2 using L1
+    
+    constexpr double sqrt2 = boost::math::constants::root_two<double>();
+
+    const flen_t L2_MIN_DELTA = minDelta * sqrt2;
     const flen_t USE_CURVATURE_DELTA = 4 * L2_MIN_DELTA;
 
 

@@ -37,7 +37,7 @@
 #include "softBody.hpp"
 #include "viaBody.hpp"
 
-#include "binSystem.hpp"
+#include "pointBinSystem.hpp"
 
 class PressureSimulator: public PowerDistributionNetwork{
 private:
@@ -45,14 +45,15 @@ private:
     flen_t m_PointsMinDelta = 0.2;
 
     std::vector<std::vector<SoftBody *>> m_OwnerSoftBodies;
-
     std::vector<std::vector<ViaBody *>> m_OwnerViasBodies;
     
 public:
 
     std::vector<std::vector<FBox>> softBodyBoundingBox;
 
-    std::vector<BinSystem<flen_t, ViaBody>> viaBins;
+    // 
+    std::vector<PointBinSystem<flen_t, ViaBody>> viaBins;
+
    
 
     PressureSimulator(const std::string &fileName);

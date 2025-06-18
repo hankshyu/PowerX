@@ -26,7 +26,7 @@
 #include "fpolygon.hpp"
 #include "fmultipolygon.hpp"
 
-#include "binSystem.hpp"
+#include "pointBinSystem.hpp"
 #include "pressureSimulator.hpp"
 
 
@@ -48,6 +48,10 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
     PressureSimulator pressureSim(FILEPATH_BUMPS);
+
+
+
+
     
     timeProfiler.pauseTimer("My Algorithm");
     timeProfiler.printTimingReport();

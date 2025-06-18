@@ -21,6 +21,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <vector>
+#include <ostream>
 // 2. Boost Library:
 
 // 3. Texo Library:
@@ -28,26 +29,48 @@
 #include "fpoint.hpp"
 #include "softBody.hpp"
 
+enum class ViaBodyStatus{
+    UNKNOWN,
+    EMPTY,          // attracts all types of signals
+    TOP_OCCUPIED,   // attracts specific signal (top signal type) of down layer
+    DOWN_OCCUPIED,  // attracts specific signal (down signal type) of up layer
+    UNSTABLE,       // two end has different signaltype
+    STABLE          // no attraction force 
+};
+
+std::ostream& operator<<(std::ostream& os, ViaBodyStatus st);
+
 class ViaBody{
 private:
-
-    int upIdx;
-    int downIdx;
-    FPoint location;
     
 
+    SignalType preplacedType;
+    
+    int m_viaLayerIdx;
+    flen_t m_x;
+    flen_t m_y;
+    
 public:
     bool upIsFixed;
     SoftBody *upSoftBody;
 
     bool downIsFixed;
     SoftBody *downSoftBody;
+
+    ViaBodyStatus status;
     
-    ViaBody(int uplayerIdx, int downlayerIdx, const FPoint &location);
+    ViaBody(int viaLayerIdx, flen_t x, flen_t y, SignalType preplacedType);
+    ViaBody(int viaLayerIdx, flen_t x, flen_t y);
+    ViaBody(int viaLayerIdx, const FPoint &location, SignalType preplacedType);
+    ViaBody(int viaLayerIdx, const FPoint &location);
     
-    int getUpIdx() const;
-    int getDownIdx() const;
-    FPoint getLocation() const;
+    inline int getViaLayerIdx() const {return this->m_viaLayerIdx;}
+    inline int getUpLayerIdx() const {return this->m_viaLayerIdx;}
+    inline int getDownLayerIdx() const {return this->m_viaLayerIdx+1;}
+    
+    inline flen_t x() const {return m_x;}
+    inline flen_t y() const {return m_y;}
+    inline FPoint getLocation() const {return FPoint(m_x, m_y);}
 
 };
 
