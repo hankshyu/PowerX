@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <utility>
+
 
 #include "colours.hpp"
 #include "timeProfiler.hpp"
@@ -28,6 +30,7 @@
 
 #include "pointBinSystem.hpp"
 #include "pressureSimulator.hpp"
+#include "rectangleBinSystem.hpp"
 
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
@@ -45,9 +48,38 @@ int main(int argc, char const *argv[]){
     TimeProfiler timeProfiler;
     timeProfiler.startTimer("My Algorithm");
 
-    Technology technology(FILEPATH_TCH);
-    EqCktExtractor EqCktExtor(technology);
-    PressureSimulator pressureSim(FILEPATH_BUMPS);
+    // Technology technology(FILEPATH_TCH);
+    // EqCktExtractor EqCktExtor(technology);
+    // PressureSimulator pressureSim(FILEPATH_BUMPS);
+
+    FBox b1(FPoint(3, 3), FPoint(6.5, 7));
+    FBox b2(FPoint(7.5, 3.4), FPoint(11.5, 4.4));
+    FBox b3(FPoint(8.2, 7), FPoint(9.0, 9.0));
+
+    FBox red(FPoint(6, 6.5), FPoint(8, 9));
+    FBox green(FPoint(5.5, 4.4), FPoint(8.3, 8));
+
+    RectangleBinSystem<flen_t, FBox> rbs(5, 0, 0, 15, 10);
+    rbs.insert(3, 3, 6.5, 7, &b1);
+    rbs.insert(7.5, 3.4, 11.5, 4.4, &b2);
+    rbs.insert(8.2, 7, 9, 9, &b3);
+
+    rbs.insert(6, 6.5, 8, 9, &red);
+    rbs.insert(5.5, 4.4, 8.3, 8, &green);
+
+    rbs.remove(&green);
+    rbs.insert(5.5, 4.4, 8.3, 8, &green);
+
+
+    std::vector<FBox *> answer = rbs.queryPoint(6.3, 6.9);
+    for(auto at : answer){
+        std::cout << *at << std::endl;
+    }
+
+    std::vector<std::pair<FBox *, FBox *>> ans = rbs.reportOverlap();
+    for(const auto &[at, bt] : ans){
+        std::cout << *at << " <-> " << *bt << std::endl; 
+    }
 
 
 
