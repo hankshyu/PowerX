@@ -39,6 +39,7 @@
 #include "objectArray.hpp"
 #include "microBump.hpp"
 #include "voronoiPDNGen.hpp"
+#include "pressureSimulator.hpp"
 
 using FPGMPoint = boost::geometry::model::d2::point_xy<flen_t>;
 using FPGMPolygon = boost::geometry::model::polygon<FPGMPoint>;
@@ -64,5 +65,10 @@ bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const
 bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
 bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath);
 bool visualiseMultiPolygons(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygons, const std::string &filePath);
+
+// user "renderPressureSimulator" to render SoftBody status, viaBody status or integrated visualisation mode
+bool visualiseSoftBodies(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::string &filePath);
+bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> vias, const std::string &filePath);
+bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> upVias,  const std::vector<ViaBody *> downVias, const std::string &filePath);
 
 #endif // __VISUALIZER_H__

@@ -15,7 +15,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
 //  2025/06/19:         Change hardVias vector to viaBody pointer type, has circular
-//                      dependencies with SoftBody type.
+//                      dependencies with SoftBody type, use forward-declaration
 /////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __SOFT_BODY_H__
@@ -36,6 +36,9 @@
 #include "fmultipolygon.hpp"
 #include "viaBody.hpp"
 
+// circular dependencies:
+class ViaBody;  // Forward declaration
+
 class SoftBody{
 private:
     int m_id;
@@ -53,8 +56,11 @@ public:
 
     SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea);
 
-    SignalType getSigType() const;
-    double getExpectCurrent() const;
+    inline int getID() const {return this->m_id;}
+    inline SignalType getSigType() const {return this->m_sigType;}
+    inline double getExpectCurrent() const {return this->m_expectCurrent;}
+    inline farea_t getInitialArea() const {return this->m_initialArea;}
+    
     double calculatePressure() const;
     void remeshContour(flen_t minDelta);
 

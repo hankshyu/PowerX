@@ -151,30 +151,41 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
         }
 
         // add preplaced via into planning (check insertion before insertion)
-        for(auto cit = viaLayers[constructLayer].preplacedCords.begin(); cit != viaLayers[constructLayer].preplacedCords.end(); ++ cit){
-            SignalType st = cit->first;
-            if(currentRequiringSignals.count(st) == 0) continue;
+        // check the preplace via above this metal layer
+        for(int viaLayer = constructLayer-1; viaLayer <= constructLayer; ++viaLayer){
+            // skip if the metal layer does not exist
+            if((viaLayer < 0) || (viaLayer >= m_viaLayerCount)) continue;
 
-            for(const Cord &c : cit->second){
-                len_t CordX = c.x();
-                len_t CordY = c.y();
-                FPoint preplacedCentre(CordX, CordY);
+            for(auto cit = viaLayers[viaLayer].preplacedCords.begin(); cit != viaLayers[viaLayer].preplacedCords.end(); ++ cit){
+                SignalType st = cit->first;
+                if(currentRequiringSignals.count(st) == 0) continue;
 
-                bool pointCovered = false;
-                for(const FBox &existedFBox : layerInitBoxes.at(constructLayer)[st]){
-                    if(fbox::isContained(preplacedCentre, existedFBox)){
-                        pointCovered = true;
-                        break;
+                for(const Cord &c : cit->second){
+                    len_t CordX = c.x();
+                    len_t CordY = c.y();
+                    FPoint preplacedCentre(CordX, CordY);
+
+                    bool pointCovered = false;
+                    for(const FBox &existedFBox : layerInitBoxes.at(viaLayer)[st]){
+                        if(fbox::isContained(preplacedCentre, existedFBox)){
+                            pointCovered = true;
+                            break;
+                        }
                     }
-                }
 
-                if(!pointCovered){
-                    FPoint preplacedBoxLL(CordX - INITIAL_MARGIN, CordY - INITIAL_MARGIN);
-                    FPoint preplacedBoxUR(CordX + INITIAL_MARGIN, CordY + INITIAL_MARGIN);
-                    layerInitBoxes.at(constructLayer)[st].emplace_back(preplacedBoxLL, preplacedBoxUR);
+                    if(!pointCovered){
+                        FPoint preplacedBoxLL(CordX - INITIAL_MARGIN, CordY - INITIAL_MARGIN);
+                        FPoint preplacedBoxUR(CordX + INITIAL_MARGIN, CordY + INITIAL_MARGIN);
+                        layerInitBoxes.at(viaLayer)[st].emplace_back(preplacedBoxLL, preplacedBoxUR);
+                    }
                 }
             }
         }
+
+
+
+
+
 
         // merge collected layerInitBoxes, union them and create corresponding Softbody object
         for(auto it = layerInitBoxes.at(constructLayer).begin(); it != layerInitBoxes.at(constructLayer).end(); ++it){
@@ -266,7 +277,7 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
         for(const auto &[st, cords] : oa.preplacedCords){
             if(st == SignalType::OBSTACLE || st == SignalType::SIGNAL){
                 for(const Cord &c : cords){
-                    isPreplacedVia[c.y()][c.x()] == true;
+                    isPreplacedVia[c.y()][c.x()] = true;
                 }
             }else{
                 // preplaced cords for specific signals
@@ -335,7 +346,8 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                         downIntersectSoftBody->hardVias.push_back(vb);
                     }
                 
-                    isPreplacedVia[c.y()][c.x()] == true;
+                    isPreplacedVia[c.y()][c.x()] = true;
+                    m_OwnerViasBodies[layer].push_back(vb);
                 }
             }
         }
@@ -408,6 +420,9 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                     upIntersectSoftBody->hardVias.push_back(vb);
                     downIntersectSoftBody->hardVias.push_back(vb);
                 }
+
+                m_OwnerViasBodies[layer].push_back(vb);
+
             }
         }
     }
@@ -429,6 +444,16 @@ PressureSimulator::~PressureSimulator(){
             delete ptr;
         }
     }
+}
+
+const std::vector<SoftBody *> &PressureSimulator::getSoftBodyOwner(int layer) const {
+    assert(layer >= 0 && layer < m_metalLayerCount);
+    return m_OwnerSoftBodies[layer];
+}
+
+const std::vector<ViaBody *> &PressureSimulator::getViaBodyOwner(int layer) const {
+    assert(layer >= 0 && layer < m_viaLayerCount);
+    return m_OwnerViasBodies[layer];
 }
 
 void PressureSimulator::inflate(){

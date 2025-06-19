@@ -22,6 +22,7 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_set>
+#include <cassert>
 
 // 2. Boost Library:
 #include "boost/geometry.hpp"
@@ -404,7 +405,6 @@ bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<Si
                 ofs << std::endl;
             }
         }
-        
     }
 
     ofs.close();
@@ -457,3 +457,102 @@ bool visualiseMultiPolygons(const VoronoiPDNGen &vpg, const std::unordered_map<S
     return true; 
 }
 
+bool visualiseSoftBodies(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "PRESSURE_SIMULATOR_SOFTBODY VISUALISATION " <<  ps.getCanvasWidth() << " " << ps.getCanvasHeight() << std::endl;
+    
+
+    ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
+    for(const SoftBody *sb : softBodies){
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << "pressure " << sb->pressure << std::endl;
+        ofs << "shape " << sb->contour.size() << std::endl;
+        for(int p = 0; p < sb->contour.size(); ++p){
+            const FPoint &fp = sb->contour[p];
+            ofs << "(" << fp.x() << ", " << fp.y() << ") ";
+        }
+        ofs << std::endl;
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> vias, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "PRESSURE_SIMULATOR_SOFTBODY_WITH_PIN VISUALISATION " <<  ps.getCanvasWidth() << " " << ps.getCanvasHeight() << std::endl;
+    
+
+    ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
+    for(const SoftBody *sb : softBodies){
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << "pressure " << sb->pressure << std::endl;
+        ofs << "shape " << sb->contour.size() << std::endl;
+        for(int p = 0; p < sb->contour.size(); ++p){
+            const FPoint &fp = sb->contour[p];
+            ofs << "(" << fp.x() << ", " << fp.y() << ") ";
+        }
+        ofs << std::endl;
+    } 
+    
+
+    ofs << "VIA_LAYER SINGLE VIAS " << vias.size() << std::endl;
+    for(const ViaBody *vb : vias){
+        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
+        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
+        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->status << std::endl;
+    }
+
+    ofs.close();
+    return true;
+}
+
+bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> upVias,  const std::vector<ViaBody *> downVias, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "PRESSURE_SIMULATOR_SOFTBODY_WITH_PINS VISUALISATION " <<  ps.getCanvasWidth() << " " << ps.getCanvasHeight() << std::endl;
+    
+    ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
+    for(const SoftBody *sb : softBodies){
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << "pressure " << sb->pressure << std::endl;
+        ofs << "shape " << sb->contour.size() << std::endl;
+        for(int p = 0; p < sb->contour.size(); ++p){
+            const FPoint &fp = sb->contour[p];
+            ofs << "(" << fp.x() << ", " << fp.y() << ") ";
+        }
+        ofs << std::endl;
+    } 
+    
+
+    ofs << "VIA_LAYER UP VIAS " << upVias.size() << std::endl;
+    for(const ViaBody *vb : upVias){
+        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
+        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
+        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->status << std::endl;
+    }
+
+    ofs << "VIA_LAYER DOWN VIAS " << downVias.size() << std::endl;
+    for(const ViaBody *vb : downVias){
+        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
+        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
+        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->status << std::endl;
+    }
+    
+    ofs.close();
+    return true;
+}

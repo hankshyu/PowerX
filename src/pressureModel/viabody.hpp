@@ -13,6 +13,8 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
+//  2025/06/19:         Add forward-declareation of SoftBody class to resolve
+//                      circular dependencies
 /////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __VIA_BODY_H__
@@ -27,7 +29,9 @@
 // 3. Texo Library:
 #include "signalType.hpp"
 #include "fpoint.hpp"
-#include "softBody.hpp"
+
+// circular dependencies:
+class SoftBody;  // Forward declaration
 
 enum class ViaBodyStatus{
     UNKNOWN,
@@ -45,12 +49,11 @@ std::ostream& operator<<(std::ostream& os, ViaBodyStatus st);
 class ViaBody{
 private:
     
-
-    SignalType preplacedType;
-    
-int m_viaLayerIdx;
+    int m_viaLayerIdx;
     flen_t m_x;
     flen_t m_y;
+
+    SignalType m_preplacedType;
     
 public:
     bool upIsFixed;
@@ -73,6 +76,7 @@ public:
     inline flen_t x() const {return m_x;}
     inline flen_t y() const {return m_y;}
     inline FPoint getLocation() const {return FPoint(m_x, m_y);}
+    inline SignalType getPreplacedSigType() const {return m_preplacedType;}
 
 };
 

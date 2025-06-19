@@ -67,11 +67,14 @@ public:
     inline int getCanvasWidth() const {return m_canvasWidth;}
     inline int getCanvasHeight() const {return m_canvasHeight;}
 
+    const std::vector<SoftBody *> &getSoftBodyOwner(int layer) const;
+    const std::vector<ViaBody *> &getViaBodyOwner(int layer) const;
+
     void inflate();
 
+    friend bool visualiseSoftBodies(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::string &filePath);
+    friend bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> vias, const std::string &filePath);
+    friend bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<SoftBody *> softBodies, const std::vector<ViaBody *> upVias,  const std::vector<ViaBody *> downVias, const std::string &filePath);
+
 };
-
-// friend bool visualisePressureSimulator(const PressureSimulator &ps, std::string &filePath);
-
-
 #endif // __PRESSURE_SIMULATOR_H__

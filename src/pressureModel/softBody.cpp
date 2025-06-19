@@ -30,23 +30,9 @@
 #include "softBody.hpp"
 
 
-
-
 // Constructor
-SoftBody::SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea):
-    m_id(id), m_sigType(sig), m_expectCurrent(expectCurrent), m_initialArea(initArea){
-    
-    // TODO: calculate initial pressure
-}
-// Getter for signal type
-SignalType SoftBody::getSigType() const {
-    return m_sigType;
-}
-
-// Getter for expected current
-double SoftBody::getExpectCurrent() const {
-    return m_expectCurrent;
-}
+SoftBody::SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea)
+    : m_id(id), m_sigType(sig), m_expectCurrent(expectCurrent), m_initialArea(initArea){}
 
 double SoftBody::calculatePressure() const{
     FPolygon fpcontour = fp::createFPolygon(contour);
