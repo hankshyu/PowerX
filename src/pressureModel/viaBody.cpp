@@ -37,6 +37,9 @@ std::ostream& operator<<(std::ostream& os, ViaBodyStatus st){
     case ViaBodyStatus::DOWN_OCCUPIED:
         return os << "ViaBodyStatus::DOWN_OCCUPIED";
         break;
+    case ViaBodyStatus::BROKEN:
+        return os << "ViaBodyStatus::BROKEN";
+        break;
     case ViaBodyStatus::UNSTABLE:
         return os << "ViaBodyStatus::UNSTABLE";
         break;

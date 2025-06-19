@@ -38,9 +38,13 @@
 #include "viaBody.hpp"
 
 #include "pointBinSystem.hpp"
+#include "rectangleBinSystem.hpp"
 
 class PressureSimulator: public PowerDistributionNetwork{
 private:
+    // simulaittion system contour (playground size of the system)
+    int m_canvasWidth;
+    int m_canvasHeight;
 
     flen_t m_PointsMinDelta = 0.2;
 
@@ -48,16 +52,20 @@ private:
     std::vector<std::vector<ViaBody *>> m_OwnerViasBodies;
     
 public:
+    // bin system of the bounding box of softBodies
+    std::vector<RectangleBinSystem<flen_t, SoftBody>> softBodyRectangleBin;
+    std::vector<PointBinSystem<flen_t, SoftBody>> softBodyPointBin;
 
-    std::vector<std::vector<FBox>> softBodyBoundingBox;
-
-    // 
-    std::vector<PointBinSystem<flen_t, ViaBody>> viaBins;
+    // bin system of the bounding box of vias
+    std::vector<PointBinSystem<flen_t, ViaBody>> viaPointBins;
 
    
 
     PressureSimulator(const std::string &fileName);
     ~PressureSimulator();
+
+    inline int getCanvasWidth() const {return m_canvasWidth;}
+    inline int getCanvasHeight() const {return m_canvasHeight;}
 
     void inflate();
 

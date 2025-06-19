@@ -38,16 +38,22 @@
 #include "pointBinSystem.hpp"
 
 PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistributionNetwork(fileName) {
+    // the canvas size is the same width the pin canvas
+    m_canvasWidth = m_pinWidth;
+    m_canvasHeight = m_pinHeight;
+    
     int softBodyIdx = 0;
     int viaBodyIdx = 0;
     const flen_t INITIAL_MARGIN = 0.5; // be a value between 0 ~ 0.5
     const flen_t POINT_BIN_SIZE = 2.0;
-    const flen_t GRID_BIN_SIZE = 5.0;
+    const flen_t RECTANGLE_BIN_SIZE = 5.0;
 
     
     this->m_OwnerSoftBodies.resize(m_metalLayerCount);
-    this->softBodyBoundingBox.resize(m_metalLayerCount);
-    
+
+    this->softBodyRectangleBin.resize(m_metalLayerCount, RectangleBinSystem<flen_t, SoftBody>(RECTANGLE_BIN_SIZE, 0, 0, m_gridWidth, m_gridHeight));
+    this->softBodyPointBin.resize(m_metalLayerCount, PointBinSystem<flen_t, SoftBody>(POINT_BIN_SIZE, 0, 0, m_gridWidth, m_gridHeight));
+
     /* Insert SoftBodies */
 
     std::unordered_set<SignalType> currentRequiringSignals;
@@ -229,9 +235,18 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                     FPoint nextPoint = poly.outer().at(i+1);
                     interpolationFillPoints(mainPoint.x(), mainPoint.y(), nextPoint.x(), nextPoint.y());
                 }
+                sb->shape = fp::createFPolygon(sb->contour);
+                m_OwnerSoftBodies[constructLayer].push_back(sb);
+                
+                // push Bounding box into the Rectangle bin system
+                FBox boundingBox = fp::getBBox(poly);
+                const FPoint &bbMin = boundingBox.min_corner();
+                const FPoint &bbMax = boundingBox.max_corner();
 
-                m_OwnerSoftBodies.at(constructLayer).push_back(sb);
-                softBodyBoundingBox.at(constructLayer).push_back(fp::getBBox(poly));
+                softBodyRectangleBin[constructLayer].insert(bbMin.x(), bbMin.y(), bbMax.x(), bbMax.y(), sb);
+                for(const FPoint &contourPoints : sb->contour){
+                    softBodyPointBin[constructLayer].insert(contourPoints.x(), contourPoints.y(), sb);
+                }
             }
         }
     
@@ -240,12 +255,13 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
 
     /* Create Vias, link to softbodies*/
     this->m_OwnerViasBodies.resize(m_viaLayerCount);
-    this->viaBins.resize(m_viaLayerCount, PointBinSystem<flen_t, ViaBody>(POINT_BIN_SIZE, 0, 0, m_pinWidth, m_pinHeight));
+    this->viaPointBins.resize(m_viaLayerCount, PointBinSystem<flen_t, ViaBody>(POINT_BIN_SIZE, 0, 0, m_pinWidth, m_pinHeight));
 
     for(int layer = 0; layer < m_viaLayerCount; ++layer){
         
         std::vector<std::vector<bool>> isPreplacedVia(m_pinHeight, std::vector<bool>(m_pinWidth, false));
 
+        // process viaCondidatew that is preplaced
         const ObjectArray &oa = viaLayers.at(layer);
         for(const auto &[st, cords] : oa.preplacedCords){
             if(st == SignalType::OBSTACLE || st == SignalType::SIGNAL){
@@ -255,22 +271,148 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
             }else{
                 // preplaced cords for specific signals
                 for(const Cord &c : cords){
-                    ViaBody *vb = new ViaBody(layer, static_cast<flen_t>(c.x()), static_cast<flen_t>(c.y()), st);
+                    flen_t cX = static_cast<flen_t>(c.x());
+                    flen_t cY = static_cast<flen_t>(c.y());
+                    
+                    // check whether if it touches any existing softbodies, this via would count as hard via
+                    // check top layer
+                    std::vector<SoftBody *> upLayerSoftBodyCandidate = softBodyRectangleBin[layer].queryPoint(cX, cY);
+                    SoftBody *upIntersectSoftBody = nullptr;
+                    for(SoftBody *upSBIndex : upLayerSoftBodyCandidate){
+                        // lookup cache if softbody exists
+                        if(fp::isContained(FPoint(cX, cY), upSBIndex->shape)){
+                            upIntersectSoftBody = upSBIndex;
+                            break;
+                        }
+                    }
 
+                    // check bottom layer
+                    std::vector<SoftBody *> downLayerSoftBodyCandidate = softBodyRectangleBin.at(layer+1).queryPoint(cX, cY);
+                    SoftBody *downIntersectSoftBody = nullptr;
+                    for(SoftBody *downSBIndex : downLayerSoftBodyCandidate){
+                        // lookup cache if softbody exists
+                        if(fp::isContained(FPoint(cX, cY), downSBIndex->shape)){
+                            upIntersectSoftBody = downSBIndex;
+                            break;
+                        }
+                    }
+                    
+                    // create the ViaBody, link the info of vias and softBodies
+                    ViaBody *vb = new ViaBody(layer, cX, cY, st);
+                    
+                    bool upIntersectsSoftBodyisEmpty = (upIntersectSoftBody == nullptr);
+                    bool downIntersectsSoftBodyisEmpty = (downIntersectSoftBody == nullptr);
+
+                    if(upIntersectsSoftBodyisEmpty && downIntersectsSoftBodyisEmpty){
+                        vb->status = ViaBodyStatus::EMPTY;
+                        viaPointBins[layer].insert(cX, cY, vb);
+
+                    }else if((!upIntersectsSoftBodyisEmpty) && downIntersectsSoftBodyisEmpty){
+                        vb->upIsFixed = true;
+                        vb->upSoftBody = upIntersectSoftBody;
+                        vb->status = ViaBodyStatus::TOP_OCCUPIED;
+                        viaPointBins[layer].insert(cX, cY, vb);
+
+                        upIntersectSoftBody->hardVias.push_back(vb);
+
+                    }else if(upIntersectsSoftBodyisEmpty && (!downIntersectsSoftBodyisEmpty)){
+                        vb->downIsFixed = true;
+                        vb->downSoftBody = downIntersectSoftBody;
+                        vb->status = ViaBodyStatus::DOWN_OCCUPIED;
+                        viaPointBins[layer].insert(cX, cY, vb);
+
+                        upIntersectSoftBody->hardVias.push_back(vb);
+
+                    }else{
+                        vb->upIsFixed = true;
+                        vb->upSoftBody = upIntersectSoftBody;
+                        vb->downIsFixed = true;
+                        vb->downSoftBody = downIntersectSoftBody;
+                        vb->status = ViaBodyStatus::BROKEN;
+                        // do not insert to viaPointBins, useless
+
+                        upIntersectSoftBody->hardVias.push_back(vb);
+                        downIntersectSoftBody->hardVias.push_back(vb);
+                    }
+                
                     isPreplacedVia[c.y()][c.x()] == true;
                 }
             }
-
-            
-
         }
-        // process those viaCandidates which is not preplaced
-
-    
         
-    }
-    
+        // process those viaCandidates which is not preplaced
+        for(int j = 0; j < m_pinHeight; ++j){
+            for(int i = 0; i < m_pinWidth; ++i){
+                if(isPreplacedVia[j][i]) continue;
+                    
+                flen_t cX = static_cast<flen_t>(i);
+                flen_t cY = static_cast<flen_t>(j);
+                
+                // check whether if it touches any existing softbodies, this via would count as hard via
+                // check top layer
+                std::vector<SoftBody *> upLayerSoftBodyCandidate = softBodyRectangleBin[layer].queryPoint(cX, cY);
+                SoftBody *upIntersectSoftBody = nullptr;
+                for(SoftBody *upSBIndex : upLayerSoftBodyCandidate){
+                    // lookup cache if softbody exists
+                    if(fp::isContained(FPoint(cX, cY), upSBIndex->shape)){
+                        upIntersectSoftBody = upSBIndex;
+                        break;
+                    }
+                }
 
+                // check bottom layer
+                std::vector<SoftBody *> downLayerSoftBodyCandidate = softBodyRectangleBin.at(layer+1).queryPoint(cX, cY);
+                SoftBody *downIntersectSoftBody = nullptr;
+                for(SoftBody *downSBIndex : downLayerSoftBodyCandidate){
+                    // lookup cache if softbody exists
+                    if(fp::isContained(FPoint(cX, cY), downSBIndex->shape)){
+                        upIntersectSoftBody = downSBIndex;
+                        break;
+                    }
+                }
+
+                // create the ViaBody, link the info of vias and softBodies
+                ViaBody *vb = new ViaBody(layer, cX, cY);
+                
+                bool upIntersectsSoftBodyisEmpty = (upIntersectSoftBody == nullptr);
+                bool downIntersectsSoftBodyisEmpty = (downIntersectSoftBody == nullptr);
+
+                if(upIntersectsSoftBodyisEmpty && downIntersectsSoftBodyisEmpty){
+                    vb->status = ViaBodyStatus::EMPTY;
+                    viaPointBins[layer].insert(cX, cY, vb);
+
+                }else if((!upIntersectsSoftBodyisEmpty) && downIntersectsSoftBodyisEmpty){
+                    vb->upIsFixed = true;
+                    vb->upSoftBody = upIntersectSoftBody;
+                    vb->status = ViaBodyStatus::TOP_OCCUPIED;
+                    viaPointBins[layer].insert(cX, cY, vb);
+
+                    upIntersectSoftBody->hardVias.push_back(vb);
+
+                }else if(upIntersectsSoftBodyisEmpty && (!downIntersectsSoftBodyisEmpty)){
+                    vb->downIsFixed = true;
+                    vb->downSoftBody = downIntersectSoftBody;
+                    vb->status = ViaBodyStatus::DOWN_OCCUPIED;
+                    viaPointBins[layer].insert(cX, cY, vb);
+
+                    upIntersectSoftBody->hardVias.push_back(vb);
+
+                }else{
+                    vb->upIsFixed = true;
+                    vb->upSoftBody = upIntersectSoftBody;
+                    vb->downIsFixed = true;
+                    vb->downSoftBody = downIntersectSoftBody;
+                    vb->status = ViaBodyStatus::BROKEN;
+                    // do not insert to viaPointBins, useless
+
+                    upIntersectSoftBody->hardVias.push_back(vb);
+                    downIntersectSoftBody->hardVias.push_back(vb);
+                }
+            }
+        }
+    }
+
+    // calculate pressure and force for each softbody & viaBody
 
 }
 

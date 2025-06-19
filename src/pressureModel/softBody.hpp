@@ -10,10 +10,12 @@
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Description:        The object that expands, shrink and merge due to
-//                      pressure-driven forces
+//                      pressure-driven forces. 
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
+//  2025/06/19:         Change hardVias vector to viaBody pointer type, has circular
+//                      dependencies with SoftBody type.
 /////////////////////////////////////////////////////////////////////////////////
 
 #ifndef __SOFT_BODY_H__
@@ -32,6 +34,7 @@
 #include "fbox.hpp"
 #include "fpolygon.hpp"
 #include "fmultipolygon.hpp"
+#include "viaBody.hpp"
 
 class SoftBody{
 private:
@@ -44,9 +47,9 @@ private:
 public:
     double pressure;
     std::vector<FPoint> contour;
+    FPolygon shape;
     
-    std::vector<FPoint> hardVias;
-    FPolygon hardViaFPolygon;
+    std::vector<ViaBody *> hardVias;
 
     SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea);
 

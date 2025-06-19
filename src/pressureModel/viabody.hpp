@@ -34,8 +34,10 @@ enum class ViaBodyStatus{
     EMPTY,          // attracts all types of signals
     TOP_OCCUPIED,   // attracts specific signal (top signal type) of down layer
     DOWN_OCCUPIED,  // attracts specific signal (down signal type) of up layer
+    BROKEN,         // up preplace signal contradicts with down preplace signal
     UNSTABLE,       // two end has different signaltype
-    STABLE          // no attraction force 
+    STABLE          // no attraction force
+
 };
 
 std::ostream& operator<<(std::ostream& os, ViaBodyStatus st);
@@ -46,7 +48,7 @@ private:
 
     SignalType preplacedType;
     
-    int m_viaLayerIdx;
+int m_viaLayerIdx;
     flen_t m_x;
     flen_t m_y;
     
