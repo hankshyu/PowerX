@@ -42,6 +42,16 @@ SIGNAL_COLORS = {
     "OBSTACLE": "#663300"
 }
 
+viaShapeMap = {
+    "UNKNOWN": '8',
+    "EMPTY": 'o',
+    "TOP_OCCUPIED": 'v',
+    "DOWN_OCCUPIED": '^',
+    "BROKEN": 'h',
+    "UNSTABLE": '*',
+    "STABLE": 'o'
+}
+
 from dataclasses import dataclass
 from typing import List
 
@@ -64,7 +74,9 @@ class SoftBody:
 class ViaBody:
     position: Cord = Cord(-1, -1)
     sigType: str = ""
+    upIsFixed: bool = False
     upSoftBody: SoftBody = field(default_factory=SoftBody)
+    downIsFixed: bool = False
     downSoftBody: SoftBody = field(default_factory=SoftBody)
     viaStatus: str = ""
 
@@ -73,6 +85,8 @@ def parse_arguments():
     
     parser.add_argument("-i", "--input", required=True, help="Path to input file (required).")
     parser.add_argument("-o", "--output", help="Path to output image file (optional).")
+    parser.add_argument("-p", "--points", action="store_true", help="mark contour points of polygon")
+    parser.add_argument("-s", "--show", action="store_true", help="show plot")
     parser.add_argument("--dpi", type=int, default=400, help="DPI for output image (default: 400).")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
     parser.add_argument("--noLegend", action="store_true", help="Legend is omitted.")
@@ -123,11 +137,13 @@ if __name__ == "__main__":
     GRID_MUL = 10
     POINT_RAIDUS = 4
     LINE_WIDTH = 1
+    MARKER_SIZE = 12
     
     planeWidth = 0
     planeHeight = 0
 
     idToSoftBody : dict[int, SoftBody] = {}
+    allViaBodyStatus = { "UNKNOWN", "EMPTY", "TOP_OCCUPIED", "DOWN_OCCUPIED", "BROKEN", "UNSTABLE", "STABLE"}
 
     # start rendering progress
     try:
@@ -148,10 +164,15 @@ if __name__ == "__main__":
                 print(CYAN,"IRISLAB Pressure Simulator Rendering Program ", COLORRST)
                 print("Input File: ", GREEN, args.input, COLORRST)
                 
-                if args.output is None:
-                    print("Output File: ", RED, "Not saved", COLORRST)
+                if (args.output is None) and (not args.show):
+                    print("Output: ", RED, "Not saved and not show", COLORRST)
+                elif (args.output is None) and (args.show):
+                    print("Output: ", GREEN, "Display mode", COLORRST)
                 else:
-                    print("Output File: ", GREEN, args.output, COLORRST)
+                    if args.show:
+                        print("Output File: ", GREEN, args.output, " with display", COLORRST)
+                    else:
+                        print("Output File: ", GREEN, args.output, COLORRST)
                 
                 if args.dpi is None:
                     print("Output Image dpi: ", GREEN, "400", COLORRST)
@@ -168,6 +189,10 @@ if __name__ == "__main__":
                     print("Title display: ", RED, "off", COLORRST)
                 else:
                     print("Title display: ", GREEN, "on", COLORRST)
+                if not args.points:
+                    print("Polygon Contour Points display: ", RED, "off", COLORRST)
+                else:
+                    print("Polygon Contour Points display: ", GREEN, "on", COLORRST)
 
                 print(f"Render Mode: " + renderMode)
                 print(f"Canvas Size: {planeWidth} x {planeHeight}")
@@ -224,12 +249,168 @@ if __name__ == "__main__":
                 path = Path(vertices, codes)
                 patch = patches.PathPatch(path, facecolor=color, edgecolor='black', linewidth=LINE_WIDTH)
                 ax.add_patch(patch)
+                
+                if args.points:
+                    for pt in sb.contour:
+                        ax.plot(pt.x * GRID_MUL, pt.y * GRID_MUL, marker='o', markersize=POINT_RAIDUS, color='black')
+
+
+            if(renderMode == "PRESSURE_SIMULATOR_SOFTBODY_WITH_PIN VISUALISATION"):
+                ViaBodyArray = []
+                LineBuffer = filein.readline().strip().split()
+
+                if(LineBuffer[0] != "VIA_LAYER" or LineBuffer[1] != "SINGLE" or LineBuffer[2] != "VIAS"):
+                    print(f"[RenderPressureSimulator]Error: With via mode but pin section not found")
+                    exit()
+                
+                pinCount = int(LineBuffer[3])
+                # parse vias
+                for pinIdx in range(pinCount):
+                    LineBuffer = filein.readline().strip().split()
+                    
+                    readX = float(LineBuffer[0])
+                    readY = float(LineBuffer[1])
+                    readType = LineBuffer[2]
+
+                    LineBuffer = filein.readline().strip().split()
+                    readUpIsFixed = bool(int(LineBuffer[0]))
+                    readUpIdx = int(LineBuffer[1])
+                    readUpObj = field(default_factory=SoftBody)
+                    # if(readUpIsFixed):
+                    #     readUpObj = idToSoftBody[readUpIdx]
+                    
+                    readDownIsFixed = bool(int(LineBuffer[2]))
+                    readDownIdx = int(LineBuffer[3])
+                    readDownObj = field(default_factory=SoftBody)
+                    # if(readDownIsFixed):
+                    #     readDownObj = idToSoftBody[readDownIdx]
+
+                    readViaType = LineBuffer[4].split("::")[1]
+                    if readViaType not in allViaBodyStatus:
+                        print(f"[RenderPressureSimulator]Error: Via type {readViaType} not found, within entry:")
+                        print(f"{readX} {readY} {readType}")
+                        print(f"{'1' if readUpIsFixed else '0'} {readUpIdx} {'1' if readDownIsFixed else '0'} {readDownIdx} ViaBodyStatus::{readViaType}")
+                        exit()
+                    
+                    newVB = ViaBody(Cord(readX, readY), readType, readUpIsFixed, readUpObj, readDownIsFixed, readDownObj, readViaType)
+                    ViaBodyArray.append(newVB)
+                
+                for via in ViaBodyArray:
+                    shape = viaShapeMap.get(via.viaStatus, '_')  # default to 'o' if unknown
+                    ax.plot(via.position.x * GRID_MUL,
+                            via.position.y * GRID_MUL,
+                            marker=shape,
+                            markersize=MARKER_SIZE,
+                            markeredgecolor='black',
+                            markerfacecolor= 'none',
+                            alpha = 0.75)  
+
+
+            if(renderMode == "PRESSURE_SIMULATOR_SOFTBODY_WITH_PINS VISUALISATION"):
+                
+                UpViaBodyArray = []
+                DownViaBodyArray = []
+
+                # parse up vias
+                LineBuffer = filein.readline().strip().split()
+
+                if(LineBuffer[0] != "VIA_LAYER" or LineBuffer[1] != "UP" or LineBuffer[2] != "VIAS"):
+                    print(f"[RenderPressureSimulator]Error: With vias mode but upper(up) via section not found")
+                    exit()
+                
+                upPinCount = int(LineBuffer[3])
+                # parse each via
+                for pinIdx in range(upPinCount):
+                    LineBuffer = filein.readline().strip().split()
+                    
+                    readX = float(LineBuffer[0])
+                    readY = float(LineBuffer[1])
+                    readType = LineBuffer[2]
+
+                    LineBuffer = filein.readline().strip().split()
+                    readUpIsFixed = bool(int(LineBuffer[0]))
+                    readUpIdx = int(LineBuffer[1])
+                    readUpObj = field(default_factory=SoftBody)
+                    
+                    readDownIsFixed = bool(int(LineBuffer[2]))
+                    readDownIdx = int(LineBuffer[3])
+                    readDownObj = field(default_factory=SoftBody)
+
+                    readViaType = LineBuffer[4].split("::")[1]
+                    if readViaType not in allViaBodyStatus:
+                        print(f"[RenderPressureSimulator]Error: Via type {readViaType} not found, within entry:")
+                        print(f"{readX} {readY} {readType}")
+                        print(f"{'1' if readUpIsFixed else '0'} {readUpIdx} {'1' if readDownIsFixed else '0'} {readDownIdx} ViaBodyStatus::{readViaType}")
+                        exit()
+                    
+                    newVB = ViaBody(Cord(readX, readY), readType, readUpIsFixed, readUpObj, readDownIsFixed, readDownObj, readViaType)
+                    UpViaBodyArray.append(newVB)
+
+                # parse down vias
+                LineBuffer = filein.readline().strip().split()
+
+                if(LineBuffer[0] != "VIA_LAYER" or LineBuffer[1] != "DOWN" or LineBuffer[2] != "VIAS"):
+                    print(f"[RenderPressureSimulator]Error: With vias mode but lower(down) via section not found")
+                    exit()
+                
+                downPinCount = int(LineBuffer[3])
+                # parse each via
+                for pinIdx in range(downPinCount):
+                    LineBuffer = filein.readline().strip().split()
+                    
+                    readX = float(LineBuffer[0])
+                    readY = float(LineBuffer[1])
+                    readType = LineBuffer[2]
+
+                    LineBuffer = filein.readline().strip().split()
+                    readUpIsFixed = bool(int(LineBuffer[0]))
+                    readUpIdx = int(LineBuffer[1])
+                    readUpObj = field(default_factory=SoftBody)
+                    
+                    readDownIsFixed = bool(int(LineBuffer[2]))
+                    readDownIdx = int(LineBuffer[3])
+                    readDownObj = field(default_factory=SoftBody)
+
+                    readViaType = LineBuffer[4].split("::")[1]
+                    if readViaType not in allViaBodyStatus:
+                        print(f"[RenderPressureSimulator]Error: Via type {readViaType} not found, within entry:")
+                        print(f"{readX} {readY} {readType}")
+                        print(f"{'1' if readUpIsFixed else '0'} {readUpIdx} {'1' if readDownIsFixed else '0'} {readDownIdx} ViaBodyStatus::{readViaType}")
+                        exit()
+                    
+                    newVB = ViaBody(Cord(readX, readY), readType, readUpIsFixed, readUpObj, readDownIsFixed, readDownObj, readViaType)
+                    DownViaBodyArray.append(newVB)
+
+                # plot the upper and lower vias here
+                for via in UpViaBodyArray:
+                    shape = viaShapeMap.get(via.viaStatus, '_')  # default to '_' if unknown
+                    ax.plot(via.position.x * GRID_MUL,
+                            via.position.y * GRID_MUL,
+                            marker=shape,
+                            markersize=MARKER_SIZE,
+                            markeredgecolor='#FF00FF', # magenta
+                            markerfacecolor='none', # for hollow markers
+                            alpha = 0.75)  
+
+                for via in DownViaBodyArray:
+                    shape = viaShapeMap.get(via.viaStatus, '_')  # default to '_' if unknown
+                    ax.plot(via.position.x * GRID_MUL,
+                            via.position.y * GRID_MUL,
+                            marker=shape,
+                            markersize=MARKER_SIZE,
+                            markeredgecolor='#00FF00', # lime green
+                            markerfacecolor= 'none', # for hollow markers
+                            alpha = 0.75)  
+
+
 
             # Optional: Save or show
             if args.output:
                 plt.savefig(args.output, dpi=args.dpi, bbox_inches='tight')
-            else:
-                plt.show()
+            if args.show:
+                    plt.show()
+
+
 
     except FileNotFoundError:
         print(f"[RenderPressureSimulator]Error: File \"{args.input}\" or \"{args.output}\" not found")

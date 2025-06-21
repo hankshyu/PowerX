@@ -507,8 +507,8 @@ bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<S
     ofs << "VIA_LAYER SINGLE VIAS " << vias.size() << std::endl;
     for(const ViaBody *vb : vias){
         ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
-        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
-        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : -1) << " ";
+        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : -1) << " ";
         ofs << vb->status << std::endl;
     }
 
