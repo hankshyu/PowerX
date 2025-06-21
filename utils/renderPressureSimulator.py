@@ -10,6 +10,8 @@ from matplotlib.path import Path
 import matplotlib.patches as patches
 from dataclasses import dataclass
 from typing import List
+from typing import Optional
+from dataclasses import dataclass, field
 
 COLORRST    = "\u001b[0m"
 BLACK       = "\u001b[30m"
@@ -45,25 +47,26 @@ from typing import List
 
 @dataclass
 class Cord:
-    x: float
-    y: float
+    x: float = 0.0
+    y: float = 0.0
 
 @dataclass
 class SoftBody:
-    id: int
-    sigType: str
-    expectCurrent: float
-    initialArea: float
-    pressure: float
-    contour: List[Cord]
+    id: int = -1
+    sigType: str = ""
+    expectCurrent: float = 0.0
+    initialArea: float = 0.0
+    pressure: float = 0.0
+    contourCount: int = 0
+    contour: List[Cord] = field(default_factory=list)
 
 @dataclass
 class ViaBody:
-    position: Cord
-    sigType: str
-    upSoftBody: SoftBody
-    downSoftBody: SoftBody
-    viaStatus: str
+    position: Cord = Cord(-1, -1)
+    sigType: str = ""
+    upSoftBody: SoftBody = field(default_factory=SoftBody)
+    downSoftBody: SoftBody = field(default_factory=SoftBody)
+    viaStatus: str = ""
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Plot the Pressure Simulation System from PowerX")
@@ -77,6 +80,40 @@ def parse_arguments():
     
     return parser.parse_args()
 
+
+def parse_contour_line(line: str, contourCount: int) -> List[Cord]:
+    # Use regular expression to extract all coordinate pairs
+    matches = re.findall(r'\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)', line)
+    
+    # Report error if count doesn't match
+    if len(matches) != contourCount:
+        raise ValueError(f"Expected {contourCount} coordinates, but found {len(matches)}")
+
+    # Convert to list of Cord
+    contour = [Cord(float(x), float(y)) for x, y in matches]
+    return contour
+
+
+def append_path_from_cord_list(cordList: List[Cord]):
+    vertices = []
+    codes = []
+
+    if not cordList:
+        return vertices, codes
+
+    vertices.append((cordList[0].x * GRID_MUL, cordList[0].y * GRID_MUL))
+    codes.append(Path.MOVETO)
+
+    for pt in cordList[1:]:
+        vertices.append((pt.x * GRID_MUL, pt.y * GRID_MUL))
+        codes.append(Path.LINETO)
+
+    # Close the path
+    vertices.append((cordList[0].x * GRID_MUL, cordList[0].y * GRID_MUL))
+    codes.append(Path.CLOSEPOLY)
+
+    return vertices, codes
+
 if __name__ == "__main__":
 
     args = parse_arguments()
@@ -86,10 +123,11 @@ if __name__ == "__main__":
     GRID_MUL = 10
     POINT_RAIDUS = 4
     LINE_WIDTH = 1
+    
     planeWidth = 0
     planeHeight = 0
 
-
+    idToSoftBody : dict[int, SoftBody] = {}
 
     # start rendering progress
     try:
@@ -107,7 +145,7 @@ if __name__ == "__main__":
 
             # display the arguments if user specifies verbose mode
             if args.verbose:
-                print(CYAN,"IRISLAB Power Plane Rendering Program ", COLORRST)
+                print(CYAN,"IRISLAB Pressure Simulator Rendering Program ", COLORRST)
                 print("Input File: ", GREEN, args.input, COLORRST)
                 
                 if args.output is None:
@@ -134,10 +172,68 @@ if __name__ == "__main__":
                 print(f"Render Mode: " + renderMode)
                 print(f"Canvas Size: {planeWidth} x {planeHeight}")
             
+            # Start reading metal layer related information
+            LineBuffer = filein.readline().strip().split()
+            if(not ((LineBuffer[0] == "METAL_LAYER") and (LineBuffer[1] == "SHAPES"))):
+                print("[RenderPressureSimulator] Error: Missing Metal layer section")
+                exit()
+            
+            shapes = int(LineBuffer[2])
+            for i in range(shapes):
+                LineBuffer = filein.readline().strip().split()
+                
+                readID = int(LineBuffer[0])
+                readSigType = str(LineBuffer[1])
+                readExpectCurrent = float(LineBuffer[2])
+                readInitialArea = float(LineBuffer[3])
+
+                newSB = SoftBody(readID, readSigType, readExpectCurrent, readInitialArea, 0, [])
+                
+                LineBuffer = filein.readline().strip().split()
+                if(not (LineBuffer[0] == "pressure")):
+                    print(f"[RenderPressureSimulator] Error: Missing pressure for metal layer with id = {readID}")
+                    exit()
+                newSB.pressure = float(LineBuffer[1])
+
+                LineBuffer = filein.readline().strip().split()
+                if(not ((LineBuffer[0] == "shape") and (int(LineBuffer[1]) > 0))):
+                    print(f"[RenderPressureSimulator] Error: Missing shape for metal layer with id = {readID}")
+                    exit()
+                newSB.contourCount = int(LineBuffer[1])
+
+                newSB.contour = parse_contour_line(filein.readline().strip(), newSB.contourCount)
+                
+                idToSoftBody[newSB.id] = newSB
+            
+            # plot the SoftBody on the canvas (render)
+            ax.set_xlim(0, GRID_MUL*planeWidth)
+            ax.set_ylim(0, GRID_MUL*planeHeight)
+            ax.set_aspect('equal')
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            for spine in ax.spines.values():
+                spine.set_linewidth(BORDER_WIDTH)
+
+            for sb in idToSoftBody.values():
+                color = SIGNAL_COLORS.get(sb.sigType, "#CCCCCC")  # fallback to gray if unknown
+                vertices, codes = append_path_from_cord_list(sb.contour)
+                if not vertices or not codes:
+                    continue
+
+                path = Path(vertices, codes)
+                patch = patches.PathPatch(path, facecolor=color, edgecolor='black', linewidth=LINE_WIDTH)
+                ax.add_patch(patch)
+
+            # Optional: Save or show
+            if args.output:
+                plt.savefig(args.output, dpi=args.dpi, bbox_inches='tight')
+            else:
+                plt.show()
 
     except FileNotFoundError:
-        print(f"[RenderPressureSimulator]Error: File \"{args.input}\" not found")
+        print(f"[RenderPressureSimulator]Error: File \"{args.input}\" or \"{args.output}\" not found")
         sys.exit()
     except PermissionError:
-        print(f"[RenderPinMap]Error: Permission denied when accessing \"{args.input}\"")
+        print(f"[RenderPressureSimulator]Error: Permission denied when accessing \"{args.input}\"")
         sys.exit()

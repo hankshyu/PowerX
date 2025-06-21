@@ -129,7 +129,7 @@ if __name__ == "__main__":
             
             # Make plot border thicker
             for spine in ax.spines.values():
-                spine.set_linewidth(BORDER_WIDTH)  # You can increase this value
+                spine.set_linewidth(BORDER_WIDTH)
 
             # ax.spines['top'].set_color('white')
             # ax.spines['right'].set_color('white')

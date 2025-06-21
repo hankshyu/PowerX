@@ -70,35 +70,19 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
         
         for(const std::string &instance : cit->second){
             BallOut *ballout = uBump.instanceToBallOutMap.at(instance);
-            
             double balloutCurrent = ballout->getMaxCurrent();
             signalCurrentRequirements[st] += balloutCurrent;
 
-            for(auto at : ballout->SignalTypeToAllCords){
-                if(at.first == SignalType::SIGNAL || at.first == SignalType::GROUND) continue;
-                len_t xMin = LEN_T_MAX, xMax = LEN_T_MIN;
-                len_t yMin = LEN_T_MAX, yMax = LEN_T_MIN;
-                for(const Cord &c : at.second){
-                    len_t x = c.x();
-                    len_t y = c.y();
-                    if(x < xMin) xMin = x;
-                    if(x > xMax) xMax = x;
-                    if(y < yMin) yMin = y;
-                    if(y > yMax) yMax = y;
-                }
-                assert(xMin != LEN_T_MAX);
-                assert(xMax != LEN_T_MIN);
-                assert(yMin != LEN_T_MAX);
-                assert(yMax != LEN_T_MIN);
-                
-                //give little margin to the bounding box
-                xMin -= INITIAL_MARGIN;
-                xMax += INITIAL_MARGIN;
-                yMin -= INITIAL_MARGIN;
-                yMax += INITIAL_MARGIN;
 
-                layerInitBoxes.at(m_ubumpConnectedMetalLayerIdx)[st].emplace_back(FPoint(xMin, yMin), FPoint(xMax, yMax));
-            }
+
+            Rectangle balloutRectangle = uBump.instanceToRectangleMap.at(instance);
+            flen_t fxl = static_cast<flen_t>(rec::getXL(balloutRectangle));
+            flen_t fxh = static_cast<flen_t>(rec::getXH(balloutRectangle));
+            flen_t fyl = static_cast<flen_t>(rec::getYL(balloutRectangle));
+            flen_t fyh = static_cast<flen_t>(rec::getYH(balloutRectangle));
+
+            layerInitBoxes.at(m_ubumpConnectedMetalLayerIdx)[st].emplace_back(FPoint(fxl, fyl), FPoint(fxh, fyh));
+
         }
     }
 
@@ -147,6 +131,9 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                 FPoint preplacedBoxUR(CordX + 1, CordY + 1);
 
                 layerInitBoxes.at(constructLayer)[st].emplace_back(preplacedBoxLL, preplacedBoxUR);
+                if(constructLayer == m_ubumpConnectedMetalLayerIdx){
+                    std::cout << "2. Step " << st << " adds " << FBox(preplacedBoxLL, preplacedBoxUR) << std::endl;
+                }
             }
         }
 
@@ -181,11 +168,6 @@ PressureSimulator::PressureSimulator(const std::string &fileName): PowerDistribu
                 }
             }
         }
-
-
-
-
-
 
         // merge collected layerInitBoxes, union them and create corresponding Softbody object
         for(auto it = layerInitBoxes.at(constructLayer).begin(); it != layerInitBoxes.at(constructLayer).end(); ++it){

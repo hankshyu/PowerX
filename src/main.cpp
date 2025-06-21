@@ -55,9 +55,9 @@ int main(int argc, char const *argv[]){
     timeProfiler.pauseTimer("My Algorithm");
     timeProfiler.printTimingReport();
 
-    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(0), pressureSim.getViaBodyOwner(0), "outputs/ps_0.txt");
-    visualiseSoftBodiesWithPins(pressureSim, pressureSim.getSoftBodyOwner(0), pressureSim.getViaBodyOwner(0), pressureSim.getViaBodyOwner(1), "outputs/ps_1.txt");
-    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(2), pressureSim.getViaBodyOwner(1), "outputs/ps_2.txt");
+    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(0), pressureSim.getViaBodyOwner(0), "outputs/psSystem_0.txt");
+    visualiseSoftBodiesWithPins(pressureSim, pressureSim.getSoftBodyOwner(1), pressureSim.getViaBodyOwner(0), pressureSim.getViaBodyOwner(1), "outputs/psSystem_1.txt");
+    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(2), pressureSim.getViaBodyOwner(1), "outputs/psSystem_2.txt");
 
     
     return 0;
