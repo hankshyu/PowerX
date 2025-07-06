@@ -2,6 +2,7 @@ SRCPATH = ./src
 TEXO_SRCPATH = $(SRCPATH)/texo
 PI_SRCPATH = $(SRCPATH)/pi
 PRESSUREMODEL_SRCPATH = $(SRCPATH)/pressureModel
+DIFFUSIONMODEL_SRCPATH = $(SRCPATH)/diffusionModel
 BINPATH = ./bin
 OBJPATH = ./obj
 BOOSTPATH = ./lib/boost_1_88_0
@@ -17,8 +18,8 @@ OPENMP_OPT = -fopenmp
 CXX = /opt/homebrew/opt/gcc/bin/g++-15
 # CXX = g++
 
-OPTFLAGS = -O3
-FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH)\
+OPTFLAGS = -O2
+FLAGS = -std=c++17 -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH)\
 		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) $(OPENMP_OPT) -D_Alignof=alignof
 
 LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -lm $(FLUTE_LIB_PATH)/libflute.a $(GEOS_LIB_PATH)/libgeos.a $(GEOS_LIB_PATH)/libgeos_c.a
@@ -35,8 +36,9 @@ PRESSUREMODEL_OBJS = 	fpoint.o fbox.o fpolygon.o fmultipolygon.o \
 						viaBody.o softBody.o \
 						pressureSimulator.o
 
+DIFFUSIONMODEL_OBJS = 	cell.o diffusionSimulator.o
 
-_OBJS = main.o timeProfiler.o visualiser.o units.o $(INF_OBJS) $(PI_OBJS) $(PRESSUREMODEL_OBJS)
+_OBJS = main.o timeProfiler.o visualiser.o units.o $(INF_OBJS) $(PI_OBJS) $(PRESSUREMODEL_OBJS) $(DIFFUSIONMODEL_OBJS)
 
 OBJS = $(patsubst %,$(OBJPATH)/%,$(_OBJS))
 DBG_OBJS = $(patsubst %.o, $(OBJPATH)/%_dbg.o, $(_OBJS))
@@ -62,6 +64,10 @@ $(OBJPATH)/%.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
 $(OBJPATH)/%.o: $(PRESSUREMODEL_SRCPATH)/%.cpp $(PRESSUREMODEL_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(OPTFLAGS) -c $< -o $@
 
+$(OBJPATH)/%.o: $(DIFFUSIONMODEL_SRCPATH)/%.cpp $(DIFFUSIONMODEL_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(OPTFLAGS) -c $< -o $@
+
+
 
 pwrx_dbg: $(DBG_OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -g -o $(BINPATH)/$@
@@ -79,6 +85,9 @@ $(OBJPATH)/%_dbg.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
 
 $(OBJPATH)/%_dbg.o: $(PRESSUREMODEL_SRCPATH)/%.cpp $(PRESSUREMODEL_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
+
+$(OBJPATH)/%_dbg.o: $(DIFFUSIONMODEL_SRCPATH)/%.cpp $(DIFFUSIONMODEL_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) -O0 -g -c $< -o $@
 
 .PHONY: clean

@@ -214,7 +214,7 @@ if __name__ == '__main__':
 
 
             if args.output is not None:
-                plt.savefig(args.output, dpi=args.dpi)
+                plt.savefig(args.output, dpi=args.dpi, bbox_inches='tight', pad_inches=0.2)
                 plt.close()
             else:
                 plt.show()

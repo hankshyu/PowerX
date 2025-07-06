@@ -36,7 +36,7 @@ class SoftBody;  // Forward declaration
 enum class ViaBodyStatus{
     UNKNOWN,
     EMPTY,          // attracts all types of signals
-    TOP_OCCUPIED,   // attracts specific signal (top signal type) of down layer
+    TOP_OCCUPIED,   
     DOWN_OCCUPIED,  // attracts specific signal (down signal type) of up layer
     BROKEN,         // up preplace signal contradicts with down preplace signal
     UNSTABLE,       // two end has different signaltype
@@ -53,31 +53,38 @@ private:
     flen_t m_x;
     flen_t m_y;
 
-    SignalType m_preplacedType;
+    bool m_isPreplaced;
+    bool m_upIsFixed;
+    bool m_downIsFixed;
     
 public:
-    bool upIsFixed;
-    SoftBody *upSoftBody;
 
-    bool downIsFixed;
+    SoftBody *upSoftBody;
     SoftBody *downSoftBody;
 
     ViaBodyStatus status;
+
+    // EMPTY, P1 ~ P10, UNKNOWN if inconsistent
+    SignalType activSigType;
     
-    ViaBody(int viaLayerIdx, flen_t x, flen_t y, SignalType preplacedType);
     ViaBody(int viaLayerIdx, flen_t x, flen_t y);
-    ViaBody(int viaLayerIdx, const FPoint &location, SignalType preplacedType);
     ViaBody(int viaLayerIdx, const FPoint &location);
     
+    inline void setIsPeplaced() {this->m_isPreplaced = true;}
+    inline void setUpIsFixed() {this->m_upIsFixed = true;}
+    inline void setDownIsFixed() {this->m_downIsFixed = true;}
+
     inline int getViaLayerIdx() const {return this->m_viaLayerIdx;}
     inline int getUpLayerIdx() const {return this->m_viaLayerIdx;}
     inline int getDownLayerIdx() const {return this->m_viaLayerIdx+1;}
-    
-    inline flen_t x() const {return m_x;}
-    inline flen_t y() const {return m_y;}
-    inline FPoint getLocation() const {return FPoint(m_x, m_y);}
-    inline SignalType getPreplacedSigType() const {return m_preplacedType;}
+    inline flen_t x() const {return this->m_x;}
+    inline flen_t y() const {return this->m_y;}
+    inline FPoint getLocation() const {return FPoint(this->m_x, this->m_y);}
+    inline bool getIsPreplaced() const {return this->m_isPreplaced;}
+    inline bool getUpIsFixed() const {return this->m_upIsFixed;}
+    inline bool getDownIsFixed() const {return this->m_downIsFixed;}
 
+    
 };
 
 #endif // __VIA_BODY_H__

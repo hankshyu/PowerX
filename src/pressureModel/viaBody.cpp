@@ -53,17 +53,13 @@ std::ostream& operator<<(std::ostream& os, ViaBodyStatus st){
     }
 }
 
-ViaBody::ViaBody(int viaLayerIdx, flen_t x, flen_t y, SignalType preplacedType)
-    : m_viaLayerIdx(viaLayerIdx), m_x(x), m_y(y), m_preplacedType(preplacedType),
-        upIsFixed(false), upSoftBody(nullptr),
-        downIsFixed(false), downSoftBody(nullptr), status(ViaBodyStatus::UNKNOWN) {}
-
 ViaBody::ViaBody(int viaLayerIdx, flen_t x, flen_t y)
-    : ViaBody(viaLayerIdx, x, y, SignalType::EMPTY) {}
+    : m_viaLayerIdx(viaLayerIdx), m_x(x), m_y(y),
+        m_isPreplaced(false), m_upIsFixed(false), m_downIsFixed(false),
+        upSoftBody(nullptr), downSoftBody(nullptr), 
+        status(ViaBodyStatus::EMPTY), activSigType(SignalType::EMPTY) {}
 
-ViaBody::ViaBody(int viaLayerIdx, const FPoint &location, SignalType preplacedType)
-    : ViaBody(viaLayerIdx, location.x(), location.y(), preplacedType) {}
 
 ViaBody::ViaBody(int viaLayerIdx, const FPoint &location)
-    : ViaBody(viaLayerIdx, location.x(), location.y(), SignalType::EMPTY) {}
+    : ViaBody(viaLayerIdx, location.x(), location.y()) {}
 

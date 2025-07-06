@@ -32,11 +32,32 @@
 
 // Constructor
 SoftBody::SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea)
-    : m_id(id), m_sigType(sig), m_expectCurrent(expectCurrent), m_initialArea(initArea){}
+    :   m_id(id), m_sigType(sig), m_rawExpectCurrent(expectCurrent), m_expectedCurrent(0.0), m_initialArea(initArea) {}
 
-double SoftBody::calculatePressure() const{
-    FPolygon fpcontour = fp::createFPolygon(contour);
-    return m_expectCurrent * (fp::getArea(fpcontour)/m_initialArea);
+
+void SoftBody::initialiseParameters(flen_t canvasWidth, flen_t canvasHeight, flen_t avgViaSpacing){
+    flen_t avgCanvasSize = 0.5 * (canvasWidth + canvasHeight);
+    this->temp = 500;
+    this->pressure = getExpectedCurrent() * this->temp;
+    this->surfaceTension = 1.0;
+
+    this->attractionStrength = 1.0;
+    this->attractionRadius = 0.15 * (avgCanvasSize);
+    this->repulsionStrength = 1.0;
+    this->repulsionRadius = 0.075 * (avgCanvasSize);
+
+    this->attractEmptyViaStrength = 1.0;
+    this->attractEmptyViaRadius = 2.5 * avgViaSpacing;
+    this->attractSameViaStrength = 1.0;
+    this->attractsameViaRadius = 5.0 * avgViaSpacing;
+}
+
+void SoftBody::updateParameters(){
+    this->contour = std::move(cacheContour);
+    cacheContour.clear();
+    // FPolygon fpcontour = fp::createFPolygon(contour);
+    // this->pressure = getExpectedCurrent() * (fp::getArea(fpcontour)/m_initialArea);
+    
 }
 
 void SoftBody::remeshContour(flen_t minDelta){
@@ -49,7 +70,7 @@ void SoftBody::remeshContour(flen_t minDelta){
     constexpr double sqrt2 = boost::math::constants::root_two<double>();
 
     const flen_t L2_MIN_DELTA = minDelta * sqrt2;
-    const flen_t USE_CURVATURE_DELTA = 4 * L2_MIN_DELTA;
+    const flen_t USE_CURVATURE_DELTA = 5 * L2_MIN_DELTA;
 
 
     std::vector<FPoint> remeshedContour;
@@ -58,8 +79,9 @@ void SoftBody::remeshContour(flen_t minDelta){
         remeshedContour.emplace_back(A);
         flen_t L2RawDistance = calManhattanDistance(A, B);
         if(L2RawDistance > L2_MIN_DELTA){
+            
             if(L2RawDistance > USE_CURVATURE_DELTA){
-
+                std::cout << "Remesh using option1 " << P << ", " << A << ", " << B << ", " << Q << ", L1 = " << calEuclideanDistance(A,B) << ", L2 = " << L2RawDistance << std::endl;
                 // Arch Estimation: L \approx \|P_3 - P_0\| + \frac{1}{3} \left( \|P_1 - P_0\| + \|P_2 - P_3\| \right)
                 // Floater, M. Arc Length Estimation and the Convergence of Polynomial Curve Interpolation. 
                 // Bit Numer Math 45, 679–694 (2005). https://doi.org/10.1007/s10543-005-0031-2
@@ -113,6 +135,7 @@ void SoftBody::remeshContour(flen_t minDelta){
                     t += step;
                 }
             }else{
+                std::cout << "Remesh using option2 " << P << ", " << A << ", " << B << ", " << Q << ", L1 = " << calEuclideanDistance(A,B) << ", L2 = " << L2RawDistance << std::endl;
 
                 flen_t ax = A.x(), ay = A.y();
                 flen_t bx = B.x(), by = B.y();

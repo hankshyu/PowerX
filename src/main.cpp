@@ -6,31 +6,12 @@
 #include "colours.hpp"
 #include "timeProfiler.hpp"
 #include "visualiser.hpp"
-#include "orderedSegment.hpp"
 
 #include "technology.hpp"
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
-#include "objectArray.hpp"
-#include "c4Bump.hpp"
-#include "microBump.hpp"
-#include "voronoiPDNGen.hpp"
 
-#include "line.hpp"
-#include "rectangle.hpp"
-#include "doughnutPolygon.hpp"
-#include "doughnutPolygonSet.hpp"
-
-//
-
-#include "fpoint.hpp"
-#include "fbox.hpp"
-#include "fpolygon.hpp"
-#include "fmultipolygon.hpp"
-
-#include "pointBinSystem.hpp"
-#include "pressureSimulator.hpp"
-#include "rectangleBinSystem.hpp"
+#include "diffusionSimulator.hpp"
 
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
@@ -44,20 +25,35 @@ void printExitBanner();
 
 int main(int argc, char const *argv[]){
 
+    std::vector<std::string> timeSpan = {
+       "Canvas Initialize",
+       "Fill Confined Space"
+    };
+
     printWelcomeBanner();
     TimeProfiler timeProfiler;
-    timeProfiler.startTimer("My Algorithm");
-
+    
+    timeProfiler.startTimer(timeSpan[0]);
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
-    PressureSimulator pressureSim(FILEPATH_BUMPS);
+    DiffusionSimulator diffsim(FILEPATH_BUMPS);
+    timeProfiler.pauseTimer(timeSpan[0]);
 
-    timeProfiler.pauseTimer("My Algorithm");
+    timeProfiler.startTimer(timeSpan[1]);
+    diffsim.fillCanvasConfinedSpace();
+    timeProfiler.pauseTimer(timeSpan[1]);
+
+
+    // dffs.initialise();
+
+    
+    visualiseGridArrayWithPin(diffsim.metalLayers[0].canvas, diffsim.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    visualiseGridArrayWithPins(diffsim.metalLayers[1].canvas, diffsim.viaLayers[0].canvas, diffsim.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    visualiseGridArrayWithPin(diffsim.metalLayers[2].canvas, diffsim.viaLayers[1].canvas, technology, "outputs/m2.txt");
+
+
     timeProfiler.printTimingReport();
 
-    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(0), pressureSim.getViaBodyOwner(0), "outputs/psSystem_0.txt");
-    visualiseSoftBodiesWithPins(pressureSim, pressureSim.getSoftBodyOwner(1), pressureSim.getViaBodyOwner(0), pressureSim.getViaBodyOwner(1), "outputs/psSystem_1.txt");
-    visualiseSoftBodiesWithPin(pressureSim, pressureSim.getSoftBodyOwner(2), pressureSim.getViaBodyOwner(1), "outputs/psSystem_2.txt");
 
     
     return 0;

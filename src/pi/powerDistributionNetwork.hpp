@@ -92,6 +92,4 @@ void runClustering(const std::vector<std::vector<SignalType>> &canvas, std::vect
 std::unordered_map<SignalType, DoughnutPolygonSet> collectDoughnutPolygons(const std::vector<std::vector<SignalType>> &canvas);
 
 
-
-
 #endif // __POWER_DISTRIBUTION_NETWORK_H__

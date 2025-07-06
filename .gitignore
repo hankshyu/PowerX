@@ -14,5 +14,7 @@ exp/*
 !exp/.gitkeep
 venv/*
 archive/photos/*
+archive/diffusionAlgo/*
 !archive/photos/.gitkeep
 utils/__pycache__
+vid/*

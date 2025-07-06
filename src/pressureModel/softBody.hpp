@@ -44,24 +44,56 @@ private:
     int m_id;
     SignalType m_sigType;
     
-    double m_expectCurrent;
+    double m_rawExpectCurrent;
+    double m_expectedCurrent;
     farea_t m_initialArea;
 
 public:
+    double temp;
+
     double pressure;
+    double surfaceTension;
+
+    // Softbody attraction/repulsion parameters
+    double attractionStrength;
+    flen_t attractionRadius; // Ra
+    double repulsionStrength;
+    flen_t repulsionRadius;  // Rr
+
+    // ViaBody attraction/repulsion parameters
+    double attractEmptyViaStrength;
+    flen_t attractEmptyViaRadius;
+    double attractSameViaStrength;
+    flen_t attractsameViaRadius;
+
+
     std::vector<FPoint> contour;
+    std::vector<FPoint> cacheContour;
+
+    
+    // cache: [0] = contour[1] - contour[0]
+    std::vector<flen_t> cacheContourDX; 
+    std::vector<flen_t> cacheContourDY;
+    std::vector<flen_t> cacheContourDistance;
+
     FPolygon shape;
     
     std::vector<ViaBody *> hardVias;
 
     SoftBody(int id, SignalType sig, double expectCurrent, farea_t initArea);
 
+    inline void setExpectedCurrent (double expectedCurrent) {this->m_expectedCurrent = expectedCurrent;}
+
     inline int getID() const {return this->m_id;}
     inline SignalType getSigType() const {return this->m_sigType;}
-    inline double getExpectCurrent() const {return this->m_expectCurrent;}
+    
+    inline double getRawExpectedCurrent() const {return this->m_rawExpectCurrent;}
+    inline double getExpectedCurrent() const {return this->m_expectedCurrent;}
+    
     inline farea_t getInitialArea() const {return this->m_initialArea;}
     
-    double calculatePressure() const;
+    void initialiseParameters(flen_t canvasWidth, flen_t canvasHeight, flen_t avgViaSpacing);
+    void updateParameters();
     void remeshContour(flen_t minDelta);
 
 };

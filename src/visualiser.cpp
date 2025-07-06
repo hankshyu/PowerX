@@ -468,7 +468,7 @@ bool visualiseSoftBodies(const PressureSimulator &ps, const std::vector<SoftBody
 
     ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
     for(const SoftBody *sb : softBodies){
-        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectedCurrent() << " " << sb->getInitialArea() << std::endl;
         ofs << "pressure " << sb->pressure << std::endl;
         ofs << "shape " << sb->contour.size() << std::endl;
         for(int p = 0; p < sb->contour.size(); ++p){
@@ -493,7 +493,7 @@ bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<S
 
     ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
     for(const SoftBody *sb : softBodies){
-        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectedCurrent() << " " << sb->getInitialArea() << std::endl;
         ofs << "pressure " << sb->pressure << std::endl;
         ofs << "shape " << sb->contour.size() << std::endl;
         for(int p = 0; p < sb->contour.size(); ++p){
@@ -506,9 +506,9 @@ bool visualiseSoftBodiesWithPin(const PressureSimulator &ps, const std::vector<S
 
     ofs << "VIA_LAYER SINGLE VIAS " << vias.size() << std::endl;
     for(const ViaBody *vb : vias){
-        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
-        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : -1) << " ";
-        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : -1) << " ";
+        ofs << vb->x() << " " << vb->y() << " " << vb->activSigType << std::endl;
+        ofs << vb->getUpIsFixed() << " " << ((vb->getUpIsFixed())? vb->upSoftBody->getID() : -1) << " ";
+        ofs << vb->getDownIsFixed() << " " << ((vb->getDownIsFixed())? vb->downSoftBody->getID() : -1) << " ";
         ofs << vb->status << std::endl;
     }
 
@@ -526,7 +526,7 @@ bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<
     
     ofs << "METAL_LAYER" << " SHAPES " << softBodies.size() << std::endl;
     for(const SoftBody *sb : softBodies){
-        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectCurrent() << " " << sb->getInitialArea() << std::endl;
+        ofs << sb->getID() << " " << sb->getSigType() << " " << sb->getExpectedCurrent() << " " << sb->getInitialArea() << std::endl;
         ofs << "pressure " << sb->pressure << std::endl;
         ofs << "shape " << sb->contour.size() << std::endl;
         for(int p = 0; p < sb->contour.size(); ++p){
@@ -539,17 +539,17 @@ bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<
 
     ofs << "VIA_LAYER UP VIAS " << upVias.size() << std::endl;
     for(const ViaBody *vb : upVias){
-        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
-        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
-        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->x() << " " << vb->y() << " " << vb->activSigType << std::endl;
+        ofs << vb->getUpIsFixed() << " " << ((vb->getUpIsFixed())? vb->upSoftBody->getID() : 0) << " ";
+        ofs << vb->getDownIsFixed() << " " << ((vb->getDownIsFixed())? vb->downSoftBody->getID() : 0) << " ";
         ofs << vb->status << std::endl;
     }
 
     ofs << "VIA_LAYER DOWN VIAS " << downVias.size() << std::endl;
     for(const ViaBody *vb : downVias){
-        ofs << vb->x() << " " << vb->y() << " " << vb->getPreplacedSigType() << std::endl;
-        ofs << vb->upIsFixed << " " << ((vb->upIsFixed)? vb->upSoftBody->getID() : 0) << " ";
-        ofs << vb->downIsFixed << " " << ((vb->downIsFixed)? vb->downSoftBody->getID() : 0) << " ";
+        ofs << vb->x() << " " << vb->y() << " " << vb->activSigType << std::endl;
+        ofs << vb->getUpIsFixed() << " " << ((vb->getUpIsFixed())? vb->upSoftBody->getID() : 0) << " ";
+        ofs << vb->getDownIsFixed() << " " << ((vb->getDownIsFixed())? vb->downSoftBody->getID() : 0) << " ";
         ofs << vb->status << std::endl;
     }
     

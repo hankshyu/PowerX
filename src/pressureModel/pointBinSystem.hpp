@@ -29,9 +29,30 @@
 
 template<typename Scalar, typename T>
 struct PointEntry{
-        Scalar x;
-        Scalar y;
-        T *object;
+    Scalar x;
+    Scalar y;
+    T *object;
+
+    PointEntry() = default;
+
+    PointEntry(Scalar x, Scalar y, T *object)
+        : x(x), y(y), object(object) {}
+
+
+};
+
+template<typename Scalar, typename T>
+struct PointDistanceEntry{
+    Scalar x;
+    Scalar y;
+    Scalar distance;
+    T* object;
+
+
+    PointDistanceEntry() = default;
+
+    PointDistanceEntry(Scalar x, Scalar y, Scalar distance, T *object)
+        : x(x), y(y), distance(distance), object(object) {}
 };
 
 template<typename Scalar, typename T>
@@ -43,11 +64,13 @@ private:
     Scalar originX, originY;
     int gridWidth, gridHeight;
 
+    Scalar canvasWidth, canvasHeight;
+
     std::vector<std::vector<Entry>> bins;
 
 public:
     PointBinSystem(Scalar binSize, Scalar xmin, Scalar ymin, Scalar xmax, Scalar ymax)
-        : binSize(binSize), originX(xmin), originY(ymin) {
+        : binSize(binSize), originX(xmin), originY(ymin), canvasWidth(xmax - xmin), canvasHeight(ymax - ymin) {
         
         gridWidth  = static_cast<int>(std::ceil((xmax - xmin) / binSize));
         gridHeight = static_cast<int>(std::ceil((ymax - ymin) / binSize));
@@ -92,7 +115,7 @@ public:
         if (ix < 0 || ix >= gridWidth || iy < 0 || iy >= gridHeight) return false;
 
         int binIndex = iy * gridWidth + ix;
-        auto& bin = bins.at(binIndex);
+        auto& bin = bins[binIndex];
 
         size_t binSize = bin.size();
         
@@ -146,6 +169,70 @@ public:
         return results;
     }
 
+    std::vector<PointDistanceEntry<Scalar, T>> queryDistance(Scalar xCentre, Scalar yCentre, Scalar distance) const {
+        std::vector<PointDistanceEntry<Scalar, T>> results;
+
+        Scalar distanceSq = distance * distance;
+
+        // First, compute the bounding square around the circle
+        Scalar xmin = xCentre - distance;
+        Scalar ymin = yCentre - distance;
+        Scalar xmax = xCentre + distance;
+        Scalar ymax = yCentre + distance;
+
+        int ix_min = static_cast<int>((xmin - originX) / binSize);
+        int iy_min = static_cast<int>((ymin - originY) / binSize);
+        int ix_max = static_cast<int>((xmax - originX) / binSize);
+        int iy_max = static_cast<int>((ymax - originY) / binSize);
+
+        ix_min = std::max(0, ix_min);
+        iy_min = std::max(0, iy_min);
+        ix_max = std::min(gridWidth - 1, ix_max);
+        iy_max = std::min(gridHeight - 1, iy_max);
+
+        for (int iy = iy_min; iy <= iy_max; ++iy) {
+            for (int ix = ix_min; ix <= ix_max; ++ix) {
+                int binIndex = iy * gridWidth + ix;
+                for (const Entry& entry : bins[binIndex]) {
+                    Scalar dx = entry.x - xCentre;
+                    Scalar dy = entry.y - yCentre;
+                    Scalar distSq = dx * dx + dy * dy;
+                    if (distSq < distanceSq) {
+                        results.emplace_back(entry.x, entry.y, sqrt(distSq), entry.object);
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
+
+    PointDistanceEntry<Scalar, T> queryNearestNeighbor(Scalar x, Scalar y) const {
+        Scalar searchRadius = binSize;
+        PointDistanceEntry<Scalar, T> nearest = {x, y, std::numeric_limits<Scalar>::max(), nullptr};
+
+        // Max possible distance: diagonal of the canvas
+        const Scalar maxRadius = std::hypot(canvasWidth, canvasHeight);
+
+        while (searchRadius <= maxRadius) {
+            auto candidates = queryDistance(x, y, searchRadius);
+
+            for (const auto& entry : candidates) {
+                if (entry.distance != 0 && entry.distance < nearest.distance) {
+                    nearest.x = entry.x;
+                    nearest.y = entry.y;
+                    nearest.distance = entry.distance;
+                    nearest.object = entry.object;
+                }
+            }
+
+            if (nearest.object != nullptr) break;
+            searchRadius *= 2;
+        }
+
+        return nearest;
+    }
 };
 
 
