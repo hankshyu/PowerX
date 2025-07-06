@@ -72,9 +72,8 @@ public:
 
     // top module for executing the algorithm
     void runAlgorithm();
-    void initialise();
     void fillCanvasConfinedSpace();
-
+    void initialise();
 
 };
 

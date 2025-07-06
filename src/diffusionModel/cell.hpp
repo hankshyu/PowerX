@@ -47,16 +47,14 @@ std::ostream& operator<<(std::ostream& os, CellType ct);
 class DiffusionChamber{
 public:
 
-    SignalType signal;
+    SignalType signal = SignalType::EMPTY;
 
-    DirFlag fullDirection;
-    DirFlag direction;
+    DirFlag fullDirection = DIRFLAG_EMPTY;
+    DirFlag direction = DIRFLAG_EMPTY;
 
     std::vector<CellLabel> cellLabels;
     std::vector<int> cellParticles;
 
-    DiffusionChamber(): signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY), direction(DIRFLAG_EMPTY) {}
-    
     // return -1 if lable not exist
     int getParticlesCount(CellLabel label); 
 
