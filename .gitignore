@@ -13,8 +13,6 @@ myenv/*
 exp/*
 !exp/.gitkeep
 venv/*
-archive/photos/*
-archive/diffusionAlgo/*
-!archive/photos/.gitkeep
+archive/**/*.png
 utils/__pycache__
 vid/*
