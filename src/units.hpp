@@ -38,17 +38,19 @@ typedef double flen_t;
 typedef double farea_t;
 typedef double angle_t;
 
-#define LEN_T_MAX std::numeric_limits<len_t>::max()
-#define LEN_T_MIN std::numeric_limits<len_t>::min()
+constexpr len_t LEN_T_MAX = std::numeric_limits<len_t>::max();
+constexpr len_t LEN_T_MIN = std::numeric_limits<len_t>::min();
 
-#define AREA_T_MAX std::numeric_limits<area_t>::max()
-#define AREA_T_MIN std::numeric_limits<area_t>::min()
+constexpr area_t AREA_T_MAX = std::numeric_limits<area_t>::max();
+constexpr area_t AREA_T_MIN = std::numeric_limits<area_t>::min();
 
-#define FLEN_T_MAX std::numeric_limits<flen_t>::max()
-#define FLEN_T_MIN std::numeric_limits<flen_t>::min()
+constexpr flen_t FLEN_T_MAX = std::numeric_limits<flen_t>::max();
+constexpr flen_t FLEN_T_MIN = std::numeric_limits<flen_t>::min();
 
-#define FAREA_T_MAX std::numeric_limits<farea_t>::max()
-#define FAREA_T_MIN std::numeric_limits<farea_t>::min()
+constexpr farea_t FAREA_T_MAX = std::numeric_limits<farea_t>::max();
+constexpr farea_t FAREA_T_MIN = std::numeric_limits<farea_t>::min();
+
+constexpr size_t SIZE_T_INVALID = std::numeric_limits<size_t>::max();
 
 enum class quadrant{
     I, II, III, IV

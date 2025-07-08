@@ -92,6 +92,7 @@ public:
     
     void enhanceCrossLayerPI();
 
+    void handCraft();
 
     /*
     void enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &PolygonMap);    

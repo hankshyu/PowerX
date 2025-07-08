@@ -71,8 +71,9 @@ public:
 
 
     // top module for executing the algorithm
-    void runAlgorithm();
-    void fillCanvasConfinedSpace();
+    // void runAlgorithm();
+    void transformSignals();
+    void fillEnclosedRegions();
     void initialise();
 
 };

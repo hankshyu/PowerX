@@ -1413,4 +1413,333 @@ void VoronoiPDNGen::enhanceCrossLayerPI(){
         }
     }
 }
+    // metallayers[1].canvas[]
+void VoronoiPDNGen::handCraft(){
+    // fill enclosed region
+    
+    std::vector<std::vector<bool>> visited;
+    const std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};
 
+    auto inBounds = [&](int y, int x) {
+        return y >= 0 && y < m_gridHeight && x >= 0 && x < m_gridWidth;
+    };
+    for (int layer = 0; layer < m_metalLayerCount ; ++layer) {
+        visited.assign(m_gridHeight, std::vector<bool>(m_gridWidth, false));
+        
+        for (int y = 0; y < m_gridHeight; ++y) {
+            for (int x = 0; x < m_gridWidth; ++x) {
+                if (metalLayers[layer].canvas[y][x] != SignalType::EMPTY || visited[y][x]) continue;
+
+                std::queue<Cord> q;
+                std::vector<Cord> region;
+                std::unordered_set<SignalType> borderSignals;
+                bool touchesBoundary = false;
+
+                q.push(Cord(x, y));
+                visited[y][x] = true;
+                region.emplace_back(x, y);
+
+                while (!q.empty()) {
+                    Cord c = q.front(); q.pop();
+
+                    for (const Cord& d : directions) {
+                        int ny = c.y() + d.y();
+                        int nx = c.x() + d.x();
+
+                        if (!inBounds(ny, nx)) {
+                            continue;
+                        }
+
+                        SignalType neighborType = metalLayers[layer].canvas[ny][nx];
+
+                        if (neighborType == SignalType::EMPTY && !visited[ny][nx]) {
+                            visited[ny][nx] = true;
+                            q.push(Cord(nx, ny));
+                            region.emplace_back(nx, ny);
+                        } else if (neighborType != SignalType::EMPTY && neighborType != SignalType::OBSTACLE) {
+                                borderSignals.insert(neighborType);
+                        }
+                    }
+                }
+
+                if (borderSignals.size() == 1) {
+                    SignalType fillType = *borderSignals.begin();
+                    for (const Cord& p : region) {
+                        metalLayers[layer].canvas[p.y()][p.x()] = fillType;
+                    }
+                }
+            }
+        }
+    }
+    
+
+
+    for(int layer = 0; layer <= 1; ++layer){
+        metalLayers[layer].canvas[74][37] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][37] = SignalType::POWER_2;
+        metalLayers[layer].canvas[74][38] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][38] = SignalType::POWER_2;
+    }
+
+    for(int layer = 0; layer <= 1; ++layer){
+        metalLayers[layer].canvas[74][55] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][55] = SignalType::POWER_2;
+        metalLayers[layer].canvas[74][56] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][56] = SignalType::POWER_2;
+    }
+
+
+    for(int layer = 0; layer <= 1; ++layer){
+        metalLayers[layer].canvas[74][55] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][55] = SignalType::POWER_2;
+        metalLayers[layer].canvas[74][56] = SignalType::POWER_2;
+        metalLayers[layer].canvas[75][56] = SignalType::POWER_2;
+    }
+
+
+
+    for(int j = 68; j <= 69; ++j){
+        for(int i = 40; i <= 53; ++i){
+            metalLayers[0].canvas[j][i] = SignalType::POWER_2;
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+    for(int i = 31; i <= 40; ++i){
+        metalLayers[1].canvas[65][i] = SignalType::POWER_2;
+    }
+
+
+    for(int layer = 0; layer <= 1; ++layer){
+        metalLayers[layer].canvas[63][85] = SignalType::POWER_4;
+        metalLayers[layer].canvas[62][85] = SignalType::POWER_4;
+        metalLayers[layer].canvas[63][86] = SignalType::POWER_4;
+        metalLayers[layer].canvas[62][86] = SignalType::POWER_4;
+        for(int j = 56; j <= 57; ++j){
+            for(int i = 78; i <= 92; ++i){
+                metalLayers[layer].canvas[j][i] = SignalType::POWER_4;
+
+            }
+        }
+    }
+    
+    for(int layer = 1; layer <= 2; ++layer){
+        for(int j = 62; j <= 64; ++j){
+            for(int i = 42; i <= 49; ++i){
+                metalLayers[layer].canvas[j][i] = SignalType::POWER_2;
+            }
+        }
+    }
+
+    for(int layer = 1; layer <= 2; ++layer){
+        for(int j = 62; j <= 64; ++j){
+            for(int i = 77; i <= 79; ++i){
+                metalLayers[layer].canvas[j][i] = SignalType::POWER_4;
+            }
+        }
+    }
+
+    for(int layer = 1; layer <= 2; ++layer){
+        for(int j = 62; j <= 64; ++j){
+            for(int i = 77; i <= 79; ++i){
+                metalLayers[layer].canvas[j][i] = SignalType::POWER_4;
+            }
+            for(int i = 83; i <= 85; ++i){
+                metalLayers[layer].canvas[j][i] = SignalType::POWER_4;
+            }
+        }
+    }
+
+    for(int j = 65; j <= 67; ++j){
+        for(int i = 40; i <= 49; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+    for(int j = 70; j <= 75; ++j){
+        for(int i = 40; i <= 41; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+    for(int j = 74; j <= 75; ++j){
+        for(int i = 36; i <= 39; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+        for(int i = 52; i <= 54; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+    for(int j = 70; j <= 73; ++j){
+        for(int i = 52; i <= 53; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+    for(int j = 70; j <= 76; ++j){
+        for(int i = 46; i <= 47; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+
+    for(int j = 59; j <= 61; ++j){
+        for(int i = 26; i <= 49; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+
+    for(int j = 44; j <= 61; ++j){
+        for(int i = 47; i <= 49; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_2;
+        }
+    }
+
+
+    for(int j = 52; j <= 55; ++j){
+        for(int i = 91; i <= 92; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+
+
+    for(int j = 58; j <= 61; ++j){
+        for(int i = 78; i <= 86; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 65; j <= 68; ++j){
+        for(int i = 84; i <= 85; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 50; j <= 54; ++j){
+        for(int i = 70; i <= 71; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 53; j <= 55; ++j){
+        for(int i = 72; i <= 79; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+
+
+    for(int j = 53; j <= 61; ++j){
+        for(int i = 77; i <= 79; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 53; j <= 55; ++j){
+        for(int i = 68; i <= 76; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 56; j <= 61; ++j){
+        for(int i = 83; i <= 85; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+    for(int j = 59; j <= 73; ++j){
+        for(int i = 77; i <= 85; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_4;
+        }
+    }
+
+    for(int j = 24; j <= 96; ++j){
+        for(int i = 20; i <= 100; ++i){
+            if(metalLayers[0].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[0].canvas[j][i] = SignalType::POWER_3;
+            }
+        }
+    }
+    for(int j = 0; j < m_gridHeight; ++j){
+        for(int i = 0; i < m_gridWidth; ++i){
+            if(metalLayers[0].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[0].canvas[j][i] = SignalType::POWER_1;
+            } 
+        }
+    }
+
+    for(int j = 24; j <= 96; ++j){
+        for(int i = 20; i <= 100; ++i){
+            if(metalLayers[1].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[1].canvas[j][i] = SignalType::POWER_3;
+            }
+        }
+    }
+
+    for(int j = 20; j <= 23; ++j){
+        for(int i = 34; i <= 35; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_3;
+        }
+    }
+    for(int j = 22; j <= 23; ++j){
+        for(int i = 46; i <= 47; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_3;
+
+        }
+    }
+    for(int j = 19; j <= 23; ++j){
+        for(int i = 91; i <= 92; ++i){
+            metalLayers[1].canvas[j][i] = SignalType::POWER_3;
+
+        }
+    }
+    for(int j = 0; j < m_gridHeight; ++j){
+        for(int i = 0; i < m_gridWidth; ++i){
+            if(metalLayers[1].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[1].canvas[j][i] = SignalType::POWER_1;
+            } 
+        }
+    }
+
+    for(int j = 24; j <= 96; ++j){
+        for(int i = 20; i <= 100; ++i){
+            if(metalLayers[2].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[2].canvas[j][i] = SignalType::POWER_3;
+            }
+        }
+    }
+
+    for(int j = 29; j <= 37; ++j){
+        for(int i = 17; i <= 19; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_3;
+        }
+    }
+    for(int j = 89; j <= 96; ++j){
+        for(int i = 17; i <= 19; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_3;
+        }
+    }
+
+    for(int j = 83; j <= 85; ++j){
+        for(int i = 101; i <= 118; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_3;
+        }
+    }
+    for(int j = 29; j <= 31; ++j){
+        for(int i = 101; i <= 118; ++i){
+            metalLayers[2].canvas[j][i] = SignalType::POWER_3;
+        }
+    }
+    for(int j = 0; j < m_gridHeight; ++j){
+        for(int i = 0; i < m_gridWidth; ++i){
+            if(metalLayers[2].canvas[j][i] == SignalType::EMPTY){
+                metalLayers[2].canvas[j][i] = SignalType::POWER_1;
+            } 
+        }
+    }
+
+
+    // for(int j = 0; j < m_gridHeight; ++j){
+    //     for(int i = 0; i < m_gridWidth; ++i){
+    //         if(metalLayers[1].canvas[j][i] != SignalType::EMPTY){
+    //             metalLayers[0].canvas[j][i] = metalLayers[1].canvas[j][i];
+    //         }
+    //     }
+    // }
+
+    // for(int j = 0; j < m_gridHeight; ++j){
+    //     for(int i = 0; i < m_gridWidth; ++i){
+    //         if(metalLayers[1].canvas[j][i] != SignalType::EMPTY){
+    //             metalLayers[2].canvas[j][i] = metalLayers[1].canvas[j][i];
+    //         }
+    //     }
+    // }
+}

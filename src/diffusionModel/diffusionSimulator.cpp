@@ -79,7 +79,9 @@ DiffusionSimulator::DiffusionSimulator(const std::string &fileName): PowerDistri
     markPinPadsWithSignals(this->metalLayers[m_c4ConnectedMetalLayerIdx].canvas, this->viaLayers[m_viaLayerCount-1].canvas, viaToMetalSignalTypes);
     markPinPadsWithoutSignals(this->metalLayers[m_c4ConnectedMetalLayerIdx].canvas, this->c4.canvas, {SignalType::EMPTY, SignalType::OBSTACLE});
     
+}
 
+void DiffusionSimulator::transformSignals(){
     // turn signals that isn't POWER_SIGNAL_SET on metal/via layer into obstacles
     for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
         for(int j = 0; j < m_pinHeight; ++j){
@@ -104,7 +106,7 @@ DiffusionSimulator::DiffusionSimulator(const std::string &fileName): PowerDistri
     }
 }
 
-void DiffusionSimulator::fillCanvasConfinedSpace() {
+void DiffusionSimulator::fillEnclosedRegions() {
     std::vector<std::vector<bool>> visited;
     const std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};
 
@@ -161,7 +163,7 @@ void DiffusionSimulator::fillCanvasConfinedSpace() {
         }
     }
 }
-
+/*
 void DiffusionSimulator::initialise(){
 
     // transfer the marking of metal layer onto chamber-related metal data structures
@@ -277,13 +279,6 @@ void DiffusionSimulator::initialise(){
 
                 cell.direction = cell.fulldirection;
 
-                
-
-
-
-
-
-
             }
         }
         m_viaGrid2DCount.push_back(layerPinCount);
@@ -296,3 +291,4 @@ void DiffusionSimulator::initialise(){
 
 
 }
+*/
