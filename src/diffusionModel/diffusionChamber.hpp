@@ -35,6 +35,7 @@
 // 0 is empty, 1 ~ n
 typedef uint8_t CellLabel;
 
+// EMPTY for competable cells, MARKED for soft, PREPLACED as hard and OBSTACLES
 enum class CellType : uint8_t{
     EMPTY = 0,
     OBSTACLES = 1,
@@ -48,7 +49,6 @@ class DiffusionChamber{
 public:
 
     SignalType signal;
-
     DirFlag fullDirection;
 
     std::vector<CellLabel> cellLabels;

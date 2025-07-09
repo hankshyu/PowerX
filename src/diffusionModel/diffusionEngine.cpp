@@ -156,68 +156,90 @@ void DiffusionEngine::markObstaclesOnCanvas(){
 void DiffusionEngine::initialiseGraphWithPreplaced(){
 
     // transfer the marking of metal layer onto chamber-related metal data structures
+    // attributes to fill in
+    // signal, fullDirection
+    // canvasMetalLayer, canvasMetalX, canvasMetalY
+    // up/down/left/right *Cell and idx
+    // metalCellNeighbors[]
+    
+    cellGrid.resize(m_cellGrid3DCount);
+    cellGridType.resize(m_cellGrid3DCount, CellType::EMPTY);
 
-    // cellGrid.resize(m_cellGrid3DCount);
-    // cellGridType.resize(m_cellGrid3DCount, CellType::EMPTY);
+    for(int metalLayer = 0; metalLayer < m_metalLayerCount; ++metalLayer){
+        for(int j = 0; j < m_gridHeight; ++j){
+            for(int i = 0; i < m_gridWidth; ++i){
 
-    // for(int metalLayer = 0; metalLayer < m_metalLayerCount; ++metalLayer){
-    //     for(int j = 0; j < m_gridHeight; ++j){
-    //         for(int i = 0; i < m_gridWidth; ++i){
-    //             size_t cellIndex = calCellIdx(metalLayer, j, i);
-    //             MetalCell &cell = cellGrid[cellIndex];
-    //             SignalType st = metalLayers[metalLayer].canvas[j][i];
-    //             if(st != SignalType::EMPTY){
-    //                 cell.signal = st;
-    //                 cellGridType[cellIndex] = (st == SignalType::OBSTACLE)? CellType::OBSTACLES : CellType::PREPLACED;
-    //             }
 
-    //             // add neighbors
-    //             if(j != (m_gridHeight-1)){
-    //                 SignalType upNieghborSt = metalLayers[metalLayer].canvas[j+1][i];
-    //                 if(upNieghborSt == SignalType::EMPTY || upNieghborSt == st){
-    //                     size_t upCellIdx = cellIdx - m_cellGridWidth;
-    //                     cell.upCell = &cellGrid[upCellIdx];
-    //                     cell.upCellIdx = upCellIdx;
-    //                     addDirection(cell.fullDirection, DirFlagAxis::UP);
-    //                 }
-    //             }
+                size_t cellIndex = calMetalIdx(metalLayer, j, i);
+                MetalCell &cell = cellGrid[cellIndex];
+                SignalType st = metalLayers[metalLayer].canvas[j][i];
 
-    //             if(j != 0){
-    //                 SignalType downNieghborSt = metalLayers[metalLayer].canvas[j-1][i];
-    //                 if(downNieghborSt == SignalType::EMPTY || downNieghborSt == st){
-    //                     size_t downCellIdx = cellIdx + m_cellGridWidth;
-    //                     cell.downCell = &cellGrid[downCellIdx];
-    //                     cell.downCellIdx = downCellIdx;
-    //                     addDirection(cell.fullDirection, DirFlagAxis::DOWN);
-    //                 }
-    //             }
+                
+                cell.canvasMetalLayer = metalLayer;
+                cell.canvasMetalY = j;
+                cell.canvasMetalX = i;
+                
+                if(st != SignalType::EMPTY){
+                    cell.signal = st;
+                    cellGridType[cellIndex] = (st == SignalType::OBSTACLE)? CellType::OBSTACLES : CellType::PREPLACED;
+                }
 
-    //             if(i != 0){
-    //                 SignalType leftNieghborSt = metalLayers[metalLayer].canvas[j][i-1];
-    //                 if(leftNieghborSt == SignalType::EMPTY || leftNieghborSt == st){
-    //                     size_t leftCellIdx = cellIdx - 1;
-    //                     cell.leftCell = &cellGrid[leftCellIdx];
-    //                     cell.leftCellIdx = leftCellIdx;
-    //                     addDirection(cell.fullDirection, DirFlagAxis::LEFT);
-    //                 }
-    //             }
+                // add neighbors
+                if(j != (m_cellGridHeight - 1)){
+                    SignalType upNieghborSt = metalLayers[metalLayer].canvas[j+1][i];
+                    if(upNieghborSt == SignalType::EMPTY || upNieghborSt == st){
+                        size_t upCellIdx = cellIndex - m_cellGridWidth;
+                        MetalCell *upCellPointer = &cellGrid[upCellIdx];
+                        cell.upCell = upCellPointer;
+                        cell.metalCellNeighbors.push_back(upCellPointer);
+                        cell.upCellIdx = upCellIdx;
 
-    //             if(i != (m_gridWidth - 1)){
-    //                 SignalType rightNieghborSt = metalLayers[metalLayer].canvas[j][i+1];
-    //                 if(rightNieghborSt == SignalType::EMPTY || rightNieghborSt == st){
-    //                     size_t rightCellIdx = cellIdx + 1;
-    //                     cell.rightCell = &cellGrid[rightCellIdx];
-    //                     cell.rightCellIdx = rightCellIdx;
-    //                     addDirection(cell.fullDirection, DirFlagAxis::RIGHT);
-    //                 }
-    //             }
+                        addDirection(cell.fullDirection, DirFlagAxis::UP);
+                        
+                    }
+                }
 
-    //             cell.direction = cell.fulldirection;
-    //         }
-    //     }
-    // }
+                if(j != 0){
+                    SignalType downNieghborSt = metalLayers[metalLayer].canvas[j-1][i];
+                    if(downNieghborSt == SignalType::EMPTY || downNieghborSt == st){
+                        size_t downCellIdx = cellIndex + m_cellGridWidth;
+                        MetalCell *downCellPointer = &cellGrid[downCellIdx];
+                        cell.downCell = downCellPointer;
+                        cell.metalCellNeighbors.push_back(downCellPointer);
+                        cell.downCellIdx = downCellIdx;
+                        addDirection(cell.fullDirection, DirFlagAxis::DOWN);
+                    }
+                }
 
-    // // transfer the marking of via layer onto chamber-related (mdtal/via) data structures
+                if(i != 0){
+                    SignalType leftNieghborSt = metalLayers[metalLayer].canvas[j][i-1];
+                    if(leftNieghborSt == SignalType::EMPTY || leftNieghborSt == st){
+                        size_t leftCellIdx = cellIndex - 1;
+                        MetalCell *leftCellPointer = &cellGrid[leftCellIdx];
+                        cell.leftCell = leftCellPointer;
+                        cell.metalCellNeighbors.push_back(leftCellPointer);
+                        cell.leftCellIdx = leftCellIdx;
+                        addDirection(cell.fullDirection, DirFlagAxis::LEFT);
+                    }
+                }
+
+                if(i != (m_cellGridWidth - 1)){
+                    SignalType rightNieghborSt = metalLayers[metalLayer].canvas[j][i+1];
+                    if(rightNieghborSt == SignalType::EMPTY || rightNieghborSt == st){
+                        size_t rightCellIdx = cellIndex + 1;
+                        MetalCell *rightCellPointer = &cellGrid[rightCellIdx];
+                        cell.rightCell = rightCellPointer;
+                        cell.metalCellNeighbors.push_back(rightCellPointer);
+                        cell.rightCellIdx = rightCellIdx;
+                        addDirection(cell.fullDirection, DirFlagAxis::RIGHT);
+                    }
+                }
+
+            }
+        }
+    }
+
+    // transfer the marking of via layer onto chamber-related (mdtal/via) data structures
     // for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
     //     size_t layerPinCount = 0;
     //     for(int j = 0; j < m_pinHeight; ++j){
