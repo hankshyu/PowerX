@@ -29,9 +29,7 @@
 
 // 3. Texo Library:
 #include "diffusionChamber.hpp"
-
-// forward definition
-class ViaCell;
+#include "viaCell.hpp"
 
 struct MetalCord{
     size_t l;
@@ -46,6 +44,9 @@ std::ostream& operator<<(std::ostream& os, const MetalCord &mc);
 
 class MetalCell : public DiffusionChamber{
 public:
+    len_t canvasMetalLayer;
+    len_t canvasMetalX;
+    len_t canvasMetalY;
 
     std::vector<MetalCell *> metalCellNeighbors;
     std::vector<ViaCell *> viaCellNeighbors;
