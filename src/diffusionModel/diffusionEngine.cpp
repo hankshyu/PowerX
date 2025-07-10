@@ -163,7 +163,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
     // metalCellNeighbors[]
     
     cellGrid.resize(m_cellGrid3DCount);
-    cellGridType.resize(m_cellGrid3DCount, CellType::EMPTY);
 
     for(int metalLayer = 0; metalLayer < m_metalLayerCount; ++metalLayer){
         for(int j = 0; j < m_gridHeight; ++j){
@@ -181,7 +180,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 
                 if(st != SignalType::EMPTY){
                     cell.signal = st;
-                    cellGridType[cellIndex] = (st == SignalType::OBSTACLE)? CellType::OBSTACLES : CellType::PREPLACED;
+                    cell.type = (st == SignalType::OBSTACLE)? CellType::OBSTACLES : CellType::PREPLACED;
                 }
 
                 // add neighbors
@@ -263,20 +262,19 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 CellType cellType;
                 if(st == SignalType::EMPTY){
-                    viaGridType.push_back(CellType::EMPTY);
-                    cellType =  CellType::EMPTY;
+                    cellType = CellType::EMPTY;
 
                 }else{ // preplaced power signals
-                    viaGridType.push_back(CellType::PREPLACED);
                     cellType = CellType::PREPLACED;
                     cell.signal = st;
                 }
+                cell.type = cellType;
 
                 // Link Up direction LL cell
                 size_t upLLCellIdx = calMetalIdx(viaLayer, j, i);
-                CellType upLLCellType = cellGridType[upLLCellIdx];
                 SignalType upLLCellSt = metalLayers[viaLayer].canvas[j][i];
                 MetalCell *upLLCellPointer = &cellGrid[upLLCellIdx];
+                CellType upLLCellType = upLLCellPointer->type;
                 
                 // modify this via cell
                 cell.upLLCell = upLLCellPointer;
@@ -296,9 +294,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Up direction LR cell
                 size_t upLRCellIdx = upLLCellIdx + 1;
-                CellType upLRCellType = cellGridType[upLRCellIdx];
                 SignalType upLRCellSt = metalLayers[viaLayer].canvas[j][i+1];
                 MetalCell *upLRCellPointer = &cellGrid[upLRCellIdx];
+                CellType upLRCellType = upLRCellPointer->type;
 
                 // modify this via cell
                 cell.upLRCell = upLRCellPointer;
@@ -318,9 +316,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Up direction UL cell
                 size_t upULCellIdx = upLLCellIdx + m_cellGridWidth;
-                CellType upULCellType = cellGridType[upULCellIdx];
                 SignalType upULCellSt = metalLayers[viaLayer].canvas[j+1][i];
                 MetalCell *upULCellPointer = &cellGrid[upULCellIdx];
+                CellType upULCellType = upULCellPointer->type;
 
                 // modify this via cell
                 cell.upULCell = upULCellPointer;
@@ -340,9 +338,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Up direction UR cell
                 size_t upURCellIdx = upULCellIdx + 1;
-                CellType upURCellType = cellGridType[upURCellIdx];
                 SignalType upURCellSt = metalLayers[viaLayer].canvas[j+1][i+1];
                 MetalCell *upURCellPointer = &cellGrid[upURCellIdx];
+                CellType upURCellType = upURCellPointer->type;
 
                 // modify this via cell
                 cell.upURCell = upURCellPointer;
@@ -362,9 +360,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Down direction LL cell
                 size_t downLLCellIdx = upLLCellIdx + m_cellGrid2DCount;
-                CellType downLLCellType = cellGridType[downLLCellIdx];
                 SignalType downLLCellSt = metalLayers[viaLayer+1].canvas[j][i];
                 MetalCell *downLLCellPointer = &cellGrid[downLLCellIdx];
+                CellType downLLCellType = downLLCellPointer->type;
 
                 // modify this via cell
                 cell.downLLCell = downLLCellPointer;
@@ -384,9 +382,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Down direction LR cell
                 size_t downLRCellIdx = downLLCellIdx + 1;
-                CellType downLRCellType = cellGridType[downLRCellIdx];
                 SignalType downLRCellSt = metalLayers[viaLayer+1].canvas[j][i+1];
                 MetalCell *downLRCellPointer = &cellGrid[downLRCellIdx];
+                CellType downLRCellType = downLRCellPointer->type;
 
                 // modify this via cell
                 cell.downLRCell = downLRCellPointer;
@@ -407,9 +405,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Down direction UL cell
                 size_t downULCellIdx = downLLCellIdx + m_cellGridWidth;
-                CellType downULCellType = cellGridType[downULCellIdx];
                 SignalType downULCellSt = metalLayers[viaLayer+1].canvas[j+1][i];
                 MetalCell *downULCellPointer = &cellGrid[downULCellIdx];
+                CellType downULCellType = downULCellPointer->type;
 
                 // modify this via cell
                 cell.downULCell = downULCellPointer;
@@ -428,9 +426,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
                 // Link Down direction UR cell
                 size_t downURCellIdx = downULCellIdx + 1;
-                CellType downURCellType = cellGridType[downURCellIdx];
                 SignalType downURCellSt = metalLayers[viaLayer+1].canvas[j+1][i+1];
                 MetalCell *downURCellPointer = &cellGrid[downURCellIdx];
+                CellType downURCellType = downURCellPointer->type;
 
                 // modify this via cell
                 cell.downURCell = downURCellPointer;
@@ -459,7 +457,52 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 }
 
 void DiffusionEngine::fillEnclosedRegions(){
+    
+    auto inBounds = [&](int x, int y){
+        return y >= 0 && y < m_cellGridHeight && x >= 0 && x < m_cellGridWidth;
+    };
 
+    for(int layer = 0; layer < m_cellGridLayers; ++layer){
+        std::vector<std::vector<bool>> visited (m_cellGridHeight, std::vector<bool>(m_cellGridWidth, false));
+        for(int y = 0; y < m_cellGridHeight; ++y){
+            for(int x = 0; x < m_cellGridWidth; ++x){
+                size_t cellIdx = calMetalIdx(layer, y, x);
+                MetalCell &cell = cellGrid[cellIdx];
+                if(cell.type != CellType::EMPTY || visited[y][x]) continue;
+
+                std::queue<Cord> q;
+                std::vector<Cord> region;
+                std::unordered_set<SignalType> borderSignals;
+                bool touchesBoundary = false;
+
+                q.push(Cord(x, y));
+                visited[y][x] = true;
+                region.emplace_back(x, y);
+
+                while(!q.empty()){
+                    Cord c = q.front(); 
+                    q.pop();
+
+                    // todo
+
+                }
+
+                if(borderSignals.size() == 1){
+                    SignalType fillType = *borderSignals.begin();
+                    // fill in the borders
+                    for(const Cord &p : region){
+                        size_t fillCellIdx = calMetalIdx(layer, p.y(), p.x());
+                        MetalCell &fillCell = cellGrid[fillCellIdx];
+                        fillCell.type = CellType::MARKED;
+                        fillCell.signal = fillType;
+                        
+                        // todo
+
+                    }
+                }
+            }
+        }
+    }
 }
 
 

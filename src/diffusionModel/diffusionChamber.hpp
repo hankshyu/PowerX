@@ -62,6 +62,7 @@ public:
     len_t canvasX;
     len_t canvasY;
 
+    CellType type;
     SignalType signal;
     DirFlag fullDirection;
 

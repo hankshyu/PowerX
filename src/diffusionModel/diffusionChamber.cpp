@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct){
 
 DiffusionChamber::DiffusionChamber(): index(SIZE_T_INVALID), metalViaType(DiffusionChamberType::UNKNOWN),
     canvasLayer(LEN_T_MIN), canvasX(LEN_T_MIN), canvasY(LEN_T_MIN),
-    signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY) {}
+    type(CellType::EMPTY), signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY) {}
 
 int DiffusionChamber::getParticlesCount(CellLabel label){
     for(int i = 0; i < cellLabels.size(); ++i){

@@ -54,11 +54,9 @@ public:
     std::unordered_map<SignalType, std::vector<CellLabel>> sigTypeToAllCellLabels;
 
     std::vector<MetalCell> cellGrid;
-    std::vector<CellType> cellGridType;
     std::vector<CellLabel> cellGridLabel;
 
     std::vector<ViaCell> viaGrid;
-    std::vector<CellType> viaGridType;
     std::vector<CellLabel> viaGridlabel;
 
     DiffusionEngine(const std::string &fileName);

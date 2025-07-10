@@ -190,7 +190,7 @@ void PowerDistributionNetwork::fillEnclosedRegionsonCanvas(){
     std::vector<std::vector<bool>> visited;
     const std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};
 
-    auto inBounds = [&](int y, int x) {
+    auto inBounds = [&](int x, int y) {
         return y >= 0 && y < m_gridHeight && x >= 0 && x < m_gridWidth;
     };
 
@@ -217,7 +217,7 @@ void PowerDistributionNetwork::fillEnclosedRegionsonCanvas(){
                         int ny = c.y() + d.y();
                         int nx = c.x() + d.x();
 
-                        if (!inBounds(ny, nx)) {
+                        if (!inBounds(nx, ny)) {
                             continue;
                         }
 
