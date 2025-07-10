@@ -187,49 +187,49 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 // add neighbors
                 if(j != (m_cellGridHeight - 1)){
                     SignalType northNieghborSt = metalLayers[metalLayer].canvas[j+1][i];
+                    size_t northCellIdx = cellIndex + m_cellGridWidth;
+                    MetalCell *northCellPointer = &cellGrid[northCellIdx];
+                    cell.northCell = northCellPointer;
+                    cell.northCellIdx = northCellIdx;
+                    addDirection(cell.fullDirection, DirFlagAxis::NORTH);
                     if(northNieghborSt == SignalType::EMPTY || northNieghborSt == st){
-                        size_t northCellIdx = cellIndex + m_cellGridWidth;
-                        MetalCell *northCellPointer = &cellGrid[northCellIdx];
-                        cell.northCell = northCellPointer;
                         cell.metalCellNeighbors.push_back(northCellPointer);
-                        cell.northCellIdx = northCellIdx;
-                        addDirection(cell.fullDirection, DirFlagAxis::NORTH);
                     }
                 }
 
                 if(j != 0){
                     SignalType southNieghborSt = metalLayers[metalLayer].canvas[j-1][i];
+                    size_t southCellIdx = cellIndex - m_cellGridWidth;
+                    MetalCell *southCellPointer = &cellGrid[southCellIdx];
+                    cell.southCell = southCellPointer;
+                    cell.southCellIdx = southCellIdx;
+                    addDirection(cell.fullDirection, DirFlagAxis::SOUTH);
                     if(southNieghborSt == SignalType::EMPTY || southNieghborSt == st){
-                        size_t southCellIdx = cellIndex - m_cellGridWidth;
-                        MetalCell *southCellPointer = &cellGrid[southCellIdx];
-                        cell.southCell = southCellPointer;
                         cell.metalCellNeighbors.push_back(southCellPointer);
-                        cell.southCellIdx = southCellIdx;
-                        addDirection(cell.fullDirection, DirFlagAxis::SOUTH);
                     }
                 }
 
                 if(i != 0){
                     SignalType westNieghborSt = metalLayers[metalLayer].canvas[j][i-1];
+                    size_t westCellIdx = cellIndex - 1;
+                    MetalCell *westCellPointer = &cellGrid[westCellIdx];
+                    cell.westCell = westCellPointer;
+                    cell.westCellIdx = westCellIdx;
+                    addDirection(cell.fullDirection, DirFlagAxis::WEST);
                     if(westNieghborSt == SignalType::EMPTY || westNieghborSt == st){
-                        size_t westCellIdx = cellIndex - 1;
-                        MetalCell *westCellPointer = &cellGrid[westCellIdx];
-                        cell.westCell = westCellPointer;
                         cell.metalCellNeighbors.push_back(westCellPointer);
-                        cell.westCellIdx = westCellIdx;
-                        addDirection(cell.fullDirection, DirFlagAxis::WEST);
                     }
                 }
 
                 if(i != (m_cellGridWidth - 1)){
                     SignalType eastNieghborSt = metalLayers[metalLayer].canvas[j][i+1];
+                    size_t eastCellIdx = cellIndex + 1;
+                    MetalCell *eastCellPointer = &cellGrid[eastCellIdx];
+                    cell.eastCell = eastCellPointer;
+                    cell.eastCellIdx = eastCellIdx;
+                    addDirection(cell.fullDirection, DirFlagAxis::EAST);
                     if(eastNieghborSt == SignalType::EMPTY || eastNieghborSt == st){
-                        size_t eastCellIdx = cellIndex + 1;
-                        MetalCell *eastCellPointer = &cellGrid[eastCellIdx];
-                        cell.eastCell = eastCellPointer;
                         cell.metalCellNeighbors.push_back(eastCellPointer);
-                        cell.eastCellIdx = eastCellIdx;
-                        addDirection(cell.fullDirection, DirFlagAxis::EAST);
                     }
                 }
             }
@@ -275,182 +275,181 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 // Link Up direction LL cell
                 size_t upLLCellIdx = calMetalIdx(viaLayer, j, i);
                 CellType upLLCellType = cellGridType[upLLCellIdx];
-                if(upLLCellType != CellType::OBSTACLES){
-                    SignalType upLLCellSt = metalLayers[viaLayer].canvas[j][i];
-                    if((cellType != CellType::PREPLACED) || (upLLCellType != CellType::PREPLACED) || (st == upLLCellSt)){
-                        MetalCell *upLLCellPointer = &cellGrid[upLLCellIdx];
+                SignalType upLLCellSt = metalLayers[viaLayer].canvas[j][i];
+                MetalCell *upLLCellPointer = &cellGrid[upLLCellIdx];
+                
+                // modify this via cell
+                cell.upLLCell = upLLCellPointer;
+                cell.upLLCellIdx = upLLCellIdx; 
+                addDirection(cell.fullDirection, DirFlagViaAxis::UPLL);
 
-                        // modify this via cell
-                        cell.upLLCell = upLLCellPointer;
-                        cell.neighbors.push_back(upLLCellPointer);
-                        cell.upLLCellIdx = upLLCellIdx; 
-                        addDirection(cell.fullDirection, DirFlagViaAxis::UPLL);
-
-                        // modify the metal cell via cell is linking to
-                        upLLCellPointer->downCell = &cell;
-                        upLLCellPointer->viaCellNeighbors.push_back(&cell);
-                        upLLCellPointer->downCellIdx = cellIndex;
-                        addDirection(upLLCellPointer->fullDirection, DirFlagAxis::DOWN);
-                    }
+                // modify the metal cell via cell is linking to
+                upLLCellPointer->downCell = &cell;
+                upLLCellPointer->downCellIdx = cellIndex;
+                addDirection(upLLCellPointer->fullDirection, DirFlagAxis::DOWN);
+                
+                if((upLLCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (upLLCellType != CellType::PREPLACED) || (st == upLLCellSt))){
+                    cell.neighbors.push_back(upLLCellPointer);
+                    upLLCellPointer->viaCellNeighbors.push_back(&cell);
                 }
+
 
                 // Link Up direction LR cell
                 size_t upLRCellIdx = upLLCellIdx + 1;
                 CellType upLRCellType = cellGridType[upLRCellIdx];
-                if(upLRCellType != CellType::OBSTACLES){
-                    SignalType upLRCellSt = metalLayers[viaLayer].canvas[j][i+1];
-                    if((cellType != CellType::PREPLACED) || (upLLCellType != CellType::PREPLACED) || (st == upLRCellSt)){
-                        MetalCell *upLRCellPointer = &cellGrid[upLRCellIdx];
+                SignalType upLRCellSt = metalLayers[viaLayer].canvas[j][i+1];
+                MetalCell *upLRCellPointer = &cellGrid[upLRCellIdx];
 
-                        // modify this via cell
-                        cell.upLRCell = upLRCellPointer;
-                        cell.neighbors.push_back(upLRCellPointer);
-                        cell.upLRCellIdx = upLRCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::UPLR);
+                // modify this via cell
+                cell.upLRCell = upLRCellPointer;
+                cell.upLRCellIdx = upLRCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::UPLR);
 
-                        // modify the metal cell via cell is linking to
-                        upLRCellPointer->downCell = &cell;
-                        upLRCellPointer->viaCellNeighbors.push_back(&cell);
-                        upLRCellPointer->downCellIdx = cellIndex;
-                        addDirection(upLRCellPointer->fullDirection, DirFlagAxis::DOWN);
-                    }
+                // modify the metal cell via cell is linking to
+                upLRCellPointer->downCell = &cell;
+                upLRCellPointer->downCellIdx = cellIndex;
+                addDirection(upLRCellPointer->fullDirection, DirFlagAxis::DOWN);
+
+                if((upLRCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (upLLCellType != CellType::PREPLACED) || (st == upLRCellSt))){
+                    cell.neighbors.push_back(upLRCellPointer);
+                    upLRCellPointer->viaCellNeighbors.push_back(&cell);
                 }
+
 
                 // Link Up direction UL cell
                 size_t upULCellIdx = upLLCellIdx + m_cellGridWidth;
                 CellType upULCellType = cellGridType[upULCellIdx];
-                if(upULCellType != CellType::OBSTACLES){
-                    SignalType upULCellSt = metalLayers[viaLayer].canvas[j+1][i];
-                    if((cellType != CellType::PREPLACED) || (upULCellType != CellType::PREPLACED) || (st == upULCellSt)){
-                        MetalCell *upULCellPointer = &cellGrid[upULCellIdx];
+                SignalType upULCellSt = metalLayers[viaLayer].canvas[j+1][i];
+                MetalCell *upULCellPointer = &cellGrid[upULCellIdx];
 
-                        // modify this via cell
-                        cell.upULCell = upULCellPointer;
-                        cell.neighbors.push_back(upULCellPointer);
-                        cell.upLRCellIdx = upULCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::UPUL);
+                // modify this via cell
+                cell.upULCell = upULCellPointer;
+                cell.upULCellIdx = upULCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::UPUL);
 
-                        // modify the metal cell via cell is linking to
-                        upULCellPointer->downCell = &cell;
-                        upULCellPointer->viaCellNeighbors.push_back(&cell);
-                        upULCellPointer->downCellIdx = cellIndex;
-                        addDirection(upULCellPointer->fullDirection, DirFlagAxis::DOWN);
-                    }
+                // modify the metal cell via cell is linking to
+                upULCellPointer->downCell = &cell;
+                upULCellPointer->downCellIdx = cellIndex;
+                addDirection(upULCellPointer->fullDirection, DirFlagAxis::DOWN);
+
+                if((upULCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (upULCellType != CellType::PREPLACED) || (st == upULCellSt))){
+                    cell.neighbors.push_back(upULCellPointer);
+                    upULCellPointer->viaCellNeighbors.push_back(&cell);
                 }
+
 
                 // Link Up direction UR cell
                 size_t upURCellIdx = upULCellIdx + 1;
                 CellType upURCellType = cellGridType[upURCellIdx];
-                if(upURCellType != CellType::OBSTACLES){
-                    SignalType upURCellSt = metalLayers[viaLayer].canvas[j+1][i+1];
-                    if((cellType != CellType::PREPLACED) || (upURCellType != CellType::PREPLACED) || (st == upURCellSt)){
-                        MetalCell *upURCellPointer = &cellGrid[upURCellIdx];
+                SignalType upURCellSt = metalLayers[viaLayer].canvas[j+1][i+1];
+                MetalCell *upURCellPointer = &cellGrid[upURCellIdx];
 
-                        // modify this via cell
-                        cell.upURCell = upURCellPointer;
-                        cell.neighbors.push_back(upURCellPointer);
-                        cell.upLRCellIdx = upURCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::UPUR);
+                // modify this via cell
+                cell.upURCell = upURCellPointer;
+                cell.upURCellIdx = upURCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::UPUR);
 
-                        // modify the metal cell via cell is linking to
-                        upURCellPointer->downCell = &cell;
-                        upURCellPointer->viaCellNeighbors.push_back(&cell);
-                        upURCellPointer->downCellIdx = cellIndex;
-                        addDirection(upURCellPointer->fullDirection, DirFlagAxis::DOWN);
-                    }
+                // modify the metal cell via cell is linking to
+                upURCellPointer->downCell = &cell;
+                upURCellPointer->downCellIdx = cellIndex;
+                addDirection(upURCellPointer->fullDirection, DirFlagAxis::DOWN);
+
+                if((upURCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (upURCellType != CellType::PREPLACED) || (st == upURCellSt))){
+                    cell.neighbors.push_back(upURCellPointer);
+                    upURCellPointer->viaCellNeighbors.push_back(&cell);
                 }
+
 
                 // Link Down direction LL cell
                 size_t downLLCellIdx = upLLCellIdx + m_cellGrid2DCount;
                 CellType downLLCellType = cellGridType[downLLCellIdx];
-                if(downLLCellType != CellType::OBSTACLES){
-                    SignalType downLLCellSt = metalLayers[viaLayer+1].canvas[j][i];
-                    if((cellType != CellType::PREPLACED) || (downLLCellType != CellType::PREPLACED) || (st == downLLCellSt)){
-                        MetalCell *downLLCellPointer = &cellGrid[downLLCellIdx];
+                SignalType downLLCellSt = metalLayers[viaLayer+1].canvas[j][i];
+                MetalCell *downLLCellPointer = &cellGrid[downLLCellIdx];
 
-                        // modify this via cell
-                        cell.downLLCell = downLLCellPointer;
-                        cell.neighbors.push_back(downLLCellPointer);
-                        cell.downLLCellIdx = downLLCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLL);
+                // modify this via cell
+                cell.downLLCell = downLLCellPointer;
+                cell.downLLCellIdx = downLLCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLL);
 
-                        // modify the metal cell via cell is linking to
-                        downLLCellPointer->upCell = &cell;
-                        downLLCellPointer->viaCellNeighbors.push_back(&cell);
-                        downLLCellPointer->upCellIdx = cellIndex;
-                        addDirection(downLLCellPointer->fullDirection, DirFlagAxis::UP);
-                    }
+                // modify the metal cell via cell is linking to
+                downLLCellPointer->upCell = &cell;
+                downLLCellPointer->upCellIdx = cellIndex;
+                addDirection(downLLCellPointer->fullDirection, DirFlagAxis::UP);
+
+                if((downLLCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (downLLCellType != CellType::PREPLACED) || (st == downLLCellSt))){
+                    cell.neighbors.push_back(downLLCellPointer);
+                    downLLCellPointer->viaCellNeighbors.push_back(&cell);
                 }
+
 
                 // Link Down direction LR cell
                 size_t downLRCellIdx = downLLCellIdx + 1;
                 CellType downLRCellType = cellGridType[downLRCellIdx];
-                if(downLRCellType != CellType::OBSTACLES){
-                    SignalType downLRCellSt = metalLayers[viaLayer+1].canvas[j][i+1];
-                    if((cellType != CellType::PREPLACED) || (downLRCellType != CellType::PREPLACED) || (st == downLRCellSt)){
-                        MetalCell *downLRCellPointer = &cellGrid[downLRCellIdx];
+                SignalType downLRCellSt = metalLayers[viaLayer+1].canvas[j][i+1];
+                MetalCell *downLRCellPointer = &cellGrid[downLRCellIdx];
 
-                        // modify this via cell
-                        cell.downLRCell = downLRCellPointer;
-                        cell.neighbors.push_back(downLRCellPointer);
-                        cell.downLRCellIdx = downLRCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLR);
+                // modify this via cell
+                cell.downLRCell = downLRCellPointer;
+                cell.downLRCellIdx = downLRCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLR);
 
-                        // modify the metal cell via cell is linking to
-                        downLRCellPointer->upCell = &cell;
-                        downLRCellPointer->viaCellNeighbors.push_back(&cell);
-                        downLRCellPointer->upCellIdx = cellIndex;
-                        addDirection(downLRCellPointer->fullDirection, DirFlagAxis::UP);
-                    }
+                // modify the metal cell via cell is linking to
+                downLRCellPointer->upCell = &cell;
+                downLRCellPointer->upCellIdx = cellIndex;
+                addDirection(downLRCellPointer->fullDirection, DirFlagAxis::UP);
+
+                if((downLRCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (downLRCellType != CellType::PREPLACED) || (st == downLRCellSt))){
+                    downLRCellPointer->viaCellNeighbors.push_back(&cell);
+                    cell.neighbors.push_back(downLRCellPointer);
                 }
+
+
 
                 // Link Down direction UL cell
                 size_t downULCellIdx = downLLCellIdx + m_cellGridWidth;
                 CellType downULCellType = cellGridType[downULCellIdx];
-                if(downULCellType != CellType::OBSTACLES){
-                    SignalType downULCellSt = metalLayers[viaLayer+1].canvas[j+1][i];
-                    if((cellType != CellType::PREPLACED) || (downULCellType != CellType::PREPLACED) || (st == downULCellSt)){
-                        MetalCell *downULCellPointer = &cellGrid[downULCellIdx];
+                SignalType downULCellSt = metalLayers[viaLayer+1].canvas[j+1][i];
+                MetalCell *downULCellPointer = &cellGrid[downULCellIdx];
 
-                        // modify this via cell
-                        cell.downULCell = downULCellPointer;
-                        cell.neighbors.push_back(downULCellPointer);
-                        cell.downULCellIdx = downULCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUL);
+                // modify this via cell
+                cell.downULCell = downULCellPointer;
+                cell.downULCellIdx = downULCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUL);
 
-                        // modify the metal cell via cell is linking to
-                        downULCellPointer->upCell = &cell;
-                        downULCellPointer->viaCellNeighbors.push_back(&cell);
-                        downULCellPointer->upCellIdx = cellIndex;
-                        addDirection(downULCellPointer->fullDirection, DirFlagAxis::UP);
-                    }
+                // modify the metal cell via cell is linking to
+                downULCellPointer->upCell = &cell;
+                downULCellPointer->upCellIdx = cellIndex;
+                addDirection(downULCellPointer->fullDirection, DirFlagAxis::UP);
+
+                if((downULCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (downULCellType != CellType::PREPLACED) || (st == downULCellSt))){
+                    cell.neighbors.push_back(downULCellPointer);
+                    downULCellPointer->viaCellNeighbors.push_back(&cell);
                 }
 
                 // Link Down direction UR cell
                 size_t downURCellIdx = downULCellIdx + 1;
                 CellType downURCellType = cellGridType[downURCellIdx];
-                if(downURCellType != CellType::OBSTACLES){
-                    SignalType downURCellSt = metalLayers[viaLayer+1].canvas[j+1][i+1];
-                    if((cellType != CellType::PREPLACED) || (downURCellType != CellType::PREPLACED) || (st == downURCellSt)){
-                        MetalCell *downURCellPointer = &cellGrid[downURCellIdx];
+                SignalType downURCellSt = metalLayers[viaLayer+1].canvas[j+1][i+1];
+                MetalCell *downURCellPointer = &cellGrid[downURCellIdx];
 
-                        // modify this via cell
-                        cell.downURCell = downURCellPointer;
-                        cell.neighbors.push_back(downURCellPointer);
-                        cell.downURCellIdx = downURCellIdx;
-                        addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUR);
+                // modify this via cell
+                cell.downURCell = downURCellPointer;
+                cell.downURCellIdx = downURCellIdx;
+                addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUR);
 
-                        // modify the metal cell via cell is linking to
-                        downURCellPointer->upCell = &cell;
-                        downURCellPointer->viaCellNeighbors.push_back(&cell);
-                        downURCellPointer->upCellIdx = cellIndex;
-                        addDirection(downURCellPointer->fullDirection, DirFlagAxis::UP);
-                    }
+                // modify the metal cell via cell is linking to
+                downURCellPointer->upCell = &cell;
+                downURCellPointer->upCellIdx = cellIndex;
+                addDirection(downURCellPointer->fullDirection, DirFlagAxis::UP);
+
+
+                if((downURCellType != CellType::OBSTACLES) && ((cellType != CellType::PREPLACED) || (downURCellType != CellType::PREPLACED) || (st == downURCellSt))){
+                    cell.neighbors.push_back(downURCellPointer);
+                    downURCellPointer->viaCellNeighbors.push_back(&cell);
                 }
 
                 // increment cellIndex for the next available
                 cellIndex++;
-
             }
         }
         
@@ -459,7 +458,9 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
     }
 }
 
-void fillEnclosedRegions();
+void DiffusionEngine::fillEnclosedRegions(){
+
+}
 
 
 
