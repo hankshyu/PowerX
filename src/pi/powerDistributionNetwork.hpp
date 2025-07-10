@@ -76,6 +76,7 @@ public:
     bool checkOnePiece(int layer);
     bool checkPinPadValid(int layer);
 
+    void fillEnclosedRegionsonCanvas();
 
     void assignVias();
     void removeFloatingPlanes(int layer);

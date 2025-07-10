@@ -186,6 +186,64 @@ bool PowerDistributionNetwork::checkOnePiece(int metalLayerIdx){
     return true;
 }
 
+void PowerDistributionNetwork::fillEnclosedRegionsonCanvas(){
+    std::vector<std::vector<bool>> visited;
+    const std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};
+
+    auto inBounds = [&](int y, int x) {
+        return y >= 0 && y < m_gridHeight && x >= 0 && x < m_gridWidth;
+    };
+
+    for (int layer = 0; layer < m_metalLayerCount ; ++layer) {
+        visited.assign(m_gridHeight, std::vector<bool>(m_gridWidth, false));
+        
+        for (int y = 0; y < m_gridHeight; ++y) {
+            for (int x = 0; x < m_gridWidth; ++x) {
+                if (metalLayers[layer].canvas[y][x] != SignalType::EMPTY || visited[y][x]) continue;
+
+                std::queue<Cord> q;
+                std::vector<Cord> region;
+                std::unordered_set<SignalType> borderSignals;
+                bool touchesBoundary = false;
+
+                q.push(Cord(x, y));
+                visited[y][x] = true;
+                region.emplace_back(x, y);
+
+                while (!q.empty()) {
+                    Cord c = q.front(); q.pop();
+
+                    for (const Cord& d : directions) {
+                        int ny = c.y() + d.y();
+                        int nx = c.x() + d.x();
+
+                        if (!inBounds(ny, nx)) {
+                            continue;
+                        }
+
+                        SignalType neighborType = metalLayers[layer].canvas[ny][nx];
+
+                        if (neighborType == SignalType::EMPTY && !visited[ny][nx]) {
+                            visited[ny][nx] = true;
+                            q.push(Cord(nx, ny));
+                            region.emplace_back(nx, ny);
+                        } else if (neighborType != SignalType::EMPTY && neighborType != SignalType::OBSTACLE) {
+                                borderSignals.insert(neighborType);
+                        }
+                    }
+                }
+
+                if (borderSignals.size() == 1) {
+                    SignalType fillType = *borderSignals.begin();
+                    for (const Cord& p : region) {
+                        metalLayers[layer].canvas[p.y()][p.x()] = fillType;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void PowerDistributionNetwork::assignVias(){
     for(int vLayer = 0; vLayer < m_viaLayerCount; ++vLayer){
         int upMetalLayerIndex = vLayer;
@@ -435,8 +493,8 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
                 for(const Line &candl : candLines){
                     if(collectedLines.count(candl) != 0) continue;
                     collectedLines.insert(candl);
-                    ofs << "Xedge" << edgeCounter++ << "_" << pointToNode(mLayerIdx, candl.getLow()) << "_" << pointToNode(mLayerIdx, candl.getHigh()) << " ";
-                    ofs << pointToNode(mLayerIdx, candl.getLow()) << " " << pointToNode(mLayerIdx, candl.getHigh()) << " edge" << std::endl;
+                    ofs << "Xedge" << edgeCounter++ << "_" << pointToNode(mLayerIdx, candl.low()) << "_" << pointToNode(mLayerIdx, candl.high()) << " ";
+                    ofs << pointToNode(mLayerIdx, candl.low()) << " " << pointToNode(mLayerIdx, candl.high()) << " edge" << std::endl;
                 }
             }
         }

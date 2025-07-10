@@ -26,10 +26,10 @@ typedef uint8_t DirFlag;
 enum class DirFlagAxis : uint8_t {
     UP      = 0x01,
     DOWN    = 0x02,
-    LEFT    = 0x04,
-    RIGHT   = 0x08,
-    TOP     = 0x10,
-    BOTTOM  = 0x20
+    NORTH   = 0x04,
+    SOUTH   = 0x08,
+    EAST    = 0x10,
+    WEST    = 0x20
 };
 
 enum class DirFlagViaAxis : uint8_t {
@@ -53,8 +53,8 @@ inline constexpr DirFlag toFlag(DirFlagViaAxis dir) {
 
 // Grouped masks
 constexpr DirFlag DIRFLAG_EMPTY = 0x00;
-constexpr DirFlag CELL_ALL_2D_DIR = toFlag(DirFlagAxis::UP) | toFlag(DirFlagAxis::DOWN) |toFlag(DirFlagAxis::LEFT) | toFlag(DirFlagAxis::RIGHT);
-constexpr DirFlag CELL_ALL_3D_DIR = CELL_ALL_2D_DIR | toFlag(DirFlagAxis::TOP) | toFlag(DirFlagAxis::BOTTOM);
+constexpr DirFlag CELL_ALL_2D_DIR = toFlag(DirFlagAxis::NORTH) | toFlag(DirFlagAxis::SOUTH) |toFlag(DirFlagAxis::EAST) | toFlag(DirFlagAxis::WEST);
+constexpr DirFlag CELL_ALL_3D_DIR = CELL_ALL_2D_DIR | toFlag(DirFlagAxis::UP) | toFlag(DirFlagAxis::DOWN);
 
 constexpr DirFlag VIA_ALL_UP_DIR = toFlag(DirFlagViaAxis::UPLL) | toFlag(DirFlagViaAxis::UPUL) | toFlag(DirFlagViaAxis::UPLR) | toFlag(DirFlagViaAxis::UPUR);
 constexpr DirFlag VIA_ALL_DOWN_DIR = toFlag(DirFlagViaAxis::DOWNLL) | toFlag(DirFlagViaAxis::DOWNUL) | toFlag(DirFlagViaAxis::DOWNLR) | toFlag(DirFlagViaAxis::DOWNUR);

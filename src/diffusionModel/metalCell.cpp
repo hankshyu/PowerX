@@ -35,7 +35,7 @@ std::ostream& operator<<(std::ostream& os, const MetalCord &mc){
 }
 
 MetalCell::MetalCell(): DiffusionChamber(),
-    upCell(nullptr), downCell(nullptr), leftCell(nullptr), rightCell(nullptr), 
-    topCell(nullptr), bottomCell(nullptr),
-    upCellIdx(SIZE_T_INVALID), downCellIdx(SIZE_T_INVALID), leftCellIdx(SIZE_T_INVALID), rightCellIdx(SIZE_T_INVALID),
-    topCellIdx(SIZE_T_INVALID), bottomCellIdx(SIZE_T_INVALID) {}
+    northCell(nullptr), southCell(nullptr), eastCell(nullptr), westCell(nullptr), 
+    upCell(nullptr), downCell(nullptr),
+    northCellIdx(SIZE_T_INVALID), southCellIdx(SIZE_T_INVALID), eastCellIdx(SIZE_T_INVALID), westCellIdx(SIZE_T_INVALID),
+    upCellIdx(SIZE_T_INVALID), downCellIdx(SIZE_T_INVALID) {}

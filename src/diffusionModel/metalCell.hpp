@@ -44,28 +44,25 @@ std::ostream& operator<<(std::ostream& os, const MetalCord &mc);
 
 class MetalCell : public DiffusionChamber{
 public:
-    len_t canvasMetalLayer;
-    len_t canvasMetalX;
-    len_t canvasMetalY;
 
     std::vector<MetalCell *> metalCellNeighbors;
     std::vector<ViaCell *> viaCellNeighbors;
 
-    MetalCell *upCell;
-    MetalCell *downCell;
-    MetalCell *leftCell;
-    MetalCell *rightCell;
+    MetalCell *northCell;
+    MetalCell *southCell;
+    MetalCell *eastCell;
+    MetalCell *westCell;
 
-    ViaCell *topCell;
-    ViaCell *bottomCell;
+    ViaCell *upCell;
+    ViaCell *downCell;
+
+    size_t northCellIdx;
+    size_t southCellIdx;
+    size_t eastCellIdx;
+    size_t westCellIdx;
 
     size_t upCellIdx;
     size_t downCellIdx;
-    size_t leftCellIdx;
-    size_t rightCellIdx;
-
-    size_t topCellIdx;
-    size_t bottomCellIdx;
 
     MetalCell();
 };

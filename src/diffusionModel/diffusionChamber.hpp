@@ -29,6 +29,7 @@
 // 2. Boost Library:
 
 // 3. Texo Library:
+#include "units.hpp"
 #include "signalType.hpp"
 #include "dirFlags.hpp"
 
@@ -45,8 +46,21 @@ enum class CellType : uint8_t{
 
 std::ostream& operator<<(std::ostream& os, CellType ct);
 
+enum class DiffusionChamberType : uint8_t{
+    UNKNOWN = 0,
+    METAL = 1,
+    VIA = 2
+};
+
+std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct);
+
 class DiffusionChamber{
 public:
+    size_t index;
+    DiffusionChamberType metalViaType;
+    len_t canvasLayer;
+    len_t canvasX;
+    len_t canvasY;
 
     SignalType signal;
     DirFlag fullDirection;
@@ -63,6 +77,16 @@ public:
     void removeParticles(CellLabel label, int particleCount);
     void clearParticles(CellLabel label);
 };
+
+// Cord class hash function implementations
+namespace std {
+    template <>
+    struct hash<DiffusionChamber> {
+        size_t operator()(const DiffusionChamber &key) const;
+    };
+
+}  // namespace std
+
 
 
 #endif // __DIFFUSION_CHAMBER_H__

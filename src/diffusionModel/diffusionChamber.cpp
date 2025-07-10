@@ -24,6 +24,7 @@
 #include <vector>
 
 // 2. Boost Library:
+#include "boost/functional/hash.hpp"
 
 // 3. Texo Library:
 #include "diffusionChamber.hpp"
@@ -51,7 +52,26 @@ std::ostream& operator<<(std::ostream& os, CellType ct){
     }
 }
 
-DiffusionChamber::DiffusionChamber(): signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY) {}
+std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct){
+        switch (dct){
+        case DiffusionChamberType::UNKNOWN:
+            return os << "DiffusionChamberType::EMPTY";
+            break;
+        case DiffusionChamberType::METAL:
+            return os << "DiffusionChamberType::OBSTACLES";
+            break;
+        case DiffusionChamberType::VIA:
+            return os << "DiffusionChamberType::PREPLACED";
+            break;
+        default:
+            return os;
+            break;
+    }
+}
+
+DiffusionChamber::DiffusionChamber(): index(SIZE_T_INVALID), metalViaType(DiffusionChamberType::UNKNOWN),
+    canvasLayer(LEN_T_MIN), canvasX(LEN_T_MIN), canvasY(LEN_T_MIN),
+    signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY) {}
 
 int DiffusionChamber::getParticlesCount(CellLabel label){
     for(int i = 0; i < cellLabels.size(); ++i){
@@ -102,4 +122,11 @@ void DiffusionChamber::clearParticles(CellLabel label){
             return;
         }
     }
+}
+
+size_t std::hash<DiffusionChamber>::operator()(const DiffusionChamber &key) const {
+    std::size_t seed = 0;
+    boost::hash_combine(seed, key.metalViaType);
+    boost::hash_combine(seed, key.index);
+    return seed;
 }
