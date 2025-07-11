@@ -228,7 +228,7 @@ void PowerDistributionNetwork::fillEnclosedRegionsonCanvas(){
                             q.push(Cord(nx, ny));
                             region.emplace_back(nx, ny);
                         } else if (neighborType != SignalType::EMPTY && neighborType != SignalType::OBSTACLE) {
-                                borderSignals.insert(neighborType);
+                            borderSignals.insert(neighborType);
                         }
                     }
                 }

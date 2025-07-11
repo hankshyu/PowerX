@@ -56,15 +56,18 @@ std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct);
 
 class DiffusionChamber{
 public:
-    size_t index;
+    
     DiffusionChamberType metalViaType;
     len_t canvasLayer;
     len_t canvasX;
     len_t canvasY;
 
+    DirFlag fullDirection;
+
     CellType type;
     SignalType signal;
-    DirFlag fullDirection;
+
+    size_t index;
 
     std::vector<CellLabel> cellLabels;
     std::vector<int> cellParticles;

@@ -91,7 +91,8 @@ public:
     void initialiseGraphWithPreplaced();
 
     void fillEnclosedRegions();
-    void markHalfOccupiedPins();
+    void markHalfOccupiedMetalsAndPins();
+    void linkNeighbors();
     void initialiseGraph();
     
 };

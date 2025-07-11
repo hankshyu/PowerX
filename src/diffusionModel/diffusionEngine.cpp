@@ -458,17 +458,16 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
 void DiffusionEngine::fillEnclosedRegions(){
     
-    auto inBounds = [&](int x, int y){
-        return y >= 0 && y < m_cellGridHeight && x >= 0 && x < m_cellGridWidth;
-    };
-
     for(int layer = 0; layer < m_cellGridLayers; ++layer){
         std::vector<std::vector<bool>> visited (m_cellGridHeight, std::vector<bool>(m_cellGridWidth, false));
         for(int y = 0; y < m_cellGridHeight; ++y){
             for(int x = 0; x < m_cellGridWidth; ++x){
                 size_t cellIdx = calMetalIdx(layer, y, x);
-                MetalCell &cell = cellGrid[cellIdx];
-                if(cell.type != CellType::EMPTY || visited[y][x]) continue;
+                MetalCell *cellPointer = &cellGrid[cellIdx];
+                
+                if(cellPointer->type != CellType::EMPTY || visited[y][x]) continue;
+                
+                SignalType cellSignalType = cellPointer->signal;
 
                 std::queue<Cord> q;
                 std::vector<Cord> region;
@@ -483,8 +482,23 @@ void DiffusionEngine::fillEnclosedRegions(){
                     Cord c = q.front(); 
                     q.pop();
 
-                    // todo
+                    std::vector<MetalCell *> neighbors;
+                    if(cellPointer->northCell != nullptr) neighbors.push_back(cellPointer->northCell);
+                    if(cellPointer->southCell != nullptr) neighbors.push_back(cellPointer->southCell);
+                    if(cellPointer->eastCell != nullptr) neighbors.push_back(cellPointer->eastCell);
+                    if(cellPointer->westCell != nullptr) neighbors.push_back(cellPointer->westCell);
 
+                    for(MetalCell *mc : neighbors){
+                        SignalType mcType = mc->signal;
+                        if((mcType == SignalType::EMPTY) && (!visited[mc->canvasY][mc->canvasX])){
+                            visited[mc->canvasY][mc->canvasX] = true;
+                            q.emplace(mc->canvasX, mc->canvasY);
+                            region.emplace_back(mc->canvasX, mc->canvasY);
+
+                        }else if(cellSignalType != SignalType::EMPTY && mcType != SignalType::OBSTACLE){
+                            borderSignals.insert(mcType);
+                        }
+                    }
                 }
 
                 if(borderSignals.size() == 1){
@@ -495,9 +509,6 @@ void DiffusionEngine::fillEnclosedRegions(){
                         MetalCell &fillCell = cellGrid[fillCellIdx];
                         fillCell.type = CellType::MARKED;
                         fillCell.signal = fillType;
-                        
-                        // todo
-
                     }
                 }
             }
@@ -505,7 +516,64 @@ void DiffusionEngine::fillEnclosedRegions(){
     }
 }
 
+void DiffusionEngine::markHalfOccupiedMetalsAndPins(){
 
+    for(ViaCell &vc : this->viaGrid){
+        SignalType vcSignal = vc.signal;
+        CellType vcCellType = vc.type;
+        if(vcSignal == SignalType::OBSTACLES) continue;
+
+        std::vector<MetalCell *> neighbors = {
+            vc.upLLCell, vc.upULCell, vc.upLRCell, vc.upURCell,
+            vc.downLLCell, vc.downULCell, vc.downLRCell, vc.downURCell
+        };
+
+        if(vcCellType == CellType::EMPTY){
+            // check if there is only one type of preplace signal
+            SignalType preplacedSig = SignalType::EMPTY;
+            for(MetalCell *mc : neighbors){
+                assert(mc != nullptr);
+                if(mc->type == CellType::PREPLACED){
+                   if(preplacedSig != SignalType::EMPTY){
+                    preplacedSig = SignalType::EMPTY;
+                    break;
+                   } 
+                   preplacedSig = mc->signal;
+                }
+            }
+            if(preplacedSig == SignalType::EMPTY) continue;
+
+            // process those which has only one prepace signal type
+            vc.signal = preplacedSig; 
+            vc.type = CellType::MARKED;
+            for(MetalCell *mc : neighbors){
+                if(mc->type == CellType::EMPTY){
+                    mc->type = CellType::MARKED;
+                    mc->signal = vcSignal;
+                }
+            }
+
+        }else if(POWER_SIGNAL_SET.count(vcSignal) != 0){ // the via has as signal type
+            for(MetalCell *mc : neighbors){
+                if(mc->type == CellType::EMPTY){
+                    mc->type = CellType::MARKED;
+                    mc->signal = vcSignal;
+                }
+            }
+        }   
+
+    }
+}
+
+void DiffusionEngine::linkNeighbors(){
+    // link neighbors of those metal cells
+    for(MetalCell &mc : this->cellGrid){
+
+    }
+
+
+    // link neighbors of those via cells
+}
 
 
 
