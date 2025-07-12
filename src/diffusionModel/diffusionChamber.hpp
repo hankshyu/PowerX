@@ -34,7 +34,8 @@
 #include "dirFlags.hpp"
 
 // 0 is empty, 1 ~ n
-typedef uint8_t CellLabel;
+typedef uint16_t CellLabel;
+constexpr CellLabel CELL_LABEL_EMPTY = 0;
 
 // EMPTY for competable cells, MARKED for soft, PREPLACED as hard and OBSTACLES
 enum class CellType : uint8_t{

@@ -36,11 +36,11 @@
 #include "units.hpp"
 
 class DiffusionEngine : public PowerDistributionNetwork{
-    size_t m_cellGridLayers;
-    size_t m_cellGridWidth;
-    size_t m_cellGridHeight;
-    size_t m_cellGrid2DCount;
-    size_t m_cellGrid3DCount;
+    size_t m_metalGridLayers;
+    size_t m_metalGridWidth;
+    size_t m_metalGridHeight;
+    size_t m_metalGrid2DCount;
+    size_t m_metalGrid3DCount;
 
     size_t m_viaGridLayers;
 
@@ -49,12 +49,11 @@ class DiffusionEngine : public PowerDistributionNetwork{
 
 public:
 
-    int labelCount;
     std::vector<SignalType> cellLabelToSigType;
     std::unordered_map<SignalType, std::vector<CellLabel>> sigTypeToAllCellLabels;
 
-    std::vector<MetalCell> cellGrid;
-    std::vector<CellLabel> cellGridLabel;
+    std::vector<MetalCell> metalGrid;
+    std::vector<CellLabel> metalGridLabel;
 
     std::vector<ViaCell> viaGrid;
     std::vector<CellLabel> viaGridlabel;
@@ -93,7 +92,7 @@ public:
     void fillEnclosedRegions();
     void markHalfOccupiedMetalsAndPins();
     void linkNeighbors();
-    void initialiseGraph();
+    void initialiseIndexing();
     
 };
 
