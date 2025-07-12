@@ -32,6 +32,20 @@ DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistribution
     this->m_metalGrid3DCount = m_metalGrid2DCount * m_metalLayerCount;
 
     this->m_viaGridLayers = m_viaLayerCount;
+
+    // calculate current budget
+    double totalCurrentBudget = 0;
+    for(auto &[st , us] : this->uBump.signalTypeToInstances){
+        for(const std::string &inst  : us){
+            double currentRequirement = this->uBump.instanceToBallOutMap[inst]->getMaxCurrent();
+            totalCurrentBudget += currentRequirement;
+            this->currentBudget[st] += currentRequirement;
+        }
+    }
+    for(auto &[st, value] : this->currentBudget){
+        value /= totalCurrentBudget;
+    }
+
 }
 
 size_t DiffusionEngine::calMetalIdx(size_t layer, size_t height, size_t width) const {
@@ -775,7 +789,110 @@ void DiffusionEngine::initialiseIndexing(){
     }
 }
 
+void DiffusionEngine::placeDiffusionParticles(){
+
+    size_t metalGridSize = metalGrid.size();
+    size_t viaGridSize = viaGrid.size();
+
+    // put particles to the surrounded points;
+    std::unordered_map<CellLabel, std::unordered_set<DiffusionChamber *>> whiteSpaceMap;
+
+    // collect for white space map by iterate all cells
+    for(size_t i = 0; i < (metalGridSize + viaGridSize); ++i){
+        bool isMetalCell = (i < metalGridSize);
+
+        if(isMetalCell){
+            MetalCell &mc = metalGrid[i];
+            MetalCell *mcPointer = &mc;
+            CellLabel metalCellLabel = metalGridLabel[i];
+            CellType metalCellType = mc.type;
+            if(metalCellType == CellType::EMPTY || metalCellType == CellType::OBSTACLES) continue;
+
+            MetalCell *mcNorthCell = mc.northCell;
+            MetalCell *mcSouthCell = mc.southCell;
+            MetalCell *mcEastCell = mc.eastCell;
+            MetalCell *mcWestCell = mc.westCell;
+
+            ViaCell *mcUpCell = mc.upCell;
+            ViaCell *mcDownCell = mc.downCell;
+
+            if((mcNorthCell != nullptr) && (mcNorthCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcNorthCell);
+            }
+            if((mcSouthCell != nullptr) && (mcSouthCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcSouthCell);
+            }
+            if((mcEastCell != nullptr) && (mcEastCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcEastCell);
+            }
+            if((mcWestCell != nullptr) && (mcWestCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcWestCell);
+            }
+
+            if((mcUpCell != nullptr) && (mcUpCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcUpCell);
+            }
+            if((mcDownCell != nullptr) && (mcDownCell->type == CellType::EMPTY)){
+                whiteSpaceMap[metalCellLabel].insert(mcDownCell);
+            }
+
+        }else{ // is Via Cell
+            size_t viaRealIdx = i - metalGridSize;
+            ViaCell &vc = viaGrid[viaRealIdx];
+            ViaCell *vcPointer = &vc;
+            CellLabel viaCellLabel =  viaGridlabel[viaRealIdx];
+            CellType viaCellType = vc.type;
+
+            if(viaCellType == CellType::EMPTY) continue;
 
 
+            MetalCell *vcUpLLCell = vc.upLLCell;
+            MetalCell *vcUpULCell = vc.upULCell;
+            MetalCell *vcUpLRCell = vc.upLRCell;
+            MetalCell *vcUpURCell = vc.upURCell;
 
+            MetalCell *vcDownLLCell = vc.downLLCell;
+            MetalCell *vcDownULCell = vc.downULCell;
+            MetalCell *vcDownLRCell = vc.downLRCell;
+            MetalCell *vcDownURCell = vc.downURCell;
+
+            if((vcUpLLCell != nullptr) && (vcUpLLCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcUpLLCell);
+            }
+            if((vcUpULCell != nullptr) && (vcUpULCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcUpULCell);
+            }
+            if((vcUpLRCell != nullptr) && (vcUpLRCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcUpLRCell);
+            }
+            if((vcUpURCell != nullptr) && (vcUpURCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcUpURCell);
+            }
+
+            if((vcDownLLCell != nullptr) && (vcDownLLCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcDownLLCell);
+            }
+            if((vcDownULCell != nullptr) && (vcDownULCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcDownULCell);
+            }
+            if((vcDownLRCell != nullptr) && (vcDownLRCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcDownLRCell);
+            }
+            if((vcDownURCell != nullptr) && (vcDownURCell->type != CellType::EMPTY)){
+                whiteSpaceMap[viaCellLabel].insert(vcDownURCell);
+            }
+        }
+
+    }
+
+    for(auto &[cl, dcset] : whiteSpaceMap){
+        SignalType st = this->cellLabelToSigType[cl];
+        if(POWER_SIGNAL_SET.count(st) == 0) continue;
+
+        for(DiffusionChamber *dc : dcset){
+            dc->addParticles(cl, 1000);
+        }
+    }
+
+}
 

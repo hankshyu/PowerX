@@ -48,6 +48,7 @@ class DiffusionEngine : public PowerDistributionNetwork{
     std::vector<size_t> m_viaGrid2DAccumlateCount; // [2] = count[0] +..+count[2]
 
 public:
+    std::unordered_map<SignalType, double> currentBudget; // normalized to sum = 1
 
     std::vector<SignalType> cellLabelToSigType;
     std::unordered_map<SignalType, std::vector<CellLabel>> sigTypeToAllCellLabels;
@@ -93,6 +94,8 @@ public:
     void markHalfOccupiedMetalsAndPins();
     void linkNeighbors();
     void initialiseIndexing();
+
+    void placeDiffusionParticles();
     
 };
 
