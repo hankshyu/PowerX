@@ -39,3 +39,11 @@ MetalCell::MetalCell(): DiffusionChamber(),
     upCell(nullptr), downCell(nullptr),
     northCellIdx(SIZE_T_INVALID), southCellIdx(SIZE_T_INVALID), eastCellIdx(SIZE_T_INVALID), westCellIdx(SIZE_T_INVALID),
     upCellIdx(SIZE_T_INVALID), downCellIdx(SIZE_T_INVALID) {}
+
+
+std::ostream& operator<<(std::ostream& os, const MetalCell &mc){
+    os << "MetalCell[(l,x,y) = (" << mc.canvasLayer << ", " << mc.canvasX << ", " << mc.canvasY << ")";
+    os << ", type = " << mc.type << ", signal = " << mc.signal << "]";
+    return os;
+}
+

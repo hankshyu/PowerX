@@ -41,3 +41,8 @@ ViaCell::ViaCell(): DiffusionChamber(),
     upLLCellIdx(SIZE_T_INVALID), upULCellIdx(SIZE_T_INVALID), upLRCellIdx(SIZE_T_INVALID), upURCellIdx(SIZE_T_INVALID),
     downLLCellIdx(SIZE_T_INVALID), downULCellIdx(SIZE_T_INVALID), downLRCellIdx(SIZE_T_INVALID), downURCellIdx(SIZE_T_INVALID) {}
 
+std::ostream& operator<<(std::ostream& os, const ViaCell &vc){
+    os << "ViaCell[(l,x,y) = (" << vc.canvasLayer << ", " << vc.canvasX << ", " << vc.canvasY << ")";
+    os << ", type = " << vc.type << ", signal = " << vc.signal << ", idx = " << vc.index << "]";
+    return os;
+}

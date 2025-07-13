@@ -11,7 +11,7 @@
 #include "eqCktExtractor.hpp"
 #include "signalType.hpp"
 
-#include "diffusionSimulator.hpp"
+#include "diffusionEngine.hpp"
 
 
 std::string FILEPATH_TCH = "inputs/standard.tch";
@@ -26,9 +26,15 @@ void printExitBanner();
 int main(int argc, char const *argv[]){
 
     std::vector<std::string> timeSpan = {
-       "Canvas Initialize",
-       "Transform Signals",
-       "Fill Confined Space"
+       "Initialize",
+       "Mark PP Pads Canvas",
+       "Mark Obstacles Canvas",
+       "Init Graph with PP",
+       "Fill Enclosed Region",
+       "Mark h-Occupied Pins",
+       "Link Neighbors",
+       "Initialize Index",
+       "Place particles"
     };
 
     printWelcomeBanner();
@@ -37,35 +43,52 @@ int main(int argc, char const *argv[]){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
 
-    /*
-    timeProfiler.startTimer(timeSpan[0]);
-    DiffusionSimulator diffsim(FILEPATH_BUMPS);
-    timeProfiler.pauseTimer(timeSpan[0]);
     
-    // timeProfiler.startTimer(timeSpan[1]);
-    // diffsim.transformSignals();
-    // timeProfiler.pauseTimer(timeSpan[1]);
+    timeProfiler.startTimer(timeSpan[0]);
+    DiffusionEngine dse(FILEPATH_BUMPS);
+    timeProfiler.pauseTimer(timeSpan[0]);
+
+    timeProfiler.startTimer(timeSpan[1]);
+    dse.markPreplacedAndInsertPadsOnCanvas();
+    timeProfiler.pauseTimer(timeSpan[1]);
+
+    timeProfiler.startTimer(timeSpan[2]);
+    dse.markObstaclesOnCanvas();
+    timeProfiler.pauseTimer(timeSpan[2]);
+
+    timeProfiler.startTimer(timeSpan[3]);
+    dse.initialiseGraphWithPreplaced();
+    timeProfiler.pauseTimer(timeSpan[3]);
+
+    // timeProfiler.startTimer(timeSpan[4]);
+    // dse.fillEnclosedRegions();
+    // timeProfiler.pauseTimer(timeSpan[4]);
+
+    // timeProfiler.startTimer(timeSpan[5]);
+    // dse.markHalfOccupiedMetalsAndPins();
+    // timeProfiler.pauseTimer(timeSpan[5]);
+
+    // timeProfiler.startTimer(timeSpan[6]);
+    // dse.linkNeighbors();
+    // timeProfiler.pauseTimer(timeSpan[6]);
+
+    // timeProfiler.startTimer(timeSpan[7]);
+    // dse.initialiseIndexing();
+    // timeProfiler.pauseTimer(timeSpan[7]);
+
+    // timeProfiler.startTimer(timeSpan[8]);
+    // dse.placeDiffusionParticles();
+    // timeProfiler.pauseTimer(timeSpan[8]);
+
+    visualiseDiffusionEngineMetal(dse, 0, "outputs/dsem0.txt");
+    visualiseDiffusionEngineMetal(dse, 1, "outputs/dsem1.txt");
+    visualiseDiffusionEngineMetal(dse, 2, "outputs/dsem2.txt");
+    visualiseDiffusionEngineVia(dse, 0, "outputs/dsev0.txt");
+    visualiseDiffusionEngineVia(dse, 1, "outputs/dsev1.txt");
 
 
-    // timeProfiler.startTimer(timeSpan[2]);
-    // diffsim.fillEnclosedRegions();
-    // timeProfiler.pauseTimer(timeSpan[2]);
-
-
-    // dffs.initialise();
-
-    visualiseGridArrayWithPin(diffsim.metalLayers[0].canvas, diffsim.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    visualiseGridArrayWithPins(diffsim.metalLayers[1].canvas, diffsim.viaLayers[0].canvas, diffsim.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    visualiseGridArrayWithPin(diffsim.metalLayers[2].canvas, diffsim.viaLayers[1].canvas, technology, "outputs/m2.txt");
-
-    */
-
-
-    VoronoiPDNGen vpg(FILEPATH_BUMPS);
-
-    vpg.markPreplacedAndInsertPads();
-
-
+    // VoronoiPDNGen vpg(FILEPATH_BUMPS);
+    // vpg.markPreplacedAndInsertPads();
     // vpg.initPointsAndSegments();
 
     // for(int i = 0; i < (vpg.getMetalLayerCount() - 1); ++i){
@@ -95,23 +118,23 @@ int main(int argc, char const *argv[]){
     //     vpg.floatingPlaneReconnection(i);
     // }
 
-    vpg.handCraft();
-    vpg.assignVias();
+    // vpg.handCraft();
+    // vpg.assignVias();
 
-    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-        vpg.removeFloatingPlanes(i);
-    }
+    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+    //     vpg.removeFloatingPlanes(i);
+    // }
 
     
-    vpg.exportEquivalentCircuit(SignalType::POWER_1, technology, EqCktExtor, "outputs/POWER1.sp");
-    vpg.exportEquivalentCircuit(SignalType::POWER_2, technology, EqCktExtor, "outputs/POWER2.sp");
-    vpg.exportEquivalentCircuit(SignalType::POWER_3, technology, EqCktExtor, "outputs/POWER3.sp");
-    vpg.exportEquivalentCircuit(SignalType::POWER_4, technology, EqCktExtor, "outputs/POWER4.sp");
+    // vpg.exportEquivalentCircuit(SignalType::POWER_1, technology, EqCktExtor, "outputs/POWER1.sp");
+    // vpg.exportEquivalentCircuit(SignalType::POWER_2, technology, EqCktExtor, "outputs/POWER2.sp");
+    // vpg.exportEquivalentCircuit(SignalType::POWER_3, technology, EqCktExtor, "outputs/POWER3.sp");
+    // vpg.exportEquivalentCircuit(SignalType::POWER_4, technology, EqCktExtor, "outputs/POWER4.sp");
 
 
-    visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
+    // visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    // visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    // visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
     // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
     // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");

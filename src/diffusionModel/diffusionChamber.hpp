@@ -68,6 +68,7 @@ public:
     CellType type;
     SignalType signal;
 
+    // this is the index place in both metalGrid/metalGridLabel or ViaGrid/viaGridlabel
     size_t index;
 
     std::vector<CellLabel> cellLabels;

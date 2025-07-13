@@ -493,8 +493,8 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
                 for(const Line &candl : candLines){
                     if(collectedLines.count(candl) != 0) continue;
                     collectedLines.insert(candl);
-                    ofs << "Xedge" << edgeCounter++ << "_" << pointToNode(mLayerIdx, candl.low()) << "_" << pointToNode(mLayerIdx, candl.high()) << " ";
-                    ofs << pointToNode(mLayerIdx, candl.low()) << " " << pointToNode(mLayerIdx, candl.high()) << " edge" << std::endl;
+                    ofs << "Xedge" << edgeCounter++ << "_" << pointToNode(mLayerIdx, candl.getLow()) << "_" << pointToNode(mLayerIdx, candl.getHigh()) << " ";
+                    ofs << pointToNode(mLayerIdx, candl.getLow()) << " " << pointToNode(mLayerIdx, candl.getHigh()) << " edge" << std::endl;
                 }
             }
         }

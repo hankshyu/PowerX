@@ -556,3 +556,36 @@ bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<
     ofs.close();
     return true;
 }
+
+bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "DIFFUSION_ENGINE METAL VISUALISATION " << layer << " " <<  dfe.m_metalGridWidth << " " << dfe.m_metalGridHeight << std::endl;
+    for(size_t i = dfe.getMetalIdxBegin(layer); i < dfe.getMetalIdxEnd(layer); ++i){
+        const MetalCell &mc = dfe.metalGrid[i];
+        assert(layer == mc.canvasLayer);
+        ofs << "Cell " << mc.canvasLayer << " " << mc.canvasX << " " << mc.canvasY << std::endl;
+        ofs << "celltype = " << mc.type << " signaltype = " << mc.signal << " label = ";
+        if(mc.index >= dfe.metalGridLabel.size()){
+            ofs << -1 << std::endl; 
+        }else{
+            ofs << dfe.metalGridLabel[mc.index] << std::endl;
+        }
+        
+        ofs << "labels(" << mc.cellLabels.size() << "): " << std::endl;
+        for(int j = 0; j < mc.cellLabels.size(); ++j){
+            ofs << mc.cellLabels[j] << " " << dfe.cellLabelToSigType[mc.cellLabels[j]] << " " << mc.cellParticles[j] << std::endl;
+        }
+    }
+    ofs.close();
+    return true;
+    
+}
+
+bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath){
+    return true;
+}
+

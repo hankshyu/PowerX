@@ -29,7 +29,6 @@
 
 // 3. Texo Library:
 #include "diffusionChamber.hpp"
-#include "metalCell.hpp"
 
 struct ViaCord{
     size_t l;
@@ -40,6 +39,8 @@ struct ViaCord{
 };
 
 std::ostream& operator<<(std::ostream& os, const ViaCord &vc);
+
+class MetalCell;
 
 class ViaCell : public DiffusionChamber{
 public:
@@ -69,5 +70,6 @@ public:
 
 };
 
+std::ostream& operator<<(std::ostream& os, const ViaCell &vc);
 
 #endif // __VIA_CELL_H__

@@ -66,12 +66,12 @@ MetalCord DiffusionEngine::calMetalCord(size_t idx) const {
     return MetalCord(layer, x, y);
 }
 
-size_t DiffusionEngine::getlMetalIdxBegin(size_t layer) const {
+size_t DiffusionEngine::getMetalIdxBegin(size_t layer) const {
     return layer * m_metalGrid2DCount;
 }
 
 size_t DiffusionEngine::getMetalIdxBegin(size_t layer, size_t height) const {
-    return layer * m_metalGrid2DCount + height * m_metalGridHeight;
+    return layer * m_metalGrid2DCount + height * m_metalGridWidth;
 }
 
 size_t DiffusionEngine::getMetalIdxEnd(size_t layer) const {
@@ -79,7 +79,7 @@ size_t DiffusionEngine::getMetalIdxEnd(size_t layer) const {
 }
 
 size_t DiffusionEngine::getMetalIdxEnd(size_t layer, size_t height) const {
-    return layer * m_metalGrid2DCount + (height+1) * m_metalGridHeight;
+    return layer * m_metalGrid2DCount + (height+1) * m_metalGridWidth;
 }
 
 size_t DiffusionEngine::calViaIdx(size_t l, size_t w) const {
@@ -99,6 +99,7 @@ ViaCord DiffusionEngine::calViaCord(size_t idx) const {
             return ViaCord(layer+1, idx - m_viaGrid2DAccumlateCount[layer]);
         }
     }
+
     // not found
     return ViaCord(SIZE_T_INVALID, SIZE_T_INVALID);
 }
@@ -252,19 +253,17 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
     for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
         for(int j = 0; j < m_pinHeight; ++j){
             for(int i = 0; i < m_pinWidth; ++i){
-            
                 SignalType st = viaLayers[viaLayer].canvas[j][i];
-                if(st == SignalType::OBSTACLE) continue;
-
+                if(st == SignalType::OBSTACLE || st == SignalType::SIGNAL) continue;
                 // use default constructor
                 viaGrid.emplace_back();
                 ViaCell &cell = viaGrid.back();
                 
                 cell.index = cellIndex;
                 cell.metalViaType = DiffusionChamberType::VIA;
-                cell.canvasLayer = viaLayer;
-                cell.canvasY = j;
-                cell.canvasX = i;
+                cell.canvasLayer = static_cast<len_t>(viaLayer);
+                cell.canvasY = static_cast<len_t>(j);
+                cell.canvasX = static_cast<len_t>(i);
 
                 CellType cellType;
                 if(st == SignalType::EMPTY){
@@ -288,10 +287,10 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::UPLL);
 
                 // modify the metal cell via cell is linking to
-                upLLCellPointer->downCell = &cell;
                 upLLCellPointer->downCellIdx = cellIndex;
                 addDirection(upLLCellPointer->fullDirection, DirFlagAxis::DOWN);
-                
+
+
                 /* Link Up direction LR cell */
                 size_t upLRCellIdx = upLLCellIdx + 1;
                 SignalType upLRCellSt = metalLayers[viaLayer].canvas[j][i+1];
@@ -304,7 +303,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::UPLR);
 
                 // modify the metal cell via cell is linking to
-                upLRCellPointer->downCell = &cell;
                 upLRCellPointer->downCellIdx = cellIndex;
                 addDirection(upLRCellPointer->fullDirection, DirFlagAxis::DOWN);
 
@@ -321,10 +319,8 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::UPUL);
 
                 // modify the metal cell via cell is linking to
-                upULCellPointer->downCell = &cell;
                 upULCellPointer->downCellIdx = cellIndex;
                 addDirection(upULCellPointer->fullDirection, DirFlagAxis::DOWN);
-
 
                 /* Link Up direction UR cell */
                 size_t upURCellIdx = upULCellIdx + 1;
@@ -338,7 +334,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::UPUR);
 
                 // modify the metal cell via cell is linking to
-                upURCellPointer->downCell = &cell;
                 upURCellPointer->downCellIdx = cellIndex;
                 addDirection(upURCellPointer->fullDirection, DirFlagAxis::DOWN);
 
@@ -355,7 +350,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLL);
 
                 // modify the metal cell via cell is linking to
-                downLLCellPointer->upCell = &cell;
                 downLLCellPointer->upCellIdx = cellIndex;
                 addDirection(downLLCellPointer->fullDirection, DirFlagAxis::UP);
 
@@ -372,7 +366,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::DOWNLR);
 
                 // modify the metal cell via cell is linking to
-                downLRCellPointer->upCell = &cell;
                 downLRCellPointer->upCellIdx = cellIndex;
                 addDirection(downLRCellPointer->fullDirection, DirFlagAxis::UP);
 
@@ -389,7 +382,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUL);
 
                 // modify the metal cell via cell is linking to
-                downULCellPointer->upCell = &cell;
                 downULCellPointer->upCellIdx = cellIndex;
                 addDirection(downULCellPointer->fullDirection, DirFlagAxis::UP);
 
@@ -406,7 +398,6 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 addDirection(cell.fullDirection, DirFlagViaAxis::DOWNUR);
 
                 // modify the metal cell via cell is linking to
-                downURCellPointer->upCell = &cell;
                 downURCellPointer->upCellIdx = cellIndex;
                 addDirection(downURCellPointer->fullDirection, DirFlagAxis::UP);
 
@@ -416,8 +407,24 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
             }
         }
         
+        size_t prevAccum = (viaLayer == 0) ? 0 : m_viaGrid2DAccumlateCount[viaLayer - 1];
         m_viaGrid2DAccumlateCount.push_back(cellIndex);
-        m_viaGrid2DCount.push_back((viaLayer == 0)? cellIndex : (cellIndex - m_viaGrid2DAccumlateCount.back()));
+        m_viaGrid2DCount.push_back(cellIndex - prevAccum);
+    }
+
+    // Debug 2025/07/13: only link MetalCell* or ViaCell* when their holder array's size concludes
+    for(ViaCell &vc : viaGrid){
+        ViaCell *vcPointer = &vc;
+        
+        vc.upLLCell->downCell = vcPointer;
+        vc.upLRCell->downCell = vcPointer;
+        vc.upULCell->downCell = vcPointer;
+        vc.upURCell->downCell = vcPointer;
+
+        vc.downLLCell->upCell = vcPointer;
+        vc.downLRCell->upCell = vcPointer;
+        vc.downULCell->upCell = vcPointer;
+        vc.downURCell->upCell = vcPointer;
     }
 }
 
@@ -615,7 +622,7 @@ void DiffusionEngine::initialiseIndexing(){
     size_t viaGridsize = viaGrid.size();
 
     this->metalGridLabel = std::vector<CellLabel>(metalGridSize, CELL_LABEL_EMPTY);
-    this->viaGridlabel = std::vector<CellLabel>(viaGridsize, CELL_LABEL_EMPTY);
+    this->viaGridLabel = std::vector<CellLabel>(viaGridsize, CELL_LABEL_EMPTY);
     
     // a connected component with the same signal type (!emtpy) would own the same idx,
 
@@ -652,7 +659,7 @@ void DiffusionEngine::initialiseIndexing(){
             this->metalGridLabel[cellIdx] = labelIdx;
         }else{
             viaVisited[viaIdx] = true;
-            this->viaGridlabel[viaIdx] = labelIdx;
+            this->viaGridLabel[viaIdx] = labelIdx;
         }
 
 
@@ -705,13 +712,13 @@ void DiffusionEngine::initialiseIndexing(){
 
                 if((mcUpCell != nullptr) && (!viaVisited[mcUpCellIdx]) && (mcUpCell->signal == paintingType)){
                     viaVisited[mcUpCellIdx] = true;
-                    this->viaGridlabel[mcUpCellIdx] = labelIdx;
+                    this->viaGridLabel[mcUpCellIdx] = labelIdx;
                     q.emplace(mcUpCell);
                 }
 
                 if((mcDownCell != nullptr) && (!viaVisited[mcDownCellIdx]) && (mcDownCell->signal == paintingType)){
                     viaVisited[mcDownCellIdx] = true;
-                    this->viaGridlabel[mcDownCellIdx] = labelIdx;
+                    this->viaGridLabel[mcDownCellIdx] = labelIdx;
                     q.emplace(mcDownCell);
                 }
 
@@ -840,7 +847,7 @@ void DiffusionEngine::placeDiffusionParticles(){
             size_t viaRealIdx = i - metalGridSize;
             ViaCell &vc = viaGrid[viaRealIdx];
             ViaCell *vcPointer = &vc;
-            CellLabel viaCellLabel =  viaGridlabel[viaRealIdx];
+            CellLabel viaCellLabel =  viaGridLabel[viaRealIdx];
             CellType viaCellType = vc.type;
 
             if(viaCellType == CellType::EMPTY) continue;
@@ -896,3 +903,148 @@ void DiffusionEngine::placeDiffusionParticles(){
 
 }
 
+void DiffusionEngine::checkConnections(){
+    for(int layer = 0; layer < m_metalGridLayers; ++layer){
+        for(int y = 0; y < m_gridHeight; ++y){
+            for(int x = 0; x < m_gridWidth; ++x){
+                size_t idx = calMetalIdx(layer, y, x);
+                MetalCell &mc = this->metalGrid[idx];
+                assert(mc.canvasLayer == layer);
+                assert(mc.canvasY == y);
+                assert(mc.canvasX == x);
+
+                if(y == 0) assert((mc.southCell == nullptr) && (mc.southCellIdx == SIZE_T_INVALID));
+                if(y == (m_gridHeight-1)) assert((mc.northCell == nullptr) && (mc.northCellIdx == SIZE_T_INVALID));
+                if(x == 0) assert((mc.westCell == nullptr) && (mc.westCellIdx == SIZE_T_INVALID));
+                if(x == (m_gridWidth-1)) assert((mc.eastCell == nullptr) && (mc.eastCellIdx == SIZE_T_INVALID));
+
+                if(mc.northCell != nullptr){
+                    assert(mc.northCell->canvasLayer == layer);
+                    assert(mc.northCell->canvasX == x);
+                    assert(mc.northCell->canvasY == (y+1));
+                }
+                if(mc.southCell != nullptr){
+                    assert(mc.southCell->canvasLayer == layer);
+                    assert(mc.southCell->canvasX == x);
+                    assert(mc.southCell->canvasY == (y-1));
+                }
+
+                if(mc.eastCell != nullptr){
+                    assert(mc.eastCell->canvasLayer == layer);
+                    assert(mc.eastCell->canvasX == (x+1));
+                    assert(mc.eastCell->canvasY == y);
+                }
+                if(mc.westCell != nullptr){
+                    assert(mc.westCell->canvasLayer == layer);
+                    assert(mc.westCell->canvasX == (x-1));
+                    assert(mc.westCell->canvasY == y);
+                }
+            }
+        }
+    }
+
+    std::cout << "Pass metal connection check!" << std::endl;
+
+    for(int layer = 0; layer < m_viaGridLayers; ++layer){
+        for(int idx = getViaIdxBegin(layer); idx < getViaIdxEnd(layer); ++idx){
+            ViaCell &vc = this->viaGrid[idx];
+            len_t viaLayer = vc.canvasLayer;
+            len_t viaY = vc.canvasY;
+            len_t viaX = vc.canvasX;
+            assert(layer == viaLayer);
+
+            assert(vc.upLLCell != nullptr);
+            assert(vc.downLLCell != nullptr);
+            assert(vc.upLRCell != nullptr);
+            assert(vc.downLRCell != nullptr);
+            assert(vc.upULCell != nullptr);
+            assert(vc.downULCell != nullptr);
+            assert(vc.upURCell != nullptr);
+            assert(vc.downURCell != nullptr);
+
+            if(vc.upLLCell != nullptr){
+                assert(vc.upLLCell == &metalGrid[vc.upLLCellIdx]);
+                assert(vc.upLLCell->canvasLayer == layer);
+                assert(vc.upLLCell->canvasX == viaX);
+                assert(vc.upLLCell->canvasY == viaY);
+
+                assert(vc.upLLCell->downCell == &viaGrid[vc.upLLCell->downCellIdx]);
+                assert(vc.upLLCell->downCell == &vc);
+            }
+
+            if(vc.downLLCell != nullptr){
+                assert(vc.downLLCell == &metalGrid[vc.downLLCellIdx]);
+                assert(vc.downLLCell->canvasLayer == (layer+1));
+                assert(vc.downLLCell->canvasX == viaX);
+                assert(vc.downLLCell->canvasY == viaY);
+
+                assert(vc.downLLCell->upCell == &viaGrid[vc.downLLCell->upCellIdx]);
+                assert(vc.downLLCell->upCell == &vc);
+            }
+
+            if(vc.upLRCell != nullptr){
+                assert(vc.upLRCell == &metalGrid[vc.upLRCellIdx]);
+                assert(vc.upLRCell->canvasLayer == layer);
+                assert(vc.upLRCell->canvasX == (viaX+1));
+                assert(vc.upLRCell->canvasY == viaY);
+
+                assert(vc.upLRCell->downCell == &viaGrid[vc.upLRCell->downCellIdx]);
+                assert(vc.upLRCell->downCell == &vc);
+            }
+
+            if(vc.downLRCell != nullptr){
+                assert(vc.downLRCell == &metalGrid[vc.downLRCellIdx]);
+                assert(vc.downLRCell->canvasLayer == (layer+1));
+                assert(vc.downLRCell->canvasX == (viaX+1));
+                assert(vc.downLRCell->canvasY == viaY);
+
+                assert(vc.downLRCell->upCell == &viaGrid[vc.downLRCell->upCellIdx]);
+                assert(vc.downLRCell->upCell == &vc);
+            }
+
+            if(vc.upULCell != nullptr){
+                assert(vc.upULCell == &metalGrid[vc.upULCellIdx]);
+                assert(vc.upULCell->canvasLayer == layer);
+                assert(vc.upULCell->canvasX == viaX);
+                assert(vc.upULCell->canvasY == (viaY+1));
+
+                assert(vc.upULCell->downCell == &viaGrid[vc.upULCell->downCellIdx]);
+                assert(vc.upULCell->downCell == &vc);
+            }
+
+            if(vc.downULCell != nullptr){
+                assert(vc.downULCell == &metalGrid[vc.downULCellIdx]);
+                assert(vc.downULCell->canvasLayer == (layer+1));
+                assert(vc.downULCell->canvasX == viaX);
+                assert(vc.downULCell->canvasY == (viaY+1));
+
+
+                assert(vc.downULCell->upCell == &viaGrid[vc.downULCell->upCellIdx]);
+                assert(vc.downULCell->upCell == &vc);
+
+            }
+
+            if(vc.upURCell != nullptr){
+                assert(vc.upURCell == &metalGrid[vc.upURCellIdx]);
+                assert(vc.upURCell->canvasLayer == layer);
+                assert(vc.upURCell->canvasX == (viaX+1));
+                assert(vc.upURCell->canvasY == (viaY+1));
+
+                assert(vc.upURCell->downCell == &viaGrid[vc.upURCell->downCellIdx]);
+                assert(vc.upURCell->downCell == &vc);
+            }
+
+            if(vc.downURCell != nullptr){
+                assert(vc.downURCell == &metalGrid[vc.downURCellIdx]);
+                assert(vc.downURCell->canvasLayer == (layer+1));
+                assert(vc.downURCell->canvasX == (viaX+1));
+                assert(vc.downURCell->canvasY == (viaY+1));
+
+                assert(vc.downURCell->upCell == &viaGrid[vc.downULCell->upCellIdx]);
+                assert(vc.downURCell->upCell == &vc);
+            }
+        }
+    }
+    
+    std::cout << "Pass via connection check!" << std::endl;
+}

@@ -57,7 +57,7 @@ public:
     std::vector<CellLabel> metalGridLabel;
 
     std::vector<ViaCell> viaGrid;
-    std::vector<CellLabel> viaGridlabel;
+    std::vector<CellLabel> viaGridLabel;
 
     DiffusionEngine(const std::string &fileName);
 
@@ -66,7 +66,7 @@ public:
     MetalCord calMetalCord(size_t idx) const;
 
     // returns the index of the first element of the metal layer
-    size_t getlMetalIdxBegin(size_t layer) const;
+    size_t getMetalIdxBegin(size_t layer) const;
     // returns the index of the first element of the metal layer/height
     size_t getMetalIdxBegin(size_t layer, size_t height) const;
     // returns the index+1 of the last element of the metal layer
@@ -96,6 +96,12 @@ public:
     void initialiseIndexing();
 
     void placeDiffusionParticles();
+    
+    // make sure the connections are correct
+    void checkConnections();
+
+    friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
+    friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     
 };
 
