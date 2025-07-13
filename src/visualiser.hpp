@@ -75,5 +75,5 @@ bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<
 // use "renderDissusionEngine" to render metalCell/viaCell status
 bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
 bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
-
+bool visualiseDiffusionEngineMetalAndVia(const DiffusionEngine &dfe, size_t metalLayer, size_t viaLayer, const std::string &filePath);
 #endif // __VISUALIZER_H__

@@ -563,10 +563,10 @@ bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, con
     assert(ofs.is_open());
     if(!ofs.is_open()) return false;
 
-    ofs << "DIFFUSION_ENGINE METAL VISUALISATION " << layer << " " <<  dfe.m_metalGridWidth << " " << dfe.m_metalGridHeight << std::endl;
+    ofs << "DIFFUSION_ENGINE METAL VISUALISATION " << layer << " -1 " <<  dfe.m_metalGridWidth << " " << dfe.m_metalGridHeight << std::endl;
+    ofs << "METAL_CELLCOUNT " << dfe.m_metalGrid2DCount << " VIA_CELLCOUNT -1" << std::endl;
     for(size_t i = dfe.getMetalIdxBegin(layer); i < dfe.getMetalIdxEnd(layer); ++i){
         const MetalCell &mc = dfe.metalGrid[i];
-        assert(layer == mc.canvasLayer);
         ofs << "Cell " << mc.canvasLayer << " " << mc.canvasX << " " << mc.canvasY << std::endl;
         ofs << "celltype = " << mc.type << " signaltype = " << mc.signal << " label = ";
         if(mc.index >= dfe.metalGridLabel.size()){
@@ -586,6 +586,79 @@ bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, con
 }
 
 bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "DIFFUSION_ENGINE VIA VISUALISATION -1 " << layer << " " <<  dfe.m_metalGridWidth << " " << dfe.m_metalGridHeight << std::endl;
+    ofs << "METAL_CELLCOUNT -1 " <<  "VIA_CELLCOUNT " << dfe.m_viaGrid2DCount.at(layer)<< std::endl;
+    for(size_t i = dfe.getViaIdxBegin(layer); i < dfe.getViaIdxEnd(layer); ++i){
+        const ViaCell &vc = dfe.viaGrid[i];
+
+        ofs << "Cell " << vc.canvasLayer << " " << vc.canvasX << " " << vc.canvasY << std::endl;
+        ofs << "celltype = " << vc.type << " signaltype = " << vc.signal << " label = ";
+        if(vc.index >= dfe.viaGridLabel.size()){
+            ofs << -1 << std::endl; 
+        }else{
+            ofs << dfe.viaGridLabel[vc.index] << std::endl;
+        }
+        
+        ofs << "labels(" << vc.cellLabels.size() << "): " << std::endl;
+        for(int j = 0; j < vc.cellLabels.size(); ++j){
+            ofs << vc.cellLabels[j] << " " << dfe.cellLabelToSigType[vc.cellLabels[j]] << " " << vc.cellParticles[j] << std::endl;
+        }
+    }
+
+    ofs.close();
     return true;
 }
 
+bool visualiseDiffusionEngineMetalAndVia(const DiffusionEngine &dfe, size_t metalLayer, size_t viaLayer, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "DIFFUSION_ENGINE METAL_AND_VIA VISUALISATION " << metalLayer << " " << viaLayer << " " <<  dfe.m_metalGridWidth << " " << dfe.m_metalGridHeight << std::endl;
+    ofs << "METAL_CELLCOUNT " << dfe.m_metalGrid2DCount << " " << "VIA_CELLCOUNT " << dfe.m_viaGrid2DCount.at(viaLayer) << std::endl;
+
+    // Write metal Related information
+    for(size_t i = dfe.getMetalIdxBegin(metalLayer); i < dfe.getMetalIdxEnd(metalLayer); ++i){
+        const MetalCell &mc = dfe.metalGrid[i];
+        ofs << "Cell " << mc.canvasLayer << " " << mc.canvasX << " " << mc.canvasY << std::endl;
+        ofs << "celltype = " << mc.type << " signaltype = " << mc.signal << " label = ";
+        if(mc.index >= dfe.metalGridLabel.size()){
+            ofs << -1 << std::endl; 
+        }else{
+            ofs << dfe.metalGridLabel[mc.index] << std::endl;
+        }
+        
+        ofs << "labels(" << mc.cellLabels.size() << "): " << std::endl;
+        for(int j = 0; j < mc.cellLabels.size(); ++j){
+            ofs << mc.cellLabels[j] << " " << dfe.cellLabelToSigType[mc.cellLabels[j]] << " " << mc.cellParticles[j] << std::endl;
+        }
+    }
+
+    // Write Via Related informaton
+    for(size_t i = dfe.getViaIdxBegin(viaLayer); i < dfe.getViaIdxEnd(viaLayer); ++i){
+        const ViaCell &vc = dfe.viaGrid[i];
+
+        ofs << "Cell " << vc.canvasLayer << " " << vc.canvasX << " " << vc.canvasY << std::endl;
+        ofs << "celltype = " << vc.type << " signaltype = " << vc.signal << " label = ";
+        if(vc.index >= dfe.viaGridLabel.size()){
+            ofs << -1 << std::endl; 
+        }else{
+            ofs << dfe.viaGridLabel[vc.index] << std::endl;
+        }
+        
+        ofs << "labels(" << vc.cellLabels.size() << "): " << std::endl;
+        for(int j = 0; j < vc.cellLabels.size(); ++j){
+            ofs << vc.cellLabels[j] << " " << dfe.cellLabelToSigType[vc.cellLabels[j]] << " " << vc.cellParticles[j] << std::endl;
+        }
+    }
+    ofs.close();
+    return true;
+}

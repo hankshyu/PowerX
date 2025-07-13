@@ -18,6 +18,17 @@
 # python3 utils/renderVoronoiPolygon.py -i outputs/mp2.txt -o outputs/mp2.png --dpi 480 -v & pids+=($!)
 
 
-python3 utils/renderDiffusionEngine.py -i outputs/dsem0.txt --dpi 1200 -v -o outputs/dsem0.png & 
-python3 utils/renderDiffusionEngine.py -i outputs/dsem1.txt --dpi 1200 -v -o outputs/dsem1.png &
-python3 utils/renderDiffusionEngine.py -i outputs/dsem2.txt --dpi 1200 -v -o outputs/dsem2.png &
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m0.txt --dpi 1000 -v -o outputs/dse_m0.png & 
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m1.txt --dpi 1000 -v -o outputs/dse_m1.png &
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m2.txt --dpi 1000 -v -o outputs/dse_m2.png &
+
+python3 utils/renderDiffusionEngine.py -i outputs/dse_v0.txt --dpi 1000 -v -o outputs/dse_v0.png & 
+python3 utils/renderDiffusionEngine.py -i outputs/dse_v1.txt --dpi 1000 -v -o outputs/dse_v1.png &
+
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m0_v0.txt --dpi 1000 -v -o outputs/dse_m0_v0.png &
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m1_v0.txt --dpi 1000 -v -o outputs/dse_m1_v0.png &
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m1_v1.txt --dpi 1000 -v -o outputs/dse_m1_v1.png &
+python3 utils/renderDiffusionEngine.py -i outputs/dse_m2_v1.txt --dpi 1000 -v -o outputs/dse_m2_v1.png &
+
+wait
+echo "run complete"

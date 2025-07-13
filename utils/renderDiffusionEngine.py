@@ -37,6 +37,30 @@ SIGNAL_COLORS = {
     "OBSTACLE": "#663300"
 }
 
+SKIRT_COLORS = {
+    "CellType::OBSTACLES" : SIGNAL_COLORS["OBSTACLE"],
+    "CellType::PREPLACED" : "#FF0000",
+    "CellType::MARKED"    : "#00FF00",
+    "CellType::EMPTY"    : "#FFFFFF",
+}
+# hyperparameters
+
+BORDER_WIDTH = 2
+
+SKIRT_BORDER = 12
+GRID_MUL = 80
+
+VIA_SIZE = 60
+
+canvasWidth = -1
+canvasHeight = -1
+metalLayer = -1
+viaLayer = -1
+
+metalCellCount = -1
+viaCellCount = -1
+
+
 class CellLabel:
     def __init__(self, celltype, signaltype, label):
         self.celltype = celltype
@@ -50,42 +74,109 @@ def parse_arguments():
     parser.add_argument("--dpi", type=int, default=400, required=False, help="DPI for output image (default: 400).")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
     return parser.parse_args()
-    
 
+def parseCell(filein, metalOrVia):
+
+    # cell Atrributes
+    cellLayer = -1
+    cellX = -1
+    cellY = -1
+    cellType = ""
+    cellSt = ""
+    cellLabel = ""
+    cellIdxLabels = []
+
+
+    LineBuffer = filein.readline().strip().split()
+    if LineBuffer[0] != "Cell":
+        print(f"[RenderDiffusionEngine]Error: Unrecognized {metalOrVia} Cell position: ")
+        sys.exit()
+    
+    cellLayer = int(LineBuffer[1])
+    cellX = int(LineBuffer[2])
+    cellY = int(LineBuffer[3])
+
+    if metalOrVia == "Metal":
+        canvasLayer = metalLayer
+    else:
+        canvasLayer = viaLayer
+
+    if (cellLayer != canvasLayer) or (cellX < 0 or cellX >= canvasWidth) or (cellY < 0 or cellY >= canvasWidth):
+        print(f"[RenderDiffusionEngine]Error: {metalOrVia} Cell Position (l = {cellLayer}, x = {cellX}, y = {cellY}) not in  Layer (l = {canvasLayer}, width = {canvasWidth}, height = {canvasHeight})")
+        sys.exit()
+
+    line = filein.readline().strip()
+    pattern = (
+        r"celltype\s*=\s*(\S+)\s+"
+        r"signaltype\s*=\s*(\S+)\s+"
+        r"label\s*=\s*(-?\d+)"
+    )
+    match = re.fullmatch(pattern, line)
+    if match:
+        cellType = match.group(1)
+        cellSt = match.group(2)
+        cellLabel = int(match.group(3))
+    else:
+        print(f"[RenderDiffusionEngine]Error: {metalOrVia} Cell Attribute mismatch {line}")
+    
+    labelCount = 0
+    line = filein.readline().strip()
+
+    match = re.match(r"labels\((\d+)\):", line)
+    if match:
+        labelCount = int(match.group(1))
+        # print(f"Valid label index: {labelCount}")
+    else:
+        print(f"[RenderDiffusionEngine]Error: {metalOrVia} Cell labels count error {line}")
+
+    for labelIdx in range(labelCount):
+        print("todo parse iex")
+
+    return cellLayer, cellX, cellY, cellType, cellSt, cellLabel, cellIdxLabels 
 
 if __name__ == '__main__':
 
     args = parse_arguments()
     fig, ax = plt.subplots(figsize=(18, 18))
     
-    BORDER_WIDTH = 2
-
-    SKIRT_BORDER = 12
-    GRID_MUL = 80
-
-    canvasWidth = -1
-    canvasHeight = -1
-    canvasLayer = -1
-
     try:
         with open(args.input, 'r') as filein:
             renderMode = ""
+
             # Read the first Line to determine the render mode
             LineBuffer = filein.readline().strip().split()
 
-            if((LineBuffer[0] == "DIFFUSION_ENGINE") and ((LineBuffer[1] == "METAL") or (LineBuffer[1] == "VIA")) and (LineBuffer[2] == "VISUALISATION")):            
+            if((LineBuffer[0] == "DIFFUSION_ENGINE") and ((LineBuffer[1] == "METAL") or (LineBuffer[1] == "VIA") or (LineBuffer[1] == "METAL_AND_VIA")) and (LineBuffer[2] == "VISUALISATION")):   
                 renderMode = LineBuffer[1]
-                canvasLayer = int(LineBuffer[3])
-                canvasWidth = int(LineBuffer[4])
-                canvasHeight = int(LineBuffer[5])
+                metalLayer = int(LineBuffer[3])
+                viaLayer = int(LineBuffer[4])
+                canvasWidth = int(LineBuffer[5])
+                canvasHeight = int(LineBuffer[6])
             else:
                 print(f"[RenderDiffusionEngine]Error: Unknown Render Mode {LineBuffer[0]} {LineBuffer[2]}")
                 sys.exit()
+            
+            # Read the second Line to determine cell counts (metal/via)
+            line = filein.readline()
+            LineBuffer = line.strip().split()
+            if(LineBuffer[0] != "METAL_CELLCOUNT") or (LineBuffer[2] != "VIA_CELLCOUNT"):
+                print(f"[RenderDiffusionEngine]Error: Unknown metal/via count: {line}")
+                sys.exit()
+
+            metalCellCount = int(LineBuffer[1])
+            viaCellCount = int(LineBuffer[3])
+            
 
             # display the arguments if user specifies verbose mode
             if args.verbose:
                 print(CYAN,"IRISLAB Diffusion Engine Rendering Program ", COLORRST)
-                print("Render Mode: ", GREEN, renderMode, COLORRST)
+                if renderMode == "METAL":
+                    print("Render Mode: ", GREEN, "Metal Layer ", metalLayer, COLORRST)
+                elif renderMode == "VIA":
+                    print("Render Mode: ", GREEN, "Via Layer ", viaLayer, COLORRST)
+                elif renderMode == "METAL_AND_VIA":
+                    print("Render Mode: ", GREEN, "Metal Layer ", metalLayer, " with Via Layer ", viaLayer, COLORRST)
+
                 print("Input File: ", GREEN, args.input, COLORRST)
                 
                 if args.output is None:
@@ -108,117 +199,109 @@ if __name__ == '__main__':
             for spine in ax.spines.values():
                 spine.set_linewidth(BORDER_WIDTH)  # You can increase this value
 
-            # start reading each cell
-            while True:
-                line = filein.readline()
-                if not line:  # end of file
-                    break
-                LineBuffer = line.strip().split()
-                if LineBuffer[0] != "Cell":
-                    print(f"[RenderDiffusionEngine]Error: Unrecognized Metal Cell position: ")
-                    sys.exit()
-                
-                cellLayer = int(LineBuffer[1])
-                cellX = int(LineBuffer[2])
-                cellY = int(LineBuffer[3])
+            # Render Metal Cells
+            if renderMode == "METAL" or renderMode == "METAL_AND_VIA":
+                # start reading each cell
+                for renderMetalCellIdx in range(metalCellCount):
 
-                if (cellLayer != canvasLayer) or (cellX < 0 or cellX >= canvasWidth) or (cellY < 0 or cellY >= canvasWidth):
-                    print(f"[RenderDiffusionEngine]Error: Metal Cell Position (l = {cellLayer}, x = {cellX}), y = {cellY} not in Metal Layer (l = {canvasLayer}, width = {canvasWidth}, height = {canvasHeight})")
-                    sys.exit()
+                    # cell Atrributes
+                    cellLayer, cellX, cellY, cellType, cellSt, cellLabel, cellIdxLabels = parseCell(filein, "Metal")
+                    # Start rendering cell according to attributes
+                    # use the skirt
 
-                cellType = ""
-                cellSt = ""
-                cellIndex = ""
-                
-                line = filein.readline().strip()
-                pattern = (
-                    r"celltype\s*=\s*(\S+)\s+"
-                    r"signaltype\s*=\s*(\S+)\s+"
-                    r"label\s*=\s*(-?\d+)"
-                )
-                match = re.fullmatch(pattern, line)
-                if match:
-                    cellType = match.group(1)
-                    cellSt = match.group(2)
-                    cellIndex = int(match.group(3))
-                else:
-                    print(f"[RenderDiffusionEngine]Error: Metal Cell Attribute mismatch {line}")
-                
-                labelCount = 0
-                line = filein.readline().strip()
-
-                match = re.match(r"labels\((\d+)\):", line)
-                if match:
-                    labelCount = int(match.group(1))
-                    # print(f"Valid label index: {labelCount}")
-                else:
-                    print(f"[RenderDiffusionEngine]Error: Metal Cell labels count error {line}")
-
-                for labelIdx in range(labelCount):
-                    print("todo parse iex")
-
-                # Start rendering cell according to attributes
-                # use the skirt
-
-                skirtColor = "none"
-                if(cellType == "CellType::OBSTACLES"):
-                    skirtColor = SIGNAL_COLORS["OBSTACLE"]
-                elif(cellType == "CellType::PREPLACED"):
-                    skirtColor = "#FF0000"
-                elif(cellType == "CellType::MARKED"):
-                    skirtColor = "#000000"
-
-                skirtRect = plt.Rectangle(
-                    (GRID_MUL*(cellX), GRID_MUL*(cellY)),
-                    GRID_MUL, GRID_MUL, 
-                    facecolor=skirtColor,
-                    edgecolor='black',
-                    linewidth=1,
-                    alpha=0.75
-                )
-
-                ax.add_patch(skirtRect)
-
-                centreRect = plt.Rectangle(
-                    (GRID_MUL*(cellX) + SKIRT_BORDER, GRID_MUL*(cellY) + SKIRT_BORDER),
-                    GRID_MUL - 2*SKIRT_BORDER, GRID_MUL - 2*SKIRT_BORDER,
-                    facecolor=SIGNAL_COLORS[cellSt],
-                    linewidth=0,
-                    alpha=0.9
-                )
-                ax.add_patch(centreRect)
-
-                label_char = ""
-                if cellType == "CellType::PREPLACED":
-                    label_char = "P"
-                elif cellType == "CellType::MARKED":
-                    label_char = "M"
-
-                if label_char:
-                    ax.text(
-                        GRID_MUL * (cellX + 1) - GRID_MUL/4 - 12,
-                        GRID_MUL * (cellY + 1) - GRID_MUL/4 - 8,
-                        label_char,
-                        fontsize=1,
-                        color='black',
-                        ha='left',
-                        va='top',
-                        # weight='bold'
+                    skirtRect = plt.Rectangle(
+                        (GRID_MUL*(cellX), GRID_MUL*(cellY)),
+                        GRID_MUL, GRID_MUL, 
+                        facecolor=SKIRT_COLORS[cellType],
+                        edgecolor='black',
+                        linewidth=0.5,
+                        alpha=0.8
                     )
-                # for debug
-                # break
-            
+                    ax.add_patch(skirtRect)
+
+                    centreRect = plt.Rectangle(
+                        (GRID_MUL*(cellX) + SKIRT_BORDER, GRID_MUL*(cellY) + SKIRT_BORDER),
+                        GRID_MUL - 2*SKIRT_BORDER, GRID_MUL - 2*SKIRT_BORDER,
+                        facecolor=SIGNAL_COLORS[cellSt],
+                        linewidth=0,
+                        alpha=0.9
+                    )
+                    ax.add_patch(centreRect)
+
+                    cellType_char = ""
+                    if cellType == "CellType::PREPLACED":
+                        cellType_char = "P"
+                    elif cellType == "CellType::MARKED":
+                        cellType_char = "M"
+
+                    if cellType_char:
+                        ax.text(
+                            GRID_MUL * (cellX + 1) - GRID_MUL/4 - 12,
+                            GRID_MUL * (cellY + 1) - GRID_MUL/4 - 8,
+                            cellType_char,
+                            fontsize=1,
+                            color='black',
+                            ha='right',
+                            va='top',
+                        )
+
+            # Render Via Cells
+            if renderMode == "VIA" or renderMode == "METAL_AND_VIA":
+                # start reading each cell
+                for renderViaCellIdx in range(viaCellCount):
+
+                    # cell Atrributes
+                    cellLayer, cellX, cellY, cellType, cellSt, cellLabel, cellIdxLabels = parseCell(filein, "Via")
+                    # Start rendering cell according to attributes
+                    # use the skirt
+
+                    viaOffSet = GRID_MUL - (VIA_SIZE/2)
+                    viaSkirtBorder = SKIRT_BORDER/2
+
+                    skirtRect = plt.Rectangle(
+                        (GRID_MUL*(cellX) + viaOffSet, GRID_MUL*(cellY) + viaOffSet),
+                        VIA_SIZE, VIA_SIZE, 
+                        facecolor=SKIRT_COLORS[cellType],
+                        edgecolor='black',
+                        linewidth=0.5,
+                        alpha=0.8
+                    )
+                    ax.add_patch(skirtRect)
+
+                    centreRect = plt.Rectangle(
+                        (GRID_MUL*(cellX) + viaOffSet + viaSkirtBorder , GRID_MUL*(cellY) + viaOffSet + viaSkirtBorder),
+                        GRID_MUL - 2*viaSkirtBorder, GRID_MUL - 2*viaSkirtBorder,
+                        facecolor=SIGNAL_COLORS[cellSt],
+                        linewidth=0,
+                        alpha=0.9
+                    )
+                    ax.add_patch(centreRect)
+
+                    cellType_char = ""
+                    if cellType == "CellType::PREPLACED":
+                        cellType_char = "P"
+                    elif cellType == "CellType::MARKED":
+                        cellType_char = "M"
+
+                    if cellType_char:
+                        ax.text(
+                            GRID_MUL * (cellX + 1) + viaOffSet - GRID_MUL/4 - 6,
+                            GRID_MUL * (cellY + 1) + viaOffSet - GRID_MUL/4 - 4,
+                            cellType_char,
+                            fontsize=1,
+                            color='black',
+                            ha='right',
+                            va='top',
+                        )
+
+
+
+
             if args.output is not None:
                 plt.savefig(args.output, dpi=args.dpi, bbox_inches='tight', pad_inches=0.2)
                 plt.close()
             else:
                 plt.show()
-                
-               
-
-                
-            
-
 
     except FileNotFoundError:
         print(f"[RenderPinMap]Error: File \"{args.input}\" not found")
