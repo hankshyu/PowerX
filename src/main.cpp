@@ -60,9 +60,9 @@ int main(int argc, char const *argv[]){
     dse.initialiseGraphWithPreplaced();
     timeProfiler.pauseTimer(timeSpan[3]);
 
-    // timeProfiler.startTimer(timeSpan[4]);
-    // dse.fillEnclosedRegions();
-    // timeProfiler.pauseTimer(timeSpan[4]);
+    timeProfiler.startTimer(timeSpan[4]);
+    dse.fillEnclosedRegions();
+    timeProfiler.pauseTimer(timeSpan[4]);
 
     // timeProfiler.startTimer(timeSpan[5]);
     // dse.markHalfOccupiedMetalsAndPins();
@@ -80,12 +80,12 @@ int main(int argc, char const *argv[]){
     // dse.placeDiffusionParticles();
     // timeProfiler.pauseTimer(timeSpan[8]);
 
-    visualiseDiffusionEngineMetal(dse, 0, "outputs/dse_m0.txt");
-    visualiseDiffusionEngineMetal(dse, 1, "outputs/dse_m1.txt");
-    visualiseDiffusionEngineMetal(dse, 2, "outputs/dse_m2.txt");
+    // visualiseDiffusionEngineMetal(dse, 0, "outputs/dse_m0.txt");
+    // visualiseDiffusionEngineMetal(dse, 1, "outputs/dse_m1.txt");
+    // visualiseDiffusionEngineMetal(dse, 2, "outputs/dse_m2.txt");
 
-    visualiseDiffusionEngineVia(dse, 0, "outputs/dse_v0.txt");
-    visualiseDiffusionEngineVia(dse, 1, "outputs/dse_v1.txt");
+    // visualiseDiffusionEngineVia(dse, 0, "outputs/dse_v0.txt");
+    // visualiseDiffusionEngineVia(dse, 1, "outputs/dse_v1.txt");
 
     visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
     visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
