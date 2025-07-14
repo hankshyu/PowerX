@@ -97,7 +97,7 @@ public:
 
     void placeDiffusionParticles();
     
-    // make sure the connections are correct
+    // make sure the connections are correct, only for verification
     void checkConnections();
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);

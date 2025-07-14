@@ -8,6 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+from collections import defaultdict
+
 COLORRST    = "\u001b[0m"
 BLACK       = "\u001b[30m"
 RED         = "\u001b[31m"
@@ -61,11 +63,11 @@ metalCellCount = -1
 viaCellCount = -1
 
 
-class CellLabel:
-    def __init__(self, celltype, signaltype, label):
-        self.celltype = celltype
-        self.signaltype = signaltype
+class CellLabelObj:
+    def __init__(self, label, signaltype, count):
         self.label = label
+        self.signaltype = signaltype
+        self.count = count
 
 def parse_arguments():
     parser = ArgumentParser(description="Visualise DiffusionEngine.")
@@ -130,7 +132,12 @@ def parseCell(filein, metalOrVia):
         print(f"[RenderDiffusionEngine]Error: {metalOrVia} Cell labels count error {line}")
 
     for labelIdx in range(labelCount):
-        print("todo parse iex")
+        LineBuffer = filein.readline().strip().split()
+        cellIdxLabels.append(CellLabelObj(int(LineBuffer[0]), LineBuffer[1], int(LineBuffer[2])))
+    
+    # sort in descending order
+    cellIdxLabels.sort(key=lambda x: x.count, reverse=True)
+
 
     return cellLayer, cellX, cellY, cellType, cellSt, cellLabel, cellIdxLabels 
 
@@ -219,12 +226,26 @@ if __name__ == '__main__':
                     )
                     ax.add_patch(skirtRect)
 
+                    coreCentreColor = SIGNAL_COLORS[cellSt]
+                    coreCentreAlpha = 0.9
+
+                    if cellSt == "EMPTY" and len(cellIdxLabels) != 0:
+                        coreCentreAlpha = 0.6
+                        signaltype_sum = defaultdict(int)
+                        for obj in cellIdxLabels:
+                            signaltype_sum[obj.signaltype] += obj.count
+
+                        # Find signaltype with largest total
+                        max_signaltype = max(signaltype_sum.items(), key=lambda x: x[1])
+                        coreCentreColor = SIGNAL_COLORS[max_signaltype[0]]
+
+
                     centreRect = plt.Rectangle(
                         (GRID_MUL*(cellX) + SKIRT_BORDER, GRID_MUL*(cellY) + SKIRT_BORDER),
                         GRID_MUL - 2*SKIRT_BORDER, GRID_MUL - 2*SKIRT_BORDER,
-                        facecolor=SIGNAL_COLORS[cellSt],
+                        facecolor=coreCentreColor,
                         linewidth=0,
-                        alpha=0.9
+                        alpha=coreCentreAlpha
                     )
                     ax.add_patch(centreRect)
 
@@ -236,14 +257,39 @@ if __name__ == '__main__':
 
                     if cellType_char:
                         ax.text(
-                            GRID_MUL * (cellX + 1) - GRID_MUL/4 - 12,
-                            GRID_MUL * (cellY + 1) - GRID_MUL/4 - 8,
+                            GRID_MUL * (cellX+1) - VIA_SIZE/2,
+                            GRID_MUL * (cellY+1) - VIA_SIZE/2,
                             cellType_char,
                             fontsize=1,
                             color='black',
                             ha='right',
                             va='top',
                         )
+                    
+                    if (cellLabel >= 0):
+                        ax.text(
+                            GRID_MUL * (cellX+1) - VIA_SIZE/2,
+                            GRID_MUL * (cellY) + VIA_SIZE/2,
+                            cellLabel,
+                            fontsize=1,
+                            color='black',
+                            ha='right',
+                            va='bottom',
+                        )
+                    
+                    # if len(cellIdxLabels) != 0:
+                        
+                    #     ax.text(
+                    #         GRID_MUL * (cellX+1) - VIA_SIZE/2,
+                    #         GRID_MUL * (cellY) + VIA_SIZE/2,
+                    #         cellLabel,
+                    #         fontsize=1,
+                    #         color='black',
+                    #         ha='left',
+                    #         va='top',
+                    #     )
+                    
+                    
 
             # Render Via Cells
             if renderMode == "VIA" or renderMode == "METAL_AND_VIA":
@@ -268,12 +314,24 @@ if __name__ == '__main__':
                     )
                     ax.add_patch(skirtRect)
 
+                    coreCentreColor = SIGNAL_COLORS[cellSt]
+                    coreCentreAlpha = 0.9
+
+                    if cellSt == "EMPTY" and len(cellIdxLabels) != 0:
+                        coreCentreAlpha = 0.6
+                        signaltype_sum = defaultdict(int)
+                        for obj in cellIdxLabels:
+                            signaltype_sum[obj.signaltype] += obj.count
+
+                        # Find signaltype with largest total
+                        max_signaltype = max(signaltype_sum.items(), key=lambda x: x[1])
+                        coreCentreColor = SIGNAL_COLORS[max_signaltype[0]]
                     centreRect = plt.Rectangle(
                         (GRID_MUL*(cellX) + viaOffSet + viaSkirtBorder , GRID_MUL*(cellY) + viaOffSet + viaSkirtBorder),
                         GRID_MUL - 2*viaSkirtBorder, GRID_MUL - 2*viaSkirtBorder,
-                        facecolor=SIGNAL_COLORS[cellSt],
+                        facecolor=coreCentreColor,
                         linewidth=0,
-                        alpha=0.9
+                        alpha=coreCentreAlpha
                     )
                     ax.add_patch(centreRect)
 

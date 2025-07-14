@@ -609,51 +609,78 @@ void DiffusionEngine::fillEnclosedRegions() {
 }
 
 void DiffusionEngine::markHalfOccupiedMetalsAndPins(){
-
+    // no vias at this stage would have obstacles at it's edge
+    // and no marked pins
     for(ViaCell &vc : this->viaGrid){
         SignalType vcSignal = vc.signal;
         CellType vcCellType = vc.type;
-        if(vcSignal == SignalType::OBSTACLES) continue;
+        
+        MetalCell *vcUpLLCell = vc.upLLCell;
+        MetalCell *vcUpULCell = vc.upULCell;
+        MetalCell *vcUpLRCell = vc.upLRCell;
+        MetalCell *vcUpURCell = vc.upURCell;
+        MetalCell *vcDownLLCell = vc.downLLCell;
+        MetalCell *vcDownULCell = vc.downULCell;
+        MetalCell *vcDownLRCell = vc.downLRCell;
+        MetalCell *vcDownURCell = vc.downURCell;
 
-        std::vector<MetalCell *> neighbors = {
-            vc.upLLCell, vc.upULCell, vc.upLRCell, vc.upURCell,
-            vc.downLLCell, vc.downULCell, vc.downLRCell, vc.downURCell
+
+        std::unordered_set<SignalType> allSignalTypes = {
+            vcSignal, 
+            vcUpLLCell->signal, vcUpULCell->signal, vcUpLRCell->signal, vcUpURCell->signal,
+            vcDownLLCell->signal, vcDownULCell->signal, vcDownLRCell->signal, vcDownURCell->signal
         };
+        allSignalTypes.erase(SignalType::EMPTY);
 
-        if(vcCellType == CellType::EMPTY){
-            // check if there is only one type of preplace signal
-            SignalType preplacedSig = SignalType::EMPTY;
-            for(MetalCell *mc : neighbors){
-                assert(mc != nullptr);
-                if(mc->type == CellType::PREPLACED){
-                   if(preplacedSig != SignalType::EMPTY){
-                    preplacedSig = SignalType::EMPTY;
-                    break;
-                   } 
-                   preplacedSig = mc->signal;
-                }
+        bool hasPreplaced = (vcCellType == CellType::PREPLACED);
+        bool vcUpLLCellIsPreplaced = vcUpLLCell->type == CellType::PREPLACED;
+        bool vcUpULCellIsPreplaced = vcUpULCell->type == CellType::PREPLACED;
+        bool vcUpLRCellIsPreplaced = vcUpLRCell->type == CellType::PREPLACED;
+        bool vcUpURCellIsPreplaced = vcUpURCell->type == CellType::PREPLACED;
+        bool vcDownLLCellIsPreplaced = vcDownLLCell->type == CellType::PREPLACED;
+        bool vcDownULCellIsPreplaced = vcDownULCell->type == CellType::PREPLACED;
+        bool vcDownLRCellIsPreplaced = vcDownLRCell->type == CellType::PREPLACED;
+        bool vcDownURCellIsPreplaced = vcDownURCell->type == CellType::PREPLACED;
+
+        hasPreplaced |= (vcUpLLCellIsPreplaced || vcUpULCellIsPreplaced || vcUpLRCellIsPreplaced || vcUpURCellIsPreplaced ||
+                        vcDownLLCellIsPreplaced || vcDownULCellIsPreplaced || vcDownLRCellIsPreplaced || vcDownURCellIsPreplaced);
+        
+        if(hasPreplaced && allSignalTypes.size() == 1){
+            SignalType fillSig = *allSignalTypes.begin();
+            if(!vcUpLLCellIsPreplaced){
+                vcUpLLCell->signal = fillSig;
+                vcUpLLCell->type = CellType::MARKED;
             }
-            if(preplacedSig == SignalType::EMPTY) continue;
-
-            // process those which has only one prepace signal type
-            vc.signal = preplacedSig; 
-            vc.type = CellType::MARKED;
-            for(MetalCell *mc : neighbors){
-                if(mc->type == CellType::EMPTY){
-                    mc->type = CellType::MARKED;
-                    mc->signal = vcSignal;
-                }
+            if(!vcUpULCellIsPreplaced){
+                vcUpULCell->signal = fillSig;
+                vcUpULCell->type = CellType::MARKED;
+            }
+            if(!vcUpLRCellIsPreplaced){
+                vcUpLRCell->signal = fillSig;
+                vcUpLRCell->type = CellType::MARKED;
+            }
+            if(!vcUpURCellIsPreplaced){
+                vcUpURCell->signal = fillSig;
+                vcUpURCell->type = CellType::MARKED;
             }
 
-        }else if(POWER_SIGNAL_SET.count(vcSignal) != 0){ // the via has as signal type
-            for(MetalCell *mc : neighbors){
-                if(mc->type == CellType::EMPTY){
-                    mc->type = CellType::MARKED;
-                    mc->signal = vcSignal;
-                }
+            if(!vcDownLLCellIsPreplaced){
+                vcDownLLCell->signal = fillSig;
+                vcDownLLCell->type = CellType::MARKED;
             }
-        }   
-
+            if(!vcDownULCellIsPreplaced){
+                vcDownULCell->signal = fillSig;
+                vcDownULCell->type = CellType::MARKED;
+            }
+            if(!vcDownLRCellIsPreplaced){
+                vcDownLRCell->signal = fillSig;
+                vcDownLRCell->type = CellType::MARKED;
+            }
+            if(!vcDownURCellIsPreplaced){
+                vcDownURCell->signal = fillSig;
+                vcDownURCell->type = CellType::MARKED;
+            } 
+        }
     }
 }
 
@@ -673,23 +700,24 @@ void DiffusionEngine::linkNeighbors(){
         if(mc.type != CellType::EMPTY) continue;
 
         MetalCell *mcPointer = &mc;
-        if((mc.northCell != nullptr) && (mc.northCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mc.northCell);
-            mc.northCell->metalCellNeighbors.push_back(mcPointer);
-        }
-        if((mc.southCell != nullptr) && (mc.southCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mc.southCell);
-            mc.southCell->metalCellNeighbors.push_back(mcPointer);
-        }
-        if((mc.eastCell != nullptr) && (mc.eastCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mc.eastCell);
-            mc.eastCell->metalCellNeighbors.push_back(mcPointer);
-        }
-        if((mc.westCell != nullptr) && (mc.westCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mc.westCell);
-            mc.westCell->metalCellNeighbors.push_back(mcPointer);
-        }
 
+        MetalCell *mcNorthCell = mc.northCell;
+        MetalCell *mcSouthCell = mc.southCell;
+        MetalCell *mcEastCell = mc.eastCell;
+        MetalCell *mcWestCell = mc.westCell;
+
+        if((mcNorthCell != nullptr) && (mcNorthCell->type == CellType::EMPTY)){
+            mc.metalCellNeighbors.push_back(mcNorthCell);
+        }
+        if((mcSouthCell != nullptr) && (mcSouthCell->type == CellType::EMPTY)){
+            mc.metalCellNeighbors.push_back(mcSouthCell);
+        }
+        if((mcEastCell != nullptr) && (mcEastCell->type == CellType::EMPTY)){
+            mc.metalCellNeighbors.push_back(mcEastCell);
+        }
+        if((mcWestCell != nullptr) && (mcWestCell->type == CellType::EMPTY)){
+            mc.metalCellNeighbors.push_back(mcWestCell);
+        }
     }
 
     // link via related linkings
@@ -697,39 +725,48 @@ void DiffusionEngine::linkNeighbors(){
         if(vc.type != CellType::EMPTY) continue;
 
         ViaCell *vcPointer = &vc;
+
+        MetalCell *vcUpLLCell = vc.upLLCell;
+        MetalCell *vcUpULCell = vc.upULCell;
+        MetalCell *vcUpLRCell = vc.upLRCell;
+        MetalCell *vcUpURCell = vc.upURCell;
+        MetalCell *vcDownLLCell = vc.downLLCell;
+        MetalCell *vcDownULCell = vc.downULCell;
+        MetalCell *vcDownLRCell = vc.downLRCell;
+        MetalCell *vcDownURCell = vc.downURCell;
         
-        if((vc.upLLCell != nullptr) && (vc.upLLCell->type == CellType::EMPTY)){
-            vc.neighbors.push_back(vc.upLLCell);
-            vc.upLLCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcUpLLCell != nullptr) && (vcUpLLCell->type == CellType::EMPTY)){
+            vc.neighbors.push_back(vcUpLLCell);
+            vcUpLLCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.upULCell != nullptr) && (vc.upULCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.upULCell);
-            vc.upULCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcUpULCell != nullptr) && (vcUpULCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcUpULCell);
+            vcUpULCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.upLRCell != nullptr) && (vc.upLRCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.upLRCell);
-            vc.upLRCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcUpLRCell != nullptr) && (vcUpLRCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcUpLRCell);
+            vcUpLRCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.upURCell != nullptr) && (vc.upURCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.upURCell);
-            vc.upURCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcUpURCell != nullptr) && (vcUpURCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcUpURCell);
+            vcUpURCell->viaCellNeighbors.push_back(vcPointer);
         }
 
-        if((vc.downLLCell != nullptr) && (vc.downLLCell->type == CellType::EMPTY)){
-            vc.neighbors.push_back(vc.downLLCell);
-            vc.downLLCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcDownLLCell != nullptr) && (vcDownLLCell->type == CellType::EMPTY)){
+            vc.neighbors.push_back(vcDownLLCell);
+            vcDownLLCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.downULCell != nullptr) && (vc.downULCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.downULCell);
-            vc.downULCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcDownULCell != nullptr) && (vcDownULCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcDownULCell);
+            vcDownULCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.downLRCell != nullptr) && (vc.downLRCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.downLRCell);
-            vc.downLRCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcDownLRCell != nullptr) && (vcDownLRCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcDownLRCell);
+            vcDownLRCell->viaCellNeighbors.push_back(vcPointer);
         }
-        if((vc.downURCell != nullptr) && (vc.downURCell->type != CellType::EMPTY)){
-            vc.neighbors.push_back(vc.downURCell);
-            vc.downURCell->viaCellNeighbors.push_back(vcPointer);
+        if((vcDownURCell != nullptr) && (vcDownURCell->type != CellType::EMPTY)){
+            vc.neighbors.push_back(vcDownURCell);
+            vcDownURCell->viaCellNeighbors.push_back(vcPointer);
         } 
     }
 }

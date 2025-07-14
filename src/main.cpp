@@ -64,21 +64,21 @@ int main(int argc, char const *argv[]){
     dse.fillEnclosedRegions();
     timeProfiler.pauseTimer(timeSpan[4]);
 
-    // timeProfiler.startTimer(timeSpan[5]);
-    // dse.markHalfOccupiedMetalsAndPins();
-    // timeProfiler.pauseTimer(timeSpan[5]);
+    timeProfiler.startTimer(timeSpan[5]);
+    dse.markHalfOccupiedMetalsAndPins();
+    timeProfiler.pauseTimer(timeSpan[5]);
 
-    // timeProfiler.startTimer(timeSpan[6]);
-    // dse.linkNeighbors();
-    // timeProfiler.pauseTimer(timeSpan[6]);
+    timeProfiler.startTimer(timeSpan[6]);
+    dse.linkNeighbors();
+    timeProfiler.pauseTimer(timeSpan[6]);
 
-    // timeProfiler.startTimer(timeSpan[7]);
-    // dse.initialiseIndexing();
-    // timeProfiler.pauseTimer(timeSpan[7]);
+    timeProfiler.startTimer(timeSpan[7]);
+    dse.initialiseIndexing();
+    timeProfiler.pauseTimer(timeSpan[7]);
 
-    // timeProfiler.startTimer(timeSpan[8]);
-    // dse.placeDiffusionParticles();
-    // timeProfiler.pauseTimer(timeSpan[8]);
+    timeProfiler.startTimer(timeSpan[8]);
+    dse.placeDiffusionParticles();
+    timeProfiler.pauseTimer(timeSpan[8]);
 
     // visualiseDiffusionEngineMetal(dse, 0, "outputs/dse_m0.txt");
     // visualiseDiffusionEngineMetal(dse, 1, "outputs/dse_m1.txt");
