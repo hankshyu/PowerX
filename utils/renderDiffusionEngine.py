@@ -39,6 +39,14 @@ SIGNAL_COLORS = {
     "OBSTACLE": "#663300"
 }
 
+SIGNAL_LABEL_COLORS = {
+    "EMPTY": "none",
+    "POWER_1": "#1e54b0",
+    "POWER_2": "#e66022",
+    "POWER_3": "#ffea00",
+    "POWER_4": "#4b3575",
+}
+
 SKIRT_COLORS = {
     "CellType::OBSTACLES" : SIGNAL_COLORS["OBSTACLE"],
     "CellType::PREPLACED" : "#FF0000",
@@ -277,18 +285,30 @@ if __name__ == '__main__':
                             va='bottom',
                         )
                     
-                    # if len(cellIdxLabels) != 0:
-                        
-                    #     ax.text(
-                    #         GRID_MUL * (cellX+1) - VIA_SIZE/2,
-                    #         GRID_MUL * (cellY) + VIA_SIZE/2,
-                    #         cellLabel,
-                    #         fontsize=1,
-                    #         color='black',
-                    #         ha='left',
-                    #         va='top',
-                    #     )
-                    
+                    if len(cellIdxLabels) != 0:
+                        lbword = f"{cellIdxLabels[0].label}:{cellIdxLabels[0].count}"
+                        lbcolor = SIGNAL_LABEL_COLORS[cellIdxLabels[0].signaltype]
+                        ax.text(
+                            GRID_MUL * (cellX) + VIA_SIZE/2 - 5,
+                            GRID_MUL * (cellY+1) - VIA_SIZE/2,
+                            lbword,
+                            fontsize=0.6,
+                            color=lbcolor,
+                            ha='left',
+                            va='top',
+                        )
+                    if len(cellIdxLabels) >= 2:
+                        lbword = f"{cellIdxLabels[1].label}:{cellIdxLabels[1].count}"
+                        lbcolor = SIGNAL_LABEL_COLORS[cellIdxLabels[1].signaltype]
+                        ax.text(
+                            GRID_MUL * (cellX) + VIA_SIZE/2 - 5,
+                            GRID_MUL * (cellY+1) - VIA_SIZE/2 - 10,
+                            lbword,
+                            fontsize=0.6,
+                            color=lbcolor,
+                            ha='left',
+                            va='top',
+                        )
                     
 
             # Render Via Cells
@@ -326,9 +346,10 @@ if __name__ == '__main__':
                         # Find signaltype with largest total
                         max_signaltype = max(signaltype_sum.items(), key=lambda x: x[1])
                         coreCentreColor = SIGNAL_COLORS[max_signaltype[0]]
+                    
                     centreRect = plt.Rectangle(
                         (GRID_MUL*(cellX) + viaOffSet + viaSkirtBorder , GRID_MUL*(cellY) + viaOffSet + viaSkirtBorder),
-                        GRID_MUL - 2*viaSkirtBorder, GRID_MUL - 2*viaSkirtBorder,
+                        VIA_SIZE - 2*viaSkirtBorder, VIA_SIZE - 2*viaSkirtBorder,
                         facecolor=coreCentreColor,
                         linewidth=0,
                         alpha=coreCentreAlpha
@@ -343,8 +364,8 @@ if __name__ == '__main__':
 
                     if cellType_char:
                         ax.text(
-                            GRID_MUL * (cellX + 1) + viaOffSet - GRID_MUL/4 - 6,
-                            GRID_MUL * (cellY + 1) + viaOffSet - GRID_MUL/4 - 4,
+                            GRID_MUL * cellX + viaOffSet + VIA_SIZE - viaSkirtBorder - 2,
+                            GRID_MUL * cellY + viaOffSet + VIA_SIZE - viaSkirtBorder - 2,
                             cellType_char,
                             fontsize=1,
                             color='black',
@@ -352,6 +373,40 @@ if __name__ == '__main__':
                             va='top',
                         )
 
+                    if (cellLabel >= 0):
+                        ax.text(
+                            GRID_MUL * cellX + viaOffSet + VIA_SIZE - viaSkirtBorder - 2,
+                            GRID_MUL * cellY + viaOffSet + viaSkirtBorder + 2,
+                            cellLabel,
+                            fontsize=1,
+                            color='black',
+                            ha='right',
+                            va='bottom',
+                        )
+                    if len(cellIdxLabels) != 0:
+                        lbword = f"{cellIdxLabels[0].label}:{cellIdxLabels[0].count}"
+                        lbcolor = SIGNAL_LABEL_COLORS[cellIdxLabels[0].signaltype]
+                        ax.text(
+                            GRID_MUL * cellX + viaOffSet + viaSkirtBorder + 2,
+                            GRID_MUL * cellY + viaOffSet + VIA_SIZE - viaSkirtBorder - 2,
+                            lbword,
+                            fontsize=0.6,
+                            color=lbcolor,
+                            ha='left',
+                            va='top',
+                        )
+                    if len(cellIdxLabels) >= 2:
+                        lbword = f"{cellIdxLabels[1].label}:{cellIdxLabels[1].count}"
+                        lbcolor = SIGNAL_LABEL_COLORS[cellIdxLabels[1].signaltype]
+                        ax.text(
+                            GRID_MUL * cellX + viaOffSet + viaSkirtBorder + 2,
+                            GRID_MUL * cellY + viaOffSet + VIA_SIZE - viaSkirtBorder - 12,
+                            lbword,
+                            fontsize=0.6,
+                            color=lbcolor,
+                            ha='left',
+                            va='top',
+                        )
 
 
 

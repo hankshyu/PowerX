@@ -71,17 +71,27 @@ public:
     // this is the index place in both metalGrid/metalGridLabel or ViaGrid/viaGridlabel
     size_t index;
 
+    std::vector<DiffusionChamber *> neighbors;
+
     std::vector<CellLabel> cellLabels;
     std::vector<int> cellParticles;
+
+    std::vector<CellLabel> cellLabelsCache;
+    std::vector<int> cellParticlesCache;
+
+
 
     DiffusionChamber();
 
     // return -1 if lable not exist
     int getParticlesCount(CellLabel label); 
 
-    void addParticles(CellLabel label, int particleCount);
-    void removeParticles(CellLabel label, int particleCount);
-    void clearParticles(CellLabel label);
+    void addParticlesToCache(CellLabel label, int particleCount);
+    // void removeParticlesFromCache(CellLabel label, int particleCount);
+    // void clearParticles(CellLabel label);
+
+    void commitCache();
+    void flushCache();
 };
 
 // Cord class hash function implementations

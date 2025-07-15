@@ -19,6 +19,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <queue>
+#include <algorithm>
 // 2. Boost Library:
 
 // 3. Texo Library:
@@ -688,8 +689,7 @@ void DiffusionEngine::linkNeighbors(){
     
     // a link goes from empty -> empty
     for(MetalCell &mc : this->metalGrid){
-        mc.metalCellNeighbors.clear();
-        mc.viaCellNeighbors.clear();
+        mc.neighbors.clear();
     }
     for(ViaCell &vc : this->viaGrid){
         vc.neighbors.clear();
@@ -706,24 +706,27 @@ void DiffusionEngine::linkNeighbors(){
         MetalCell *mcEastCell = mc.eastCell;
         MetalCell *mcWestCell = mc.westCell;
 
+        ViaCell *mcUpCell = mc.upCell;
+        ViaCell *mcDownCell = mc.downCell;
+
         if((mcNorthCell != nullptr) && (mcNorthCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mcNorthCell);
+            mc.neighbors.push_back(mcNorthCell);
         }
         if((mcSouthCell != nullptr) && (mcSouthCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mcSouthCell);
+            mc.neighbors.push_back(mcSouthCell);
         }
         if((mcEastCell != nullptr) && (mcEastCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mcEastCell);
+            mc.neighbors.push_back(mcEastCell);
         }
         if((mcWestCell != nullptr) && (mcWestCell->type == CellType::EMPTY)){
-            mc.metalCellNeighbors.push_back(mcWestCell);
+            mc.neighbors.push_back(mcWestCell);
         }
+
     }
 
     // link via related linkings
     for(ViaCell &vc : this->viaGrid){
         if(vc.type != CellType::EMPTY) continue;
-
         ViaCell *vcPointer = &vc;
 
         MetalCell *vcUpLLCell = vc.upLLCell;
@@ -737,38 +740,123 @@ void DiffusionEngine::linkNeighbors(){
         
         if((vcUpLLCell != nullptr) && (vcUpLLCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcUpLLCell);
-            vcUpLLCell->viaCellNeighbors.push_back(vcPointer);
+            vcUpLLCell->neighbors.push_back(vcPointer);
         }
-        if((vcUpULCell != nullptr) && (vcUpULCell->type != CellType::EMPTY)){
+        if((vcUpULCell != nullptr) && (vcUpULCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcUpULCell);
-            vcUpULCell->viaCellNeighbors.push_back(vcPointer);
+            vcUpULCell->neighbors.push_back(vcPointer);
         }
-        if((vcUpLRCell != nullptr) && (vcUpLRCell->type != CellType::EMPTY)){
+        if((vcUpLRCell != nullptr) && (vcUpLRCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcUpLRCell);
-            vcUpLRCell->viaCellNeighbors.push_back(vcPointer);
+            vcUpLRCell->neighbors.push_back(vcPointer);
         }
-        if((vcUpURCell != nullptr) && (vcUpURCell->type != CellType::EMPTY)){
+        if((vcUpURCell != nullptr) && (vcUpURCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcUpURCell);
-            vcUpURCell->viaCellNeighbors.push_back(vcPointer);
+            vcUpURCell->neighbors.push_back(vcPointer);
         }
 
         if((vcDownLLCell != nullptr) && (vcDownLLCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcDownLLCell);
-            vcDownLLCell->viaCellNeighbors.push_back(vcPointer);
+            vcDownLLCell->neighbors.push_back(vcPointer);
         }
-        if((vcDownULCell != nullptr) && (vcDownULCell->type != CellType::EMPTY)){
+        if((vcDownULCell != nullptr) && (vcDownULCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcDownULCell);
-            vcDownULCell->viaCellNeighbors.push_back(vcPointer);
+            vcDownULCell->neighbors.push_back(vcPointer);
         }
-        if((vcDownLRCell != nullptr) && (vcDownLRCell->type != CellType::EMPTY)){
+        if((vcDownLRCell != nullptr) && (vcDownLRCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcDownLRCell);
-            vcDownLRCell->viaCellNeighbors.push_back(vcPointer);
+            vcDownLRCell->neighbors.push_back(vcPointer);
         }
-        if((vcDownURCell != nullptr) && (vcDownURCell->type != CellType::EMPTY)){
+        if((vcDownURCell != nullptr) && (vcDownURCell->type == CellType::EMPTY)){
             vc.neighbors.push_back(vcDownURCell);
-            vcDownURCell->viaCellNeighbors.push_back(vcPointer);
+            vcDownURCell->neighbors.push_back(vcPointer);
         } 
     }
+}
+
+void DiffusionEngine::checkNeighbors(){
+    for(MetalCell &mc : metalGrid){
+        
+        assert(mc.neighbors.size() <= 6 && mc.neighbors.size() >= 0);
+        if(mc.type != CellType::EMPTY){
+            assert(mc.neighbors.empty());
+        }else{
+            if(mc.northCell != nullptr && mc.northCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.northCell) == 1);
+            }
+            if(mc.southCell != nullptr && mc.southCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.southCell) == 1);
+            }
+            if(mc.eastCell != nullptr && mc.eastCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.eastCell) == 1);
+            }
+            if(mc.westCell != nullptr && mc.westCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.westCell) == 1);
+            }
+
+            if(mc.upCell != nullptr && mc.upCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.upCell) == 1);
+            }
+            if(mc.downCell != nullptr && mc.downCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.downCell) == 1);
+            }
+
+
+        }
+
+        for(DiffusionChamber *dc : mc.neighbors){
+            MetalCell *nmc = static_cast<MetalCell *>(dc);
+            ViaCell *nvc = static_cast<ViaCell *>(dc);
+            assert((nmc == mc.northCell) || (nmc == mc.southCell) || (nmc == mc.eastCell) || (nmc == mc.westCell) || (nvc == mc.upCell) || (nvc == mc.downCell));
+        }
+
+
+    }
+    std::cout << "Pass Metal Cells Check Neighbors test" << std::endl;
+
+    for(ViaCell &vc : viaGrid){
+        assert(vc.neighbors.size() <= 8 && vc.neighbors.size() >= 0); 
+        for(DiffusionChamber *dc : vc.neighbors){
+            MetalCell *nmc = static_cast<MetalCell *>(dc);
+            assert((nmc == vc.upLLCell) || (dc == vc.upULCell) || (dc == vc.upLRCell) || (dc == vc.upURCell) ||
+                   (nmc == vc.downLLCell) || (dc == vc.downULCell) || (dc == vc.downLRCell) || (dc == vc.downURCell) 
+                );
+        }
+        if(vc.type != CellType::EMPTY){
+            assert(vc.neighbors.empty());
+        }else{
+            if(vc.upLLCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLLCell) == 1);
+            }
+            if(vc.upULCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upULCell) == 1);
+            }
+            if(vc.upLRCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLRCell) == 1);
+            }
+            if(vc.upURCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upURCell) == 1);
+            }
+
+            if(vc.downLLCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLLCell) == 1);
+            }
+            if(vc.downULCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downULCell) == 1);
+            }
+            if(vc.downLRCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLRCell) == 1);
+            }
+            if(vc.downURCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downURCell) == 1);
+            }
+        }
+
+
+    }
+    std::cout << "Pass Via Cells Check Neighbors test" << std::endl;
+
+    
 }
 
 void DiffusionEngine::initialiseIndexing(){
@@ -1054,7 +1142,8 @@ void DiffusionEngine::placeDiffusionParticles(){
         if(POWER_SIGNAL_SET.count(st) == 0) continue;
 
         for(DiffusionChamber *dc : dcset){
-            dc->addParticles(cl, 1000);
+            dc->addParticlesToCache(cl, 1000);
+            dc->commitCache();
         }
     }
 
@@ -1204,4 +1293,84 @@ void DiffusionEngine::checkConnections(){
     }
     
     std::cout << "Pass via connection check!" << std::endl;
+}
+
+void DiffusionEngine::diffuse(double diffusionRate){
+    assert(diffusionRate > 0 && diffusionRate < 0.5);
+
+    bool testFirstDiffuse = false;
+    bool firstDiffuse = false;
+    for(MetalCell &cell : metalGrid){
+        size_t neighborSize = cell.neighbors.size();
+        // if(neighborSize == 0) continue;
+        if(!testFirstDiffuse){
+            testFirstDiffuse = true;
+            firstDiffuse = cell.cellParticles.empty();
+        }
+
+        cell.cellLabelsCache = cell.cellLabels;
+        cell.cellParticlesCache = cell.cellParticles;
+
+
+        for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+            // cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
+            cell.cellParticlesCache[i] =  neighborSize + 100;
+        }
+
+        // for(DiffusionChamber *diffc : cell.neighbors){
+        //     for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
+        //         cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
+        //     }
+        // }
+        // if(!firstDiffuse){
+        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.cellParticles[i];
+        //     }
+        // }else{
+        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i];
+        //     }
+        // }
+    }
+
+    for(ViaCell &cell : viaGrid){
+        size_t neighborSize = cell.neighbors.size();
+        // if(neighborSize == 0) continue;
+        if(!testFirstDiffuse){
+            testFirstDiffuse = true;
+            firstDiffuse = cell.cellParticles.empty();
+        }
+
+        cell.cellLabelsCache = cell.cellLabels;
+        cell.cellParticlesCache = cell.cellParticles;
+        
+
+        for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+            // cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
+            cell.cellParticlesCache[i] = neighborSize + 100;
+        }
+
+        // for(DiffusionChamber *diffc : cell.neighbors){
+        //     for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
+        //         cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
+        //     }
+        // }
+        // if(!firstDiffuse){
+        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.cellParticles[i];
+        //     }
+        // }else{
+        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i];
+        //     }
+        // }
+    }
+
+    for(MetalCell &cell : metalGrid){
+        cell.commitCache();
+    }
+    for(ViaCell &cell : viaGrid){
+        cell.commitCache();
+    }
+    
 }

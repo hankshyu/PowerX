@@ -34,7 +34,8 @@ int main(int argc, char const *argv[]){
        "Mark h-Occupied Pins",
        "Link Neighbors",
        "Initialize Index",
-       "Place particles"
+       "Place particles",
+       "Diffuse"
     };
 
     printWelcomeBanner();
@@ -79,6 +80,10 @@ int main(int argc, char const *argv[]){
     timeProfiler.startTimer(timeSpan[8]);
     dse.placeDiffusionParticles();
     timeProfiler.pauseTimer(timeSpan[8]);
+
+    timeProfiler.startTimer(timeSpan[9]);
+    dse.diffuse(0.1);
+    timeProfiler.pauseTimer(timeSpan[9]);
 
     // visualiseDiffusionEngineMetal(dse, 0, "outputs/dse_m0.txt");
     // visualiseDiffusionEngineMetal(dse, 1, "outputs/dse_m1.txt");

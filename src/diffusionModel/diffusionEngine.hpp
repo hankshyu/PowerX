@@ -96,9 +96,12 @@ public:
     void initialiseIndexing();
 
     void placeDiffusionParticles();
+
+    void diffuse(double diffusionRate);
     
     // make sure the connections are correct, only for verification
     void checkConnections();
+    void checkNeighbors();
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);

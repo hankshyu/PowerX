@@ -80,48 +80,69 @@ int DiffusionChamber::getParticlesCount(CellLabel label){
     return -1;
 }
 
-void DiffusionChamber::addParticles(CellLabel label, int particleCount){
-    assert(particleCount >= 0);
-    for(int i = 0; i < cellLabels.size(); ++i){
-        if(label == cellLabels[i]){
-            cellParticles[i] += particleCount;
-            return;
-        }
-    }
-    
-    // add new label
-    cellLabels.push_back(label);
-    cellParticles.push_back(particleCount);
-}
-
-void DiffusionChamber::removeParticles(CellLabel label, int particleCount){
-    assert(particleCount >= 0);
-    for (int i = 0; i < cellLabels.size(); ++i) {
-        if (label == cellLabels[i]) {
-            cellParticles[i] -= particleCount;
-            if (cellParticles[i] <= 0) {
-                // swap with back, then pop
-                cellParticles[i] = cellParticles.back();
-                cellLabels[i] = cellLabels.back();
-                cellParticles.pop_back();
-                cellLabels.pop_back();
+void DiffusionChamber::addParticlesToCache(CellLabel label, int particleCount){
+    if(particleCount == 0) return;
+    assert(particleCount != 0);
+    for(int i = 0; i < cellLabelsCache.size(); ++i){
+        if(label == cellLabelsCache[i]){
+            cellParticlesCache[i] += particleCount;
+            if (cellParticlesCache[i] == 0) {
+                // remove lable if it's == 0
+                cellParticlesCache[i] = cellParticlesCache.back();
+                cellLabelsCache[i] = cellLabelsCache.back();
+                cellParticlesCache.pop_back();
+                cellLabelsCache.pop_back();
             }
             return;
         }
     }
+    // add new label
+    cellLabelsCache.push_back(label);
+    cellParticlesCache.push_back(particleCount);
 }
 
-void DiffusionChamber::clearParticles(CellLabel label){
-    for (int i = 0; i < cellLabels.size(); ++i) {
-        if (label == cellLabels[i]) {
-            // swap with back, then pop
-            cellParticles[i] = cellParticles.back();
-            cellLabels[i] = cellLabels.back();
-            cellParticles.pop_back();
-            cellLabels.pop_back();
-            return;
-        }
-    }
+// void DiffusionChamber::removeParticlesFromCache(CellLabel label, int particleCount){
+//     assert(particleCount >= 0);
+//     for (int i = 0; i < cellLabelsCache.size(); ++i) {
+//         if (label == cellLabelsCache[i]) {
+//             cellParticlesCache[i] -= particleCount;
+//             if (cellParticles[i] == 0) {
+//                 // remove lable if it's == 0
+//                 cellParticlesCache[i] = cellParticlesCache.back();
+//                 cellLabelsCache[i] = cellLabelsCache.back();
+//                 cellParticlesCache.pop_back();
+//                 cellLabelsCache.pop_back();
+//             }
+//             return;
+//         }
+//     }
+// }
+
+// void DiffusionChamber::clearParticles(CellLabel label){
+//     for (int i = 0; i < cellLabels.size(); ++i) {
+//         if (label == cellLabels[i]) {
+//             // swap with back, then pop
+//             cellParticles[i] = cellParticles.back();
+//             cellLabels[i] = cellLabels.back();
+//             cellParticles.pop_back();
+//             cellLabels.pop_back();
+//             return;
+//         }
+//     }
+// }
+
+void DiffusionChamber::commitCache(){
+    cellLabels = std::move(cellLabelsCache);
+    cellParticles = std::move(cellParticlesCache);
+
+    cellLabelsCache.clear();
+    cellParticlesCache.clear();
+}
+
+void DiffusionChamber::flushCache(){
+
+    cellLabelsCache.clear();
+    cellParticlesCache.clear();
 }
 
 size_t std::hash<DiffusionChamber>::operator()(const DiffusionChamber &key) const {

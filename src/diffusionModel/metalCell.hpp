@@ -45,9 +45,8 @@ class ViaCell;
 
 class MetalCell : public DiffusionChamber{
 public:
-
-    std::vector<MetalCell *> metalCellNeighbors;
-    std::vector<ViaCell *> viaCellNeighbors;
+    // std::vector<MetalCell *> metalCellNeighbors;
+    // std::vector<ViaCell *> viaCellNeighbors;
 
     MetalCell *northCell;
     MetalCell *southCell;

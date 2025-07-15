@@ -44,7 +44,6 @@ class MetalCell;
 
 class ViaCell : public DiffusionChamber{
 public:
-    std::vector<MetalCell *> neighbors;
 
     MetalCell *upLLCell;
     MetalCell *upULCell;
