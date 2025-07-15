@@ -77,7 +77,7 @@ int DiffusionChamber::getParticlesCount(CellLabel label){
     for(int i = 0; i < cellLabels.size(); ++i){
         if(label == cellLabels[i]) return cellParticles[i];
     }
-    return -1;
+    return 0;
 }
 
 void DiffusionChamber::addParticlesToCache(CellLabel label, int particleCount){

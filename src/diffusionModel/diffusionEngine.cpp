@@ -1298,72 +1298,51 @@ void DiffusionEngine::checkConnections(){
 void DiffusionEngine::diffuse(double diffusionRate){
     assert(diffusionRate > 0 && diffusionRate < 0.5);
 
-    bool testFirstDiffuse = false;
-    bool firstDiffuse = false;
     for(MetalCell &cell : metalGrid){
         size_t neighborSize = cell.neighbors.size();
-        // if(neighborSize == 0) continue;
-        if(!testFirstDiffuse){
-            testFirstDiffuse = true;
-            firstDiffuse = cell.cellParticles.empty();
-        }
+        if(neighborSize == 0) continue;
 
         cell.cellLabelsCache = cell.cellLabels;
         cell.cellParticlesCache = cell.cellParticles;
 
 
         for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-            // cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
-            cell.cellParticlesCache[i] =  neighborSize + 100;
+            cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
         }
 
-        // for(DiffusionChamber *diffc : cell.neighbors){
-        //     for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
-        //         cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
-        //     }
-        // }
-        // if(!firstDiffuse){
-        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.cellParticles[i];
-        //     }
-        // }else{
-        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i];
-        //     }
-        // }
+        for(DiffusionChamber *diffc : cell.neighbors){
+            for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
+                cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
+            }
+        }
+
+        for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+            cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.getParticlesCount(cell.cellLabelsCache[i]);
+        }
+
     }
 
     for(ViaCell &cell : viaGrid){
         size_t neighborSize = cell.neighbors.size();
-        // if(neighborSize == 0) continue;
-        if(!testFirstDiffuse){
-            testFirstDiffuse = true;
-            firstDiffuse = cell.cellParticles.empty();
-        }
+        if(neighborSize == 0) continue;
 
         cell.cellLabelsCache = cell.cellLabels;
         cell.cellParticlesCache = cell.cellParticles;
-        
+
 
         for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-            // cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
-            cell.cellParticlesCache[i] = neighborSize + 100;
+            cell.cellParticlesCache[i] = -cell.cellParticles[i] * neighborSize;
         }
 
-        // for(DiffusionChamber *diffc : cell.neighbors){
-        //     for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
-        //         cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
-        //     }
-        // }
-        // if(!firstDiffuse){
-        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.cellParticles[i];
-        //     }
-        // }else{
-        //     for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
-        //         cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i];
-        //     }
-        // }
+        for(DiffusionChamber *diffc : cell.neighbors){
+            for(size_t i = 0; i < diffc->cellLabels.size(); ++i){
+                cell.addParticlesToCache(diffc->cellLabels[i], diffc->cellParticles[i]);
+            }
+        }
+        
+        for (size_t i = 0; i < cell.cellParticlesCache.size(); ++i) {
+            cell.cellParticlesCache[i] = diffusionRate * cell.cellParticlesCache[i] + cell.getParticlesCount(cell.cellLabelsCache[i]);
+        }
     }
 
     for(MetalCell &cell : metalGrid){
@@ -1373,4 +1352,43 @@ void DiffusionEngine::diffuse(double diffusionRate){
         cell.commitCache();
     }
     
+}
+
+void DiffusionEngine::stage(){
+
+    for(MetalCell &cell : this->metalGrid){
+        if((cell.type != CellType::EMPTY)  || (cell.cellLabels.empty())) continue;
+        size_t maxIdx = 0;
+        int maxParticles = cell.cellParticles[0];
+
+        for(size_t i = 1; i < cell.cellParticles.size(); ++i){
+            int particlesCount = cell.cellParticles[i];
+            if(particlesCount > maxParticles){
+                maxParticles = particlesCount;
+                maxIdx = i;
+            }
+        }
+
+        cell.signal = cellLabelToSigType[cell.cellLabels[maxIdx]];
+    }
+
+    for(ViaCell &cell : this->viaGrid){
+        if((cell.type != CellType::EMPTY)  || (cell.cellLabels.empty())) continue;
+        size_t maxIdx = 0;
+        int maxParticles = cell.cellParticles[0];
+
+        for(size_t i = 1; i < cell.cellParticles.size(); ++i){
+            int particlesCount = cell.cellParticles[i];
+            if(particlesCount > maxParticles){
+                maxParticles = particlesCount;
+                maxIdx = i;
+            }
+        }
+
+        cell.signal = cellLabelToSigType[cell.cellLabels[maxIdx]];
+    }
+}
+
+void DiffusionEngine::commit(){
+   // todo 
 }

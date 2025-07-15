@@ -98,6 +98,8 @@ public:
     void placeDiffusionParticles();
 
     void diffuse(double diffusionRate);
+    void stage();
+    void commit();
     
     // make sure the connections are correct, only for verification
     void checkConnections();
