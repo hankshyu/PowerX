@@ -32,7 +32,7 @@
 #include "c4Bump.hpp"
 #include "signalType.hpp"
 #include "ballOut.hpp"
-#include "ObjectArray.hpp"
+#include "objectArray.hpp"
 
 C4PinCluster::C4PinCluster(): representation(Cord(-1, -1)), clusterSignalType(SignalType::EMPTY) {
 

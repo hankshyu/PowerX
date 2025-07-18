@@ -25,6 +25,7 @@
 // 3. Texo Library:
 #include "diffusionEngine.hpp"
 
+
 DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistributionNetwork(fileName) {
     this->m_metalGridLayers = m_metalLayerCount;
     this->m_metalGridWidth = m_gridWidth;
@@ -774,89 +775,8 @@ void DiffusionEngine::linkNeighbors(){
     }
 }
 
-void DiffusionEngine::checkNeighbors(){
-    for(MetalCell &mc : metalGrid){
-        
-        assert(mc.neighbors.size() <= 6 && mc.neighbors.size() >= 0);
-        if(mc.type != CellType::EMPTY){
-            assert(mc.neighbors.empty());
-        }else{
-            if(mc.northCell != nullptr && mc.northCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.northCell) == 1);
-            }
-            if(mc.southCell != nullptr && mc.southCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.southCell) == 1);
-            }
-            if(mc.eastCell != nullptr && mc.eastCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.eastCell) == 1);
-            }
-            if(mc.westCell != nullptr && mc.westCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.westCell) == 1);
-            }
+void DiffusionEngine::runDiffusionTop(double diffusionRate){
 
-            if(mc.upCell != nullptr && mc.upCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.upCell) == 1);
-            }
-            if(mc.downCell != nullptr && mc.downCell->type == CellType::EMPTY){
-                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.downCell) == 1);
-            }
-
-
-        }
-
-        for(DiffusionChamber *dc : mc.neighbors){
-            MetalCell *nmc = static_cast<MetalCell *>(dc);
-            ViaCell *nvc = static_cast<ViaCell *>(dc);
-            assert((nmc == mc.northCell) || (nmc == mc.southCell) || (nmc == mc.eastCell) || (nmc == mc.westCell) || (nvc == mc.upCell) || (nvc == mc.downCell));
-        }
-
-
-    }
-    std::cout << "Pass Metal Cells Check Neighbors test" << std::endl;
-
-    for(ViaCell &vc : viaGrid){
-        assert(vc.neighbors.size() <= 8 && vc.neighbors.size() >= 0); 
-        for(DiffusionChamber *dc : vc.neighbors){
-            MetalCell *nmc = static_cast<MetalCell *>(dc);
-            assert((nmc == vc.upLLCell) || (dc == vc.upULCell) || (dc == vc.upLRCell) || (dc == vc.upURCell) ||
-                   (nmc == vc.downLLCell) || (dc == vc.downULCell) || (dc == vc.downLRCell) || (dc == vc.downURCell) 
-                );
-        }
-        if(vc.type != CellType::EMPTY){
-            assert(vc.neighbors.empty());
-        }else{
-            if(vc.upLLCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLLCell) == 1);
-            }
-            if(vc.upULCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upULCell) == 1);
-            }
-            if(vc.upLRCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLRCell) == 1);
-            }
-            if(vc.upURCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upURCell) == 1);
-            }
-
-            if(vc.downLLCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLLCell) == 1);
-            }
-            if(vc.downULCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downULCell) == 1);
-            }
-            if(vc.downLRCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLRCell) == 1);
-            }
-            if(vc.downURCell->type == CellType::EMPTY){
-                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downURCell) == 1);
-            }
-        }
-
-
-    }
-    std::cout << "Pass Via Cells Check Neighbors test" << std::endl;
-
-    
 }
 
 void DiffusionEngine::initialiseIndexing(){
@@ -1391,4 +1311,91 @@ void DiffusionEngine::stage(){
 
 void DiffusionEngine::commit(){
    // todo 
+}
+
+
+
+void DiffusionEngine::checkNeighbors(){
+    for(MetalCell &mc : metalGrid){
+        
+        assert(mc.neighbors.size() <= 6 && mc.neighbors.size() >= 0);
+        if(mc.type != CellType::EMPTY){
+            assert(mc.neighbors.empty());
+        }else{
+            if(mc.northCell != nullptr && mc.northCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.northCell) == 1);
+            }
+            if(mc.southCell != nullptr && mc.southCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.southCell) == 1);
+            }
+            if(mc.eastCell != nullptr && mc.eastCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.eastCell) == 1);
+            }
+            if(mc.westCell != nullptr && mc.westCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.westCell) == 1);
+            }
+
+            if(mc.upCell != nullptr && mc.upCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.upCell) == 1);
+            }
+            if(mc.downCell != nullptr && mc.downCell->type == CellType::EMPTY){
+                assert(std::count(mc.neighbors.begin(), mc.neighbors.end(), mc.downCell) == 1);
+            }
+
+
+        }
+
+        for(DiffusionChamber *dc : mc.neighbors){
+            MetalCell *nmc = static_cast<MetalCell *>(dc);
+            ViaCell *nvc = static_cast<ViaCell *>(dc);
+            assert((nmc == mc.northCell) || (nmc == mc.southCell) || (nmc == mc.eastCell) || (nmc == mc.westCell) || (nvc == mc.upCell) || (nvc == mc.downCell));
+        }
+
+
+    }
+    std::cout << "Pass Metal Cells Check Neighbors test" << std::endl;
+
+    for(ViaCell &vc : viaGrid){
+        assert(vc.neighbors.size() <= 8 && vc.neighbors.size() >= 0); 
+        for(DiffusionChamber *dc : vc.neighbors){
+            MetalCell *nmc = static_cast<MetalCell *>(dc);
+            assert((nmc == vc.upLLCell) || (dc == vc.upULCell) || (dc == vc.upLRCell) || (dc == vc.upURCell) ||
+                   (nmc == vc.downLLCell) || (dc == vc.downULCell) || (dc == vc.downLRCell) || (dc == vc.downURCell) 
+                );
+        }
+        if(vc.type != CellType::EMPTY){
+            assert(vc.neighbors.empty());
+        }else{
+            if(vc.upLLCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLLCell) == 1);
+            }
+            if(vc.upULCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upULCell) == 1);
+            }
+            if(vc.upLRCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upLRCell) == 1);
+            }
+            if(vc.upURCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.upURCell) == 1);
+            }
+
+            if(vc.downLLCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLLCell) == 1);
+            }
+            if(vc.downULCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downULCell) == 1);
+            }
+            if(vc.downLRCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downLRCell) == 1);
+            }
+            if(vc.downURCell->type == CellType::EMPTY){
+                assert(std::count(vc.neighbors.begin(), vc.neighbors.end(), vc.downURCell) == 1);
+            }
+        }
+
+
+    }
+    std::cout << "Pass Via Cells Check Neighbors test" << std::endl;
+
+    
 }

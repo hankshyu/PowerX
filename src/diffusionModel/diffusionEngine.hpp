@@ -93,17 +93,28 @@ public:
     void fillEnclosedRegions();
     void markHalfOccupiedMetalsAndPins();
     void linkNeighbors();
+    
+    /* These are functions for multi-source DFS (Diffusion)*/
+    void runDiffusionTop(double diffusionRate);
+
     void initialiseIndexing();
-
     void placeDiffusionParticles();
-
     void diffuse(double diffusionRate);
     void stage();
     void commit();
+
+
+    /* These are functions for MCF (Multi-commodity Flow)*/
+
+
+
     
     // make sure the connections are correct, only for verification
     void checkConnections();
     void checkNeighbors();
+
+
+
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
