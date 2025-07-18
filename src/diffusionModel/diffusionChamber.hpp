@@ -32,6 +32,7 @@
 #include "units.hpp"
 #include "signalType.hpp"
 #include "dirFlags.hpp"
+#include "flowEdge.hpp"
 
 // 0 is empty, 1 ~ n
 typedef uint16_t CellLabel;
@@ -54,6 +55,8 @@ enum class DiffusionChamberType : uint8_t{
 };
 
 std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct);
+
+class FlowEdge;
 
 class DiffusionChamber{
 public:

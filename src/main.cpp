@@ -26,79 +26,53 @@ void printExitBanner();
 
 int main(int argc, char const *argv[]){
 
-    // std::vector<std::string> timeSpan = {
-    //    "Initialize",
-    //    "Mark PP Pads Canvas",
-    //    "Mark Obstacles Canvas",
-    //    "Init Graph with PP",
-    //    "Fill Enclosed Region",
-    //    "Mark h-Occupied Pins",
-    //    "Link Neighbors",
-    //    "Initialize Index",
-    //    "Place particles",
-    //    "Diffuse"
-    // };
+    std::vector<std::string> timeSpan = {
+        "Initialize",
+        "Mark PP Pads Canvas",
+        "Mark Obstacles Canvas",
+        "Init Graph with PP",
+        "Fill Enclosed Region",
 
-    // printWelcomeBanner();
-    // TimeProfiler timeProfiler;
+        "Run MCF Solver",
+    };
+
+    printWelcomeBanner();
+    TimeProfiler timeProfiler;
+
+    Technology technology(FILEPATH_TCH);
+    EqCktExtractor EqCktExtor(technology);
     
-    // Technology technology(FILEPATH_TCH);
-    // EqCktExtractor EqCktExtor(technology);
+    timeProfiler.startTimer(timeSpan[0]);
+    DiffusionEngine dse(FILEPATH_BUMPS);
+    timeProfiler.pauseTimer(timeSpan[0]);
+    
+    timeProfiler.startTimer(timeSpan[1]);
+    dse.markPreplacedAndInsertPadsOnCanvas();
+    timeProfiler.pauseTimer(timeSpan[1]);
+
+    timeProfiler.startTimer(timeSpan[2]);
+    dse.markObstaclesOnCanvas();
+    timeProfiler.pauseTimer(timeSpan[2]);
+
+    timeProfiler.startTimer(timeSpan[3]);
+    dse.initialiseGraphWithPreplaced();
+    timeProfiler.pauseTimer(timeSpan[3]);
+
+    timeProfiler.startTimer(timeSpan[4]);
+    dse.fillEnclosedRegions();
+    timeProfiler.pauseTimer(timeSpan[4]);
+
+
+    timeProfiler.startTimer(timeSpan[5]);
+    dse.runMCFSolver("", 1);
+    timeProfiler.pauseTimer(timeSpan[5]);
+    
+    visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
+    visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
+    visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
+    visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
 
     
-    // timeProfiler.startTimer(timeSpan[0]);
-    // DiffusionEngine dse(FILEPATH_BUMPS);
-    // timeProfiler.pauseTimer(timeSpan[0]);
-
-    // timeProfiler.startTimer(timeSpan[1]);
-    // dse.markPreplacedAndInsertPadsOnCanvas();
-    // timeProfiler.pauseTimer(timeSpan[1]);
-
-    // timeProfiler.startTimer(timeSpan[2]);
-    // dse.markObstaclesOnCanvas();
-    // timeProfiler.pauseTimer(timeSpan[2]);
-
-    // timeProfiler.startTimer(timeSpan[3]);
-    // dse.initialiseGraphWithPreplaced();
-    // timeProfiler.pauseTimer(timeSpan[3]);
-
-    // timeProfiler.startTimer(timeSpan[4]);
-    // dse.fillEnclosedRegions();
-    // timeProfiler.pauseTimer(timeSpan[4]);
-
-    // timeProfiler.startTimer(timeSpan[5]);
-    // dse.markHalfOccupiedMetalsAndPins();
-    // timeProfiler.pauseTimer(timeSpan[5]);
-
-    // timeProfiler.startTimer(timeSpan[6]);
-    // dse.linkNeighbors();
-    // timeProfiler.pauseTimer(timeSpan[6]);
-
-    // timeProfiler.startTimer(timeSpan[7]);
-    // dse.initialiseIndexing();
-    // timeProfiler.pauseTimer(timeSpan[7]);
-
-    // timeProfiler.startTimer(timeSpan[8]);
-    // dse.placeDiffusionParticles();
-    // timeProfiler.pauseTimer(timeSpan[8]);
-
-    // timeProfiler.startTimer(timeSpan[9]);
-    // dse.diffuse(0.1);
-    // timeProfiler.pauseTimer(timeSpan[9]);
-
-    // visualiseDiffusionEngineMetal(dse, 0, "outputs/dse_m0.txt");
-    // visualiseDiffusionEngineMetal(dse, 1, "outputs/dse_m1.txt");
-    // visualiseDiffusionEngineMetal(dse, 2, "outputs/dse_m2.txt");
-
-    // visualiseDiffusionEngineVia(dse, 0, "outputs/dse_v0.txt");
-    // visualiseDiffusionEngineVia(dse, 1, "outputs/dse_v1.txt");
-
-    // visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
-
-
     // VoronoiPDNGen vpg(FILEPATH_BUMPS);
     // vpg.markPreplacedAndInsertPads();
     // vpg.initPointsAndSegments();
@@ -160,7 +134,7 @@ int main(int argc, char const *argv[]){
     // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[1], "outputs/mp1.txt");
     // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[2], "outputs/mp2.txt");
     
-    // timeProfiler.printTimingReport();
+    timeProfiler.printTimingReport();
     return 0;
     
 

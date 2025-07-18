@@ -35,6 +35,9 @@
 #include "viaCell.hpp"
 #include "units.hpp"
 
+// 4. Gurobi Library
+#include "gurobi_c++.h"
+
 class DiffusionEngine : public PowerDistributionNetwork{
     size_t m_metalGridLayers;
     size_t m_metalGridWidth;
@@ -96,8 +99,8 @@ public:
     
     /* These are functions for multi-source DFS (Diffusion)*/
     void runDiffusionTop(double diffusionRate);
-
-    void initialiseIndexing();
+    // returns the number of labels (0 is reserved for empty)
+    CellLabel initialiseIndexing();
     void placeDiffusionParticles();
     void diffuse(double diffusionRate);
     void stage();
@@ -105,16 +108,13 @@ public:
 
 
     /* These are functions for MCF (Multi-commodity Flow)*/
+    void runMCFSolver(std::string logFile, int outputLevel);
 
 
 
-    
     // make sure the connections are correct, only for verification
     void checkConnections();
     void checkNeighbors();
-
-
-
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);

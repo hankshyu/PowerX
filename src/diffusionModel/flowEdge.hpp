@@ -25,10 +25,12 @@
 // 2. Boost Library:
 
 // 3. Texo Library:
-#include "diffusionChamber.hpp"
+#include "signalType.hpp"
 
 // 4. Gurobi Library
 #include "gurobi_c++.h"
+
+class DiffusionChamber;
 
 class FlowEdge{
 public:
@@ -38,8 +40,8 @@ public:
     
     GRBVar var;
     
-    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v): st(st), u(u), v(v) {}
-    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v, GRBVar var): st(st), u(u), v(v), var(var) {}
+    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v);
+    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v, GRBVar var);
 };
 
 std::ostream &operator << (std::ostream &os, const FlowEdge &fe);

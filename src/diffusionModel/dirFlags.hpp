@@ -53,8 +53,9 @@ inline constexpr DirFlag toFlag(DirFlagViaAxis dir) {
 
 // Grouped masks
 constexpr DirFlag DIRFLAG_EMPTY = 0x00;
+constexpr DirFlag CELL_UP_DOWN_DIR = toFlag(DirFlagAxis::UP) | toFlag(DirFlagAxis::DOWN);
 constexpr DirFlag CELL_ALL_2D_DIR = toFlag(DirFlagAxis::NORTH) | toFlag(DirFlagAxis::SOUTH) |toFlag(DirFlagAxis::EAST) | toFlag(DirFlagAxis::WEST);
-constexpr DirFlag CELL_ALL_3D_DIR = CELL_ALL_2D_DIR | toFlag(DirFlagAxis::UP) | toFlag(DirFlagAxis::DOWN);
+constexpr DirFlag CELL_ALL_3D_DIR = CELL_ALL_2D_DIR | CELL_UP_DOWN_DIR;
 
 constexpr DirFlag VIA_ALL_UP_DIR = toFlag(DirFlagViaAxis::UPLL) | toFlag(DirFlagViaAxis::UPUL) | toFlag(DirFlagViaAxis::UPLR) | toFlag(DirFlagViaAxis::UPUR);
 constexpr DirFlag VIA_ALL_DOWN_DIR = toFlag(DirFlagViaAxis::DOWNLL) | toFlag(DirFlagViaAxis::DOWNUL) | toFlag(DirFlagViaAxis::DOWNLR) | toFlag(DirFlagViaAxis::DOWNUR);
@@ -83,6 +84,7 @@ inline bool hasDirection(DirFlag flag, DirFlagAxis dir) {
 inline bool hasDirection(DirFlag flag, DirFlagViaAxis dir) {
     return (flag & toFlag(dir)) != DIRFLAG_EMPTY;
 }
+
 
 // Reset all directions
 inline void clearAllDirections(DirFlag& flag) {

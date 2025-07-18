@@ -24,6 +24,7 @@
 
 // 3. Texo Library:
 #include "flowEdge.hpp"
+#include "diffusionChamber.hpp"
 
 // 4. Gurobi Library
 #include "gurobi_c++.h"

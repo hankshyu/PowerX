@@ -69,9 +69,11 @@ std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct){
     }
 }
 
-DiffusionChamber::DiffusionChamber(): index(SIZE_T_INVALID), metalViaType(DiffusionChamberType::UNKNOWN),
-    canvasLayer(LEN_T_MIN), canvasX(LEN_T_MIN), canvasY(LEN_T_MIN),
-    type(CellType::EMPTY), signal(SignalType::EMPTY), fullDirection(DIRFLAG_EMPTY) {}
+DiffusionChamber::DiffusionChamber(): 
+    metalViaType(DiffusionChamberType::UNKNOWN), canvasLayer(LEN_T_MIN), canvasX(LEN_T_MIN), canvasY(LEN_T_MIN),
+    fullDirection(DIRFLAG_EMPTY), type(CellType::EMPTY), signal(SignalType::EMPTY),
+    index(SIZE_T_INVALID) {}
+    
 
 int DiffusionChamber::getParticlesCount(CellLabel label){
     for(int i = 0; i < cellLabels.size(); ++i){
