@@ -35,6 +35,9 @@
 #include "viaCell.hpp"
 #include "units.hpp"
 
+#include "flowNode.hpp"
+#include "flowEdge.hpp"
+
 // 4. Gurobi Library
 #include "gurobi_c++.h"
 
@@ -61,6 +64,20 @@ public:
 
     std::vector<ViaCell> viaGrid;
     std::vector<CellLabel> viaGridLabel;
+
+    // MCF related attributes
+    std::vector<SignalType> flowSOIIdxToSig;
+    std::unordered_map<SignalType, int> flowSOISigToIdx;
+    
+    std::vector<FlowNode> superSource;
+    std::vector<FlowNode> superSink;
+
+    std::vector<std::vector<FlowNode>> viaFlowTopNodeArr;
+    std::vector<std::vector<FlowNode>> viaFlowDownNodeArr;
+    
+    std::vector<FlowNode> metalFlowNodeOwnership;
+    std::vector<std::vector<std::vector<FlowNode *>>> metalFlowNodeArr;
+
 
     DiffusionEngine(const std::string &fileName);
 
@@ -100,7 +117,7 @@ public:
     /* These are functions for multi-source DFS (Diffusion)*/
     void runDiffusionTop(double diffusionRate);
     // returns the number of labels (0 is reserved for empty)
-    CellLabel initialiseIndexing();
+    int initialiseIndexing();
     void placeDiffusionParticles();
     void diffuse(double diffusionRate);
     void stage();
@@ -108,6 +125,7 @@ public:
 
 
     /* These are functions for MCF (Multi-commodity Flow)*/
+    void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
 
 

@@ -32,7 +32,8 @@ int main(int argc, char const *argv[]){
         "Mark Obstacles Canvas",
         "Init Graph with PP",
         "Fill Enclosed Region",
-
+        
+        "Init MCF Solver",
         "Run MCF Solver",
     };
 
@@ -61,11 +62,14 @@ int main(int argc, char const *argv[]){
     timeProfiler.startTimer(timeSpan[4]);
     dse.fillEnclosedRegions();
     timeProfiler.pauseTimer(timeSpan[4]);
-
-
+    
     timeProfiler.startTimer(timeSpan[5]);
-    dse.runMCFSolver("", 1);
+    dse.initialiseMCFSolver();
     timeProfiler.pauseTimer(timeSpan[5]);
+
+    // timeProfiler.startTimer(timeSpan[5]);
+    // dse.runMCFSolver("", 1);
+    // timeProfiler.pauseTimer(timeSpan[5]);
     
     visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
     visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");

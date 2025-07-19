@@ -24,24 +24,19 @@
 
 // 3. Texo Library:
 #include "flowEdge.hpp"
-#include "diffusionChamber.hpp"
+#include "flowNode.hpp"
 
 // 4. Gurobi Library
 #include "gurobi_c++.h"
 
-FlowEdge::FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v):
+FlowEdge::FlowEdge(SignalType st, FlowNode* u, FlowNode* v):
     st(st), u(u), v(v) {}
 
-FlowEdge::FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v, GRBVar var): 
+FlowEdge::FlowEdge(SignalType st, FlowNode* u, FlowNode* v, GRBVar var): 
     st(st), u(u), v(v), var(var) {}
 
 std::ostream &operator << (std::ostream &os, const FlowEdge &fe){
-    DiffusionChamber *u = fe.u;
-    DiffusionChamber *v = fe.v;
-
-    os << "FlowEdge[" << u->metalViaType << " (" << u->canvasLayer << ", " << u->canvasY << ", " << u->canvasX << ")";
-    os << " -- " << fe.st << " -- ";
-    return os << v->metalViaType << " (" << v->canvasLayer << ", " << v->canvasY << ", " << v->canvasX << ")]";
+    return os << "FlowEdge[" << fe.u->label << " -- " << fe.st << " -- " << fe.v->label << "]";
 }
 
 size_t std::hash<FlowEdge>::operator()(const FlowEdge &key) const {

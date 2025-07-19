@@ -30,18 +30,18 @@
 // 4. Gurobi Library
 #include "gurobi_c++.h"
 
-class DiffusionChamber;
+class FlowNode;
 
 class FlowEdge{
 public:
+    FlowNode *u;
+    FlowNode *v;
     SignalType st;
-    DiffusionChamber *u;
-    DiffusionChamber *v;
-    
+
     GRBVar var;
     
-    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v);
-    FlowEdge(SignalType st, DiffusionChamber* u, DiffusionChamber* v, GRBVar var);
+    FlowEdge(SignalType st, FlowNode* u, FlowNode* v);
+    FlowEdge(SignalType st, FlowNode* u, FlowNode* v, GRBVar var);
 };
 
 std::ostream &operator << (std::ostream &os, const FlowEdge &fe);

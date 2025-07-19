@@ -83,7 +83,6 @@ public:
     std::vector<int> cellParticlesCache;
 
 
-
     DiffusionChamber();
 
     // return -1 if lable not exist

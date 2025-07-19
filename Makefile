@@ -42,7 +42,7 @@ PRESSUREMODEL_OBJS = 	fpoint.o fbox.o fpolygon.o fmultipolygon.o \
 						viaBody.o softBody.o \
 						pressureSimulator.o
 
-DIFFUSIONMODEL_OBJS =	diffusionChamber.o metalCell.o viaCell.o flowEdge.o diffusionEngine.o
+DIFFUSIONMODEL_OBJS =	diffusionChamber.o metalCell.o viaCell.o flowNode.o flowEdge.o diffusionEngine.o
 
 _OBJS = main.o timeProfiler.o visualiser.o units.o $(INF_OBJS) $(PI_OBJS) $(PRESSUREMODEL_OBJS) $(DIFFUSIONMODEL_OBJS)
 
