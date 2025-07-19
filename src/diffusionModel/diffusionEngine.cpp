@@ -1291,7 +1291,6 @@ void DiffusionEngine::initialiseMCFSolver(){
                     FlowNode &fn = metalFlowNodeOwnership.back();
                     tmpMetalLabel[layer][y][x] = newIdx;
 
-                    
                     bool LLIsSpecial = in2DRange(y-1, x-1) && (metalGrid[calMetalIdx(layer, y-1, x-1)].type != CellType::EMPTY);
                     bool WestIsSpecial = in2DRange(y, x-1) && (metalGrid[calMetalIdx(layer, y, x-1)].type != CellType::EMPTY);
                     bool ULIsSpecial = in2DRange(y+1, x-1) && (metalGrid[calMetalIdx(layer, y+1, x-1)].type != CellType::EMPTY);
@@ -1326,6 +1325,51 @@ void DiffusionEngine::initialiseMCFSolver(){
         }
     }
 
+    // paint the via pads as special nodes as well
+    for(int viaIdx = 0; viaIdx < getAllViaIdxEnd(); ++viaIdx){
+        ViaCell &vc = this->viaGrid[viaIdx];
+        
+        len_t viaLayer = vc.canvasLayer;
+        len_t viaY = vc.canvasY;
+        len_t viaX = vc.canvasX;
+
+        CellLabel topLLLabel = tmpMetalLabel[viaLayer][viaY][viaX];
+        CellLabel topLRLabel = tmpMetalLabel[viaLayer][viaY][viaX+1];
+        CellLabel topULLabel = tmpMetalLabel[viaLayer][viaY+1][viaX];
+        CellLabel topURLabel = tmpMetalLabel[viaLayer][viaY+1][viaX+1];
+
+        CellLabel downLLLabel = tmpMetalLabel[viaLayer+1][viaY][viaX];
+        CellLabel downLRLabel = tmpMetalLabel[viaLayer+1][viaY][viaX+1];
+        CellLabel downULLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX];
+        CellLabel downURLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX+1];
+
+        if(metalFlowNodeOwnership[topLLLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[topLLLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[topLRLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[topLRLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[topULLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[topULLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[topURLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[topURLabel].isSuperNode = true;
+        }
+
+        if(metalFlowNodeOwnership[downLLLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[downLLLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[downLRLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[downLRLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[downULLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[downULLabel].isSuperNode = true;
+        }
+        if(metalFlowNodeOwnership[downURLabel].type == FlowNodeType::EMPTY){
+            metalFlowNodeOwnership[downURLabel].isSuperNode = true;
+        }
+    }
+
     this->metalFlowNodeArr = std::vector<std::vector<std::vector<FlowNode *>>>(
         m_metalGridLayers, std::vector<std::vector<FlowNode *>>(
             m_metalGridHeight, std::vector<FlowNode *>(m_metalGridWidth, nullptr)
@@ -1354,7 +1398,11 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
         GRBModel GRBmodel = GRBModel(GRBenv);
 
         /* construct the flow decision variables */
-
+        // STEP 1. build metal layer decision variables, use the initialized markings
+        for(size_t layer = m_ubumpConnectedMetalLayerIdx; layer <= m_c4ConnectedMetalLayerIdx; ++layer){
+            
+        }
+        
 
 
     } catch (GRBException &e) {
