@@ -54,7 +54,12 @@ public:
     int layer;
 
     SignalType st;
+    
     bool isSuperNode;
+    bool northIsAggregated;
+    bool southIsAggregated;
+    bool eastIsAggregated;
+    bool westIsAggregated;
     
     std::vector<FlowEdge *> inEdges;
     std::vector<FlowEdge *> outEdges;

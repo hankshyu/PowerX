@@ -1292,21 +1292,51 @@ void DiffusionEngine::initialiseMCFSolver(){
                     tmpMetalLabel[layer][y][x] = newIdx;
 
                     bool LLIsSpecial = in2DRange(y-1, x-1) && (metalGrid[calMetalIdx(layer, y-1, x-1)].type != CellType::EMPTY);
-                    bool WestIsSpecial = in2DRange(y, x-1) && (metalGrid[calMetalIdx(layer, y, x-1)].type != CellType::EMPTY);
                     bool ULIsSpecial = in2DRange(y+1, x-1) && (metalGrid[calMetalIdx(layer, y+1, x-1)].type != CellType::EMPTY);
-                    
-                    bool SouthIsSpecial = in2DRange(y-1, x) && (metalGrid[calMetalIdx(layer, y-1, x)].type != CellType::EMPTY);
-                    bool NorthIsSpecial = in2DRange(y+1, x) && (metalGrid[calMetalIdx(layer, y+1, x)].type != CellType::EMPTY);
-
                     bool LRIsSpecial = in2DRange(y-1, x+1) && (metalGrid[calMetalIdx(layer, y-1, x+1)].type != CellType::EMPTY);
-                    bool EastIsSpecial = in2DRange(y, x+1) && (metalGrid[calMetalIdx(layer, y, x+1)].type != CellType::EMPTY);
                     bool URIsSpecial = in2DRange(y+1, x+1) && (metalGrid[calMetalIdx(layer, y+1, x+1)].type != CellType::EMPTY);
                     
-                    bool isSuperNode = LLIsSpecial || WestIsSpecial || ULIsSpecial 
+                    bool NorthIsSpecial = false;
+                    bool SouthIsSpecial = false;
+                    bool EastIsSpecial = false;
+                    bool WestIsSpecial = false;
+
+                    if(in2DRange(y+1, x)){
+                        CellType northType = metalGrid[calMetalIdx(layer, y+1, x)].type;
+                        NorthIsSpecial = (northType != CellType::EMPTY);
+                        if(northType == CellType::PREPLACED || northType == CellType::MARKED){
+                            fn.northIsAggregated = true;
+                        }
+                    }
+
+                    if(in2DRange(y-1, x)){
+                        CellType southType = metalGrid[calMetalIdx(layer, y-1, x)].type;
+                        SouthIsSpecial = (southType != CellType::EMPTY);
+                        if(southType == CellType::PREPLACED || southType == CellType::MARKED){
+                            fn.southIsAggregated = true;
+                        }
+                    }
+                    
+                    if(in2DRange(y, x+1)){
+                        CellType eastType = metalGrid[calMetalIdx(layer, y, x+1)].type;
+                        EastIsSpecial = (eastType != CellType::EMPTY);
+                        if(eastType == CellType::PREPLACED || eastType == CellType::MARKED){
+                            fn.eastIsAggregated = true;
+                        }
+                        
+                    }
+                    
+                    if(in2DRange(y, x-1)){
+                        CellType westType = metalGrid[calMetalIdx(layer, y, x-1)].type;
+                        WestIsSpecial = (westType != CellType::EMPTY);
+                        if(westType == CellType::PREPLACED || westType == CellType::MARKED){
+                            fn.westIsAggregated = true;
+                        }
+                    }
+
+                    fn.isSuperNode = LLIsSpecial || WestIsSpecial || ULIsSpecial 
                         || SouthIsSpecial || NorthIsSpecial 
                         || LRIsSpecial || EastIsSpecial || URIsSpecial;
-
-                    fn.isSuperNode = isSuperNode;
                     
                     
                 }else if(mc.type == CellType::MARKED || mc.type == CellType::PREPLACED){
@@ -1387,7 +1417,6 @@ void DiffusionEngine::initialiseMCFSolver(){
 
 }
 
-
 void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
     try {
         /* Initialise Gubobi solver*/
@@ -1399,10 +1428,11 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
 
         /* construct the flow decision variables */
         // STEP 1. build metal layer decision variables, use the initialized markings
-        for(size_t layer = m_ubumpConnectedMetalLayerIdx; layer <= m_c4ConnectedMetalLayerIdx; ++layer){
-            
-        }
+        std::vector<bool> metalFlowNodeIdxProcessed(metalFlowNodeOwnership.size(), false);
         
+        for(size_t layer = m_ubumpConnectedMetalLayerIdx; layer <= m_c4ConnectedMetalLayerIdx; ++layer){
+
+        }
 
 
     } catch (GRBException &e) {

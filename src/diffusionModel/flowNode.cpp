@@ -26,10 +26,13 @@
 // 4. Gurobi Library
 #include "gurobi_c++.h"
 
-FlowNode::FlowNode(): type(FlowNodeType::UNKNOWN), label(CELL_LABEL_EMPTY), layer(-1), isSuperNode(false) {}
+FlowNode::FlowNode(): FlowNode(FlowNodeType::UNKNOWN, CELL_LABEL_EMPTY -1) {}
 
-FlowNode::FlowNode(FlowNodeType type): type(type), label(CELL_LABEL_EMPTY), layer(-1), isSuperNode(false) {}
+FlowNode::FlowNode(FlowNodeType type): FlowNode(type, CELL_LABEL_EMPTY -1) {}
 
-FlowNode::FlowNode(FlowNodeType type, CellLabel label): type(type), label(label), layer(-1), isSuperNode(false) {}
+FlowNode::FlowNode(FlowNodeType type, CellLabel label): FlowNode(type, label, -1) {}
 
-FlowNode::FlowNode(FlowNodeType type, CellLabel label, int layer): type(type), label(label), layer(layer), isSuperNode(false) {}
+FlowNode::FlowNode(FlowNodeType type, CellLabel label, int layer): 
+    type(type), label(label), layer(layer),
+    st(SignalType::UNKNOWN),
+    isSuperNode(false), northIsAggregated(false), southIsAggregated(false), eastIsAggregated(false), westIsAggregated(false) {}
