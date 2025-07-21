@@ -41,7 +41,7 @@ enum class FlowNodeType : uint8_t{
     SUPER_SINK,
 };
 
-std::ostream& operator<<(std::ostream& os, FlowNodeType dct);
+std::ostream& operator<<(std::ostream& os, FlowNodeType fnt);
 
 
 
@@ -53,7 +53,7 @@ public:
     CellLabel label;
     int layer;
 
-    SignalType st;
+    SignalType signal;
     
     bool isSuperNode;
     bool northIsAggregated;
@@ -68,6 +68,7 @@ public:
     FlowNode(FlowNodeType type);
     FlowNode(FlowNodeType type, CellLabel label);
     FlowNode(FlowNodeType type, CellLabel label, int layer);
+    FlowNode(FlowNodeType type, CellLabel label, int layer, SignalType st);
     
 };
 

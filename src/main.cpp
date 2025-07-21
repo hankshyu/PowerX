@@ -67,14 +67,16 @@ int main(int argc, char const *argv[]){
     dse.initialiseMCFSolver();
     timeProfiler.pauseTimer(timeSpan[5]);
 
-    // timeProfiler.startTimer(timeSpan[5]);
-    // dse.runMCFSolver("", 1);
-    // timeProfiler.pauseTimer(timeSpan[5]);
+    timeProfiler.startTimer(timeSpan[6]);
+    dse.runMCFSolver("", 1);
+    timeProfiler.pauseTimer(timeSpan[6]);
+
+    dse.writeBackToPDN();
     
-    visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
-    visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
-    visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
-    visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
+    // visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
+    // visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
+    // visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
+    // visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
 
     
     // VoronoiPDNGen vpg(FILEPATH_BUMPS);
@@ -122,9 +124,9 @@ int main(int argc, char const *argv[]){
     // vpg.exportEquivalentCircuit(SignalType::POWER_4, technology, EqCktExtor, "outputs/POWER4.sp");
 
 
-    // visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    // visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    // visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
+    visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
     // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
     // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");

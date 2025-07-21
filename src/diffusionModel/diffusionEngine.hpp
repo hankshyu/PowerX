@@ -66,8 +66,28 @@ public:
     std::vector<CellLabel> viaGridLabel;
 
     // MCF related attributes
+    double normalMetalEdgeLB = 0.0;
+    double normalMetalEdgeUB = 1.0;
+    double normalMetalEdgeWeight = 1.0;
+
+    double aggrMetalEdgeLB = 0.0;
+    double aggrMetalEdgeUB = 2.0;
+    double aggrMetalEdgeWeight = 0.2;
+    
+    double ViaEdgeLB = 0.0;
+    double ViaEdgeUB = 1.75;
+    double subViaEdgeUB = ViaEdgeUB / 2.5;
+    double viaEdgeWeight = 0.1;
+
+    double ViaBudgetAvgQuota = 0.25;
+    double viaBudgetCurrentQuota = 0.75;
+
+    double minChipletBudgetAvgPctg = 0.75;
+
+    // sorting by ascending order of current requirement
     std::vector<SignalType> flowSOIIdxToSig;
     std::unordered_map<SignalType, int> flowSOISigToIdx;
+    std::vector<double> SOIBudget;
     
     std::vector<FlowNode> superSource;
     std::vector<FlowNode> superSink;
@@ -77,6 +97,10 @@ public:
     
     std::vector<FlowNode> metalFlowNodeOwnership;
     std::vector<std::vector<std::vector<FlowNode *>>> metalFlowNodeArr;
+    std::unordered_map<SignalType, std::vector<FlowNode *>> superSourceConnectedNodes;
+    std::unordered_map<SignalType, std::vector<FlowNode *>> superSinkConnectedNodes;
+
+    std::vector<FlowEdge *> flowEdgeOwnership;
 
 
     DiffusionEngine(const std::string &fileName);
@@ -113,6 +137,8 @@ public:
     void fillEnclosedRegions();
     void markHalfOccupiedMetalsAndPins();
     void linkNeighbors();
+
+    void writeBackToPDN();
     
     /* These are functions for multi-source DFS (Diffusion)*/
     void runDiffusionTop(double diffusionRate);

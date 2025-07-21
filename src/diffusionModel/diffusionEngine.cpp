@@ -20,6 +20,7 @@
 // 1. C++ STL:
 #include <queue>
 #include <algorithm>
+#include <limits>
 // 2. Boost Library:
 
 // 3. Texo Library:
@@ -39,6 +40,7 @@ DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistribution
     // calculate current budget
     double totalCurrentBudget = 0;
     for(auto &[st , us] : this->uBump.signalTypeToInstances){
+        if(POWER_SIGNAL_SET.count(st) == 0) continue;
         for(const std::string &inst  : us){
             double currentRequirement = this->uBump.instanceToBallOutMap[inst]->getMaxCurrent();
             totalCurrentBudget += currentRequirement;
@@ -148,16 +150,6 @@ void DiffusionEngine::markPreplacedAndInsertPadsOnCanvas(){
 
 void DiffusionEngine::markObstaclesOnCanvas(){
     // turn signals that isn't POWER_SIGNAL_SET on metal/via layer into obstacles
-    for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
-        for(int j = 0; j < m_pinHeight; ++j){
-                for(int i = 0; i < m_pinWidth; ++i){
-                SignalType st = viaLayers[viaLayer].canvas[j][i];
-                if((st == SignalType::GROUND) || (st == SignalType::SIGNAL) || (st == SignalType::OVERLAP)){
-                    viaLayers[viaLayer].canvas[j][i] = SignalType::OBSTACLE;
-                }
-            }
-        }
-    }
 
     for(int metalLayer = 0; metalLayer < m_metalLayerCount; ++metalLayer){
         for(int j = 0; j < m_gridHeight; ++j){
@@ -169,6 +161,49 @@ void DiffusionEngine::markObstaclesOnCanvas(){
             }
         }
     }
+
+    auto inMetalCanvas = [&](int y, int x){
+        return (y >= 0) && (y < m_metalGridHeight) && (x >= 0) && (x < m_metalGridWidth);
+    };
+
+    for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
+        for(int j = 0; j < m_pinHeight; ++j){
+            for(int i = 0; i < m_pinWidth; ++i){
+                SignalType st = viaLayers[viaLayer].canvas[j][i];
+                if((st == SignalType::GROUND) || (st == SignalType::SIGNAL) || (st == SignalType::OVERLAP) || (st == SignalType::OBSTACLE)){
+                    viaLayers[viaLayer].canvas[j][i] = SignalType::OBSTACLE;
+                    continue;
+                }
+
+                bool LLinCanvas = inMetalCanvas(j-1, i-1);
+                bool LRinCanvas = inMetalCanvas(j-1, i);
+                bool ULinCanvas = inMetalCanvas(j, i-1);
+                bool URinCanvas = inMetalCanvas(j, i);
+
+                bool topLLIsObstacles = (LLinCanvas && metalLayers[viaLayer].canvas[j-1][i-1] == SignalType::OBSTACLE);
+                bool topLRIsObstacles = (LRinCanvas && metalLayers[viaLayer].canvas[j-1][i] == SignalType::OBSTACLE);
+                bool topULIsObstacles = (ULinCanvas && metalLayers[viaLayer].canvas[j][i-1] == SignalType::OBSTACLE);
+                bool topURIsObstacles = (URinCanvas && metalLayers[viaLayer].canvas[j][i] == SignalType::OBSTACLE);
+                
+                if(topLLIsObstacles || topLRIsObstacles || topULIsObstacles || topURIsObstacles){
+                    viaLayers[viaLayer].canvas[j][i] = SignalType::OBSTACLE;
+                    continue;
+                }
+                
+                bool downLLIsObstacles = (LLinCanvas && metalLayers[viaLayer+1].canvas[j-1][i-1] == SignalType::OBSTACLE);
+                bool downLRIsObstacles = (LRinCanvas && metalLayers[viaLayer+1].canvas[j-1][i] == SignalType::OBSTACLE);
+                bool downULIsObstacles = (ULinCanvas && metalLayers[viaLayer+1].canvas[j][i-1] == SignalType::OBSTACLE);
+                bool downURIsObstacles = (URinCanvas && metalLayers[viaLayer+1].canvas[j][i] == SignalType::OBSTACLE);
+                
+                if(downLLIsObstacles || downLRIsObstacles || downULIsObstacles || downURIsObstacles){
+                    viaLayers[viaLayer].canvas[j][i] = SignalType::OBSTACLE;
+                    continue;
+                }
+            }
+        }
+    }
+
+
 }
 
 void DiffusionEngine::initialiseGraphWithPreplaced(){
@@ -252,6 +287,8 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
     // upLLCell, upULCell upLRCell upURCell             *MetalCell and idx
     // downLLCell, downULCell, downLRCell, downURCell   *MetalCell and idx
     // neighbors[]
+    
+    
     size_t cellIndex = 0;
     for(int viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
         for(int j = 0; j < m_pinHeight; ++j){
@@ -263,8 +300,8 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 bool hasOccupiedSignal = (st != SignalType::EMPTY);
 
                 // check if this via "must be created"
-                size_t upLLCellIdx = calMetalIdx(viaLayer, j, i);
-                SignalType upLLCellSt = metalLayers[viaLayer].canvas[j][i];
+                size_t upLLCellIdx = calMetalIdx(viaLayer, j-1, i-1);
+                SignalType upLLCellSt = metalLayers[viaLayer].canvas[j-1][i-1];
                 if(upLLCellSt == SignalType::OBSTACLE) continue;
                 bool upLLCellStNotEmpty = (upLLCellSt != SignalType::EMPTY && upLLCellSt != occupiedSignal);
                 if(hasOccupiedSignal && upLLCellStNotEmpty) continue;
@@ -274,7 +311,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t upLRCellIdx = upLLCellIdx + 1;
-                SignalType upLRCellSt = metalLayers[viaLayer].canvas[j][i+1];
+                SignalType upLRCellSt = metalLayers[viaLayer].canvas[j-1][i];
                 if(upLRCellSt == SignalType::OBSTACLE) continue;
                 bool upLRCellStNotEmpty = (upLRCellSt != SignalType::EMPTY && upLRCellSt != occupiedSignal);
                 if(hasOccupiedSignal && upLRCellStNotEmpty) continue;
@@ -284,7 +321,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t upULCellIdx = upLLCellIdx + m_metalGridWidth;
-                SignalType upULCellSt = metalLayers[viaLayer].canvas[j+1][i];
+                SignalType upULCellSt = metalLayers[viaLayer].canvas[j][i-1];
                 if(upULCellSt == SignalType::OBSTACLE) continue;
                 bool upULCellStNotEmpty = (upULCellSt != SignalType::EMPTY && upULCellSt != occupiedSignal);
                 if(hasOccupiedSignal && upULCellStNotEmpty) continue;
@@ -294,7 +331,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t upURCellIdx = upULCellIdx + 1;
-                SignalType upURCellSt = metalLayers[viaLayer].canvas[j+1][i+1];
+                SignalType upURCellSt = metalLayers[viaLayer].canvas[j][i];
                 if(upURCellSt == SignalType::OBSTACLE) continue;
                 bool upURCellStNotEmpty = (upURCellSt != SignalType::EMPTY && upURCellSt != occupiedSignal);
                 if(hasOccupiedSignal && upURCellStNotEmpty) continue;
@@ -305,7 +342,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
 
 
                 size_t downLLCellIdx = upLLCellIdx + m_metalGrid2DCount;
-                SignalType downLLCellSt = metalLayers[viaLayer+1].canvas[j][i];
+                SignalType downLLCellSt = metalLayers[viaLayer+1].canvas[j-1][i-1];
                 if(downLLCellSt == SignalType::OBSTACLE) continue;
                 bool downLLCellStNotEmpty = (downLLCellSt != SignalType::EMPTY && downLLCellSt != occupiedSignal);
                 if(hasOccupiedSignal && downLLCellStNotEmpty) continue;
@@ -315,7 +352,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t downLRCellIdx = downLLCellIdx + 1;
-                SignalType downLRCellSt = metalLayers[viaLayer+1].canvas[j][i+1];
+                SignalType downLRCellSt = metalLayers[viaLayer+1].canvas[j-1][i];
                 if(downLRCellSt == SignalType::OBSTACLE) continue;
                 bool downLRCellStNotEmpty = (downLRCellSt != SignalType::EMPTY && downLRCellSt != occupiedSignal);
                 if(hasOccupiedSignal && downLRCellStNotEmpty) continue;
@@ -325,7 +362,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t downULCellIdx = downLLCellIdx + m_metalGridWidth;
-                SignalType downULCellSt = metalLayers[viaLayer+1].canvas[j+1][i];
+                SignalType downULCellSt = metalLayers[viaLayer+1].canvas[j][i-1];
                 if(downULCellSt == SignalType::OBSTACLE) continue;
                 bool downULCellStNotEmpty = (downULCellSt != SignalType::EMPTY && downULCellSt != occupiedSignal);
                 if(hasOccupiedSignal && downULCellStNotEmpty) continue;
@@ -335,7 +372,7 @@ void DiffusionEngine::initialiseGraphWithPreplaced(){
                 }
 
                 size_t downURCellIdx = downULCellIdx + 1;
-                SignalType downURCellSt = metalLayers[viaLayer+1].canvas[j+1][i+1];
+                SignalType downURCellSt = metalLayers[viaLayer+1].canvas[j][i];
                 if(downURCellSt == SignalType::OBSTACLE) continue;
                 bool downURCellStNotEmpty = (downURCellSt != SignalType::EMPTY && downURCellSt != occupiedSignal);
                 if(hasOccupiedSignal && downURCellStNotEmpty) continue;
@@ -780,6 +817,31 @@ void DiffusionEngine::linkNeighbors(){
             vcDownURCell->neighbors.push_back(vcPointer);
         } 
     }
+}
+
+void DiffusionEngine::writeBackToPDN(){
+    for(size_t layer = 0; layer < m_metalGridLayers; ++layer){
+        for(size_t y = 0; y < m_metalGridHeight; ++y){
+            for(size_t x = 0; x < m_metalGridWidth; ++x){
+                if(metalLayers[layer].canvas[y][x] == SignalType::EMPTY){
+                    metalLayers[layer].canvas[y][x] = metalGrid[calMetalIdx(layer, y, x)].signal;
+                }
+            }
+        }
+    }
+
+    for(size_t layer = 0; layer < m_viaLayerCount; ++ layer){
+        for(int idx = 0; idx < m_viaGrid2DCount[layer]; ++idx){
+            ViaCell &vc = viaGrid[calViaIdx(layer, idx)];
+            if(viaLayers[layer].canvas[vc.canvasY][vc.canvasX] == SignalType::EMPTY){
+                viaLayers[layer].canvas[vc.canvasY][vc.canvasX] = vc.signal;
+            }
+        }
+    }
+
+
+
+
 }
 
 void DiffusionEngine::runDiffusionTop(double diffusionRate){
@@ -1238,18 +1300,21 @@ void DiffusionEngine::initialiseMCFSolver(){
     
     // initialise flowSOIIdxToSig, flowSOISigToIdx
     // initialise superSource, superSink
-    int flowSOIIdx = 0;
-    for (const auto& [signal, _] : currentBudget) {
-        this->flowSOIIdxToSig.push_back(signal);
-        this->flowSOISigToIdx[signal] = flowSOIIdx;
-        
-        superSource.emplace_back(FlowNodeType::SUPER_SOURCE);
-        superSource.back().st = signal;
-        
-        superSink.emplace_back(FlowNodeType::SUPER_SINK);
-        superSink.back().st = signal;
 
-        flowSOIIdx++;
+    // create flowSOIIdxToSig using signals in currentBudget and in ascending order of current budget
+    for (const auto& [sig, _] : currentBudget) {
+        flowSOIIdxToSig.push_back(sig);
+    }
+    std::sort(flowSOIIdxToSig.begin(), flowSOIIdxToSig.end(), 
+        [&](const SignalType& a, const SignalType& b) {return currentBudget[a] < currentBudget[b];}
+    );
+
+    for(int flowSOIIdx = 0; flowSOIIdx < flowSOIIdxToSig.size(); ++flowSOIIdx){
+        SignalType sig = flowSOIIdxToSig[flowSOIIdx];
+        this->flowSOISigToIdx[sig] = flowSOIIdx;
+        
+        superSource.emplace_back(FlowNodeType::SUPER_SOURCE, CELL_LABEL_EMPTY, -1, sig);
+        superSink.emplace_back(FlowNodeType::SUPER_SINK, CELL_LABEL_EMPTY, -1, sig);
     }
 
     // initialise viaFlowTopNodeArr, viaFlowDownNodeArr
@@ -1257,12 +1322,13 @@ void DiffusionEngine::initialiseMCFSolver(){
     viaFlowDownNodeArr.resize(m_viaGridLayers);
     for(int viaLayer = 0; viaLayer < m_viaGridLayers; ++viaLayer){
         size_t layerViaCount = m_viaGrid2DCount[viaLayer];
-        viaFlowTopNodeArr[viaLayer].resize(layerViaCount, FlowNode(FlowNodeType::VIA_TOP));
-        viaFlowDownNodeArr[viaLayer].resize(layerViaCount, FlowNode(FlowNodeType::VIA_DOWN));
+        viaFlowTopNodeArr[viaLayer].resize(layerViaCount, FlowNode(FlowNodeType::VIA_TOP, CELL_LABEL_EMPTY, viaLayer));
+        viaFlowDownNodeArr[viaLayer].resize(layerViaCount, FlowNode(FlowNodeType::VIA_DOWN, CELL_LABEL_EMPTY, viaLayer));
     }
 
     // initialise metalFlowNodeOwnership first, than like the pointer to metalFlowNodeArr
     int metalNodeCount = static_cast<int>(initialiseIndexing());
+    std::vector<bool> aggregatedNodesProcessed(metalNodeCount, false);
     for(int i = 0; i < metalNodeCount; ++i){
         this->metalFlowNodeOwnership.emplace_back(FlowNodeType::AGGREGATED, i);
     }
@@ -1278,12 +1344,17 @@ void DiffusionEngine::initialiseMCFSolver(){
         return (y >= 0) && (y < m_metalGridHeight) && (x >= 0) && (x >= m_metalGridWidth);
     };
 
+    std::unordered_map<SignalType, std::vector<CellLabel>> superSourceConnIdx;
+    std::unordered_map<SignalType, std::vector<CellLabel>> superSinkConnIdx;
+
     for(size_t layer = 0; layer < m_metalGridLayers; ++layer){
         for(size_t y = 0; y < m_metalGridHeight; ++y){
             for(size_t x = 0; x < m_metalGridWidth; ++x){
                 size_t mcIdx = calMetalIdx(layer, y, x);
                 MetalCell &mc = this->metalGrid[mcIdx];
+                
                 CellLabel mcCellLabel = this->metalGridLabel[mcIdx];
+
 
                 if(mc.type == CellType::EMPTY){
                     int newIdx = metalFlowNodeOwnership.size();
@@ -1340,20 +1411,49 @@ void DiffusionEngine::initialiseMCFSolver(){
                     
                     
                 }else if(mc.type == CellType::MARKED || mc.type == CellType::PREPLACED){
+                    SignalType mcSignal = mc.signal;
                     int newIdx = mcCellLabel;
+                    tmpMetalLabel[layer][y][x] = newIdx;
+                    if(aggregatedNodesProcessed[newIdx]) continue;
+
+                    aggregatedNodesProcessed[newIdx] = true;
                     FlowNode &fn = metalFlowNodeOwnership[newIdx];
                     fn.layer = layer;
-                    tmpMetalLabel[layer][y][x] = newIdx;
+                    fn.signal = mcSignal;
+                    if(layer == m_ubumpConnectedMetalLayerIdx){
+                        superSinkConnIdx[mcSignal].push_back(mcCellLabel);
+                    }else if(layer == m_c4ConnectedMetalLayerIdx){
+                        superSourceConnIdx[mcSignal].push_back(mcCellLabel);
+                    }
+
+                    
                 }else if(mc.type == CellType::OBSTACLES){
                     int newIdx = mcCellLabel;
+                    tmpMetalLabel[layer][y][x] = newIdx;  
+                    if(aggregatedNodesProcessed[newIdx]) continue;
+
+                    aggregatedNodesProcessed[newIdx] = true;
                     FlowNode &fn = metalFlowNodeOwnership[newIdx];
                     fn.layer = layer;
                     fn.type = FlowNodeType::OBSTACLES;
-                    tmpMetalLabel[layer][y][x] = newIdx;  
                 }
             }
         }
     }
+    // transform superSource and superSink idx to FlowNode*
+
+    for (const auto& [signal, connVec] : superSourceConnIdx) {
+        for (const CellLabel& label : connVec) {
+            this->superSourceConnectedNodes[signal].push_back(&metalFlowNodeOwnership[label]);
+        }
+    }
+
+    for (const auto& [signal, connVec] : superSinkConnIdx) {
+        for (const CellLabel& label : connVec) {
+            this->superSinkConnectedNodes[signal].push_back(&metalFlowNodeOwnership[label]);
+        }
+    }
+
 
     // paint the via pads as special nodes as well
     for(int viaIdx = 0; viaIdx < getAllViaIdxEnd(); ++viaIdx){
@@ -1363,15 +1463,15 @@ void DiffusionEngine::initialiseMCFSolver(){
         len_t viaY = vc.canvasY;
         len_t viaX = vc.canvasX;
 
-        CellLabel topLLLabel = tmpMetalLabel[viaLayer][viaY][viaX];
-        CellLabel topLRLabel = tmpMetalLabel[viaLayer][viaY][viaX+1];
-        CellLabel topULLabel = tmpMetalLabel[viaLayer][viaY+1][viaX];
-        CellLabel topURLabel = tmpMetalLabel[viaLayer][viaY+1][viaX+1];
+        CellLabel topLLLabel = tmpMetalLabel[viaLayer][viaY-1][viaX-1];
+        CellLabel topLRLabel = tmpMetalLabel[viaLayer][viaY-1][viaX];
+        CellLabel topULLabel = tmpMetalLabel[viaLayer][viaY][viaX-1];
+        CellLabel topURLabel = tmpMetalLabel[viaLayer][viaY][viaX];
 
-        CellLabel downLLLabel = tmpMetalLabel[viaLayer+1][viaY][viaX];
-        CellLabel downLRLabel = tmpMetalLabel[viaLayer+1][viaY][viaX+1];
-        CellLabel downULLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX];
-        CellLabel downURLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX+1];
+        CellLabel downLLLabel = tmpMetalLabel[viaLayer+1][viaY-1][viaX-1];
+        CellLabel downLRLabel = tmpMetalLabel[viaLayer+1][viaY-1][viaX];
+        CellLabel downULLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX-1];
+        CellLabel downURLabel = tmpMetalLabel[viaLayer+1][viaY+1][viaX];
 
         if(metalFlowNodeOwnership[topLLLabel].type == FlowNodeType::EMPTY){
             metalFlowNodeOwnership[topLLLabel].isSuperNode = true;
@@ -1415,9 +1515,50 @@ void DiffusionEngine::initialiseMCFSolver(){
         }
     }
 
+    // calculate SOIBudget according to viadistribution & currentBudget array
+
+    SOIBudget.resize(flowSOIIdxToSig.size(), std::numeric_limits<double>::max());
+    double minViaLayerSumBudget = std::numeric_limits<double>::max();
+    for(size_t viaLayer = 0; viaLayer < m_viaGridLayers; ++viaLayer){
+        double emptyViaCount = static_cast<double>(m_viaGrid2DCount[viaLayer]);
+        
+        for(size_t viaIdx = 0; viaIdx < m_viaGrid2DCount[viaLayer]; ++ viaIdx){
+            ViaCell &vc = this->viaGrid[calViaIdx(viaLayer, viaIdx)];
+            if(vc.type == CellType::OBSTACLES) emptyViaCount -= 1;
+            else if(vc.type == CellType::PREPLACED || vc.type == CellType::MARKED){
+                emptyViaCount -= 0.5;
+            }
+        }
+        if(emptyViaCount < minViaLayerSumBudget) minViaLayerSumBudget = emptyViaCount;
+    }
+
+    for(int i = 0; i < SOIBudget.size(); ++i){
+        SOIBudget[i] = minViaLayerSumBudget * ((ViaBudgetAvgQuota / SOIBudget.size()) + viaBudgetCurrentQuota * currentBudget[flowSOIIdxToSig[i]]);
+    }
+
+    // for displaying
+    std::cout << "Display requrests: " << std::endl;
+    for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+        std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << std::endl;
+    }
+    std::cout << "Display superSource" << std::endl;
+    for(FlowNode &fn : superSource){
+        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    }
+
+    std::cout << "Display superSink" << std::endl;
+    for(FlowNode &fn : superSink){
+        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    }
+
 }
 
 void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
+   
+    auto in2DRange = [&](int y, int x){
+        return (y >= 0) && (y < m_metalGridHeight) && (x >= 0) && (x < m_metalGridWidth);
+    };
+
     try {
         /* Initialise Gubobi solver*/
         GRBEnv GRBenv = GRBEnv(true);
@@ -1431,265 +1572,482 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
         std::vector<bool> metalFlowNodeIdxProcessed(metalFlowNodeOwnership.size(), false);
         
         for(size_t layer = m_ubumpConnectedMetalLayerIdx; layer <= m_c4ConnectedMetalLayerIdx; ++layer){
+            for(int y = 0; y < m_metalGridHeight; ++y){
+                for(int x = 0; x < m_metalGridWidth; ++x){
+                    FlowNode *fnPointer = this->metalFlowNodeArr[layer][y][x];
+                    if(fnPointer->type != FlowNodeType::EMPTY) continue;
+                    
+                    std::vector<Cord>fourNeighbors = {Cord(1, 0), Cord(-1, 0), Cord(0, 1), Cord(0, -1)};
+                    bool UpDownDir = ((x + y) %2 == 0);
 
+                    for(const Cord &neighborDir : fourNeighbors){
+                        int nx = x + neighborDir.x();
+                        int ny = y + neighborDir.y();
+
+                        if(in2DRange(ny, nx)){
+                            FlowNode *neighborFnPointer = this->metalFlowNodeArr[layer][ny][nx];
+
+                            if(neighborFnPointer->type == FlowNodeType::EMPTY){
+                                // create two directions,
+                                // from this -> north
+                                // from node -> this
+                                if((UpDownDir && (neighborDir.y() != 0)) || (!UpDownDir && (neighborDir.x() != 0)) || (fnPointer->isSuperNode)){
+                                    GRBLinExpr varsExclusiveLinExpr = 0.0;
+                                    for(SignalType &st : this->flowSOIIdxToSig){
+                                        GRBVar var = GRBmodel.addVar(normalMetalEdgeLB, normalMetalEdgeUB, normalMetalEdgeWeight, GRB_CONTINUOUS);
+                                        FlowEdge *fe = new FlowEdge(st, fnPointer, neighborFnPointer, var);
+                                        this->flowEdgeOwnership.push_back(fe);
+                                        fnPointer->outEdges.push_back(fe);
+                                        neighborFnPointer->inEdges.push_back(fe);
+                                        varsExclusiveLinExpr += var;
+                                    }
+                                    // add exclusiveness
+                                    GRBmodel.addConstr(varsExclusiveLinExpr <= normalMetalEdgeUB);
+                                }
+
+                                
+
+
+                            }else if(neighborFnPointer->type == FlowNodeType::AGGREGATED){
+                                if(layer == m_ubumpConnectedMetalLayerIdx){
+                                    // only goes from this -> neighbor(aggregated)
+                                    SignalType targetSt = neighborFnPointer->signal;
+                                    GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                    FlowEdge *fe = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var);
+                                    this->flowEdgeOwnership.push_back(fe);
+                                    fnPointer->outEdges.push_back(fe);
+                                    neighborFnPointer->inEdges.push_back(fe);
+                                    
+                                }else if(layer == m_c4ConnectedMetalLayerIdx){
+                                    // only goes from neighbor(aggregated) -> this
+                                    SignalType targetSt = neighborFnPointer->signal;
+                                    GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                    FlowEdge *fe = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var);
+                                    this->flowEdgeOwnership.push_back(fe);
+                                    neighborFnPointer->outEdges.push_back(fe);
+                                    fnPointer->inEdges.push_back(fe);
+                                
+                                }else{
+                                    // goes both ways
+                                    SignalType targetSt = neighborFnPointer->signal;
+                                    
+                                    GRBVar var0 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                    FlowEdge *fe0 = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var0);
+                                    this->flowEdgeOwnership.push_back(fe0);
+                                    fnPointer->outEdges.push_back(fe0);
+                                    neighborFnPointer->inEdges.push_back(fe0);
+
+                                    GRBVar var1 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                    FlowEdge *fe1 = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var1);
+                                    this->flowEdgeOwnership.push_back(fe1);
+                                    neighborFnPointer->outEdges.push_back(fe1);
+                                    fnPointer->inEdges.push_back(fe1);
+
+                                }
+                            }
+
+
+                        }
+                    }
+
+                }
+            }
         }
 
+        // STEP 2. build via layer diecision variables
+        for(size_t viaLayer = 0; viaLayer < m_viaGridLayers; ++viaLayer){
+            for(size_t viaIdx = 0; viaIdx < m_viaGrid2DCount[viaLayer]; ++ viaIdx){
+                ViaCell &vc = this->viaGrid[calViaIdx(viaLayer, viaIdx)];
+                size_t vcCanvasY = static_cast<size_t>(vc.canvasY);
+                size_t vcCanvasX = static_cast<size_t>(vc.canvasX);
+
+                FlowNode *topFNPointer = &viaFlowTopNodeArr[viaLayer][viaIdx];
+                FlowNode *downFNPointer = &viaFlowDownNodeArr[viaLayer][viaIdx];
+
+                // add vars from downVia -> topvia
+                GRBLinExpr varsExclusiveLinExpr = 0.0;
+                for(SignalType &st : this->flowSOIIdxToSig){
+                    GRBVar var = GRBmodel.addVar(ViaEdgeLB, ViaEdgeUB, viaEdgeWeight, GRB_CONTINUOUS);
+                    GRBVar bin = GRBmodel.addVar(0.0, 1.0, 0.0, GRB_BINARY);
+                    
+                    FlowEdge *fe = new FlowEdge(st, downFNPointer, topFNPointer, var);
+                    this->flowEdgeOwnership.push_back(fe);
+                    downFNPointer->outEdges.push_back(fe);
+                    topFNPointer->inEdges.push_back(fe);
+                    
+                    GRBmodel.addConstr(var <= (ViaEdgeUB * bin));
+                    // varsExclusiveLinExpr += var;
+                    varsExclusiveLinExpr += bin;
+
+                }
+                // add exclusiveness
+                // GRBmodel.addConstr(varsExclusiveLinExpr <= ViaEdgeUB);
+                GRBmodel.addConstr(varsExclusiveLinExpr <= 1);
+
+                // add vars from down nodes -> downVia
+                std::unordered_map<FlowNode *, int> downOccurence;
+                ++downOccurence[metalFlowNodeArr[viaLayer+1][vcCanvasY-1][vcCanvasX-1]];
+                ++downOccurence[metalFlowNodeArr[viaLayer+1][vcCanvasY-1][vcCanvasX]];
+                ++downOccurence[metalFlowNodeArr[viaLayer+1][vcCanvasY][vcCanvasX-1]];
+                ++downOccurence[metalFlowNodeArr[viaLayer+1][vcCanvasY][vcCanvasX]];
+
+                for(const auto &[key, value] : downOccurence){
+                    if(key->type == FlowNodeType::OBSTACLES){
+                        continue;
+                    }else if(key->type == FlowNodeType::EMPTY){
+                        GRBLinExpr varsExclusiveLinExpr = 0.0;
+                        for(SignalType &st : this->flowSOIIdxToSig){
+                            GRBVar var = GRBmodel.addVar(ViaEdgeLB, subViaEdgeUB, viaEdgeWeight, GRB_CONTINUOUS);
+                            FlowEdge *fe = new FlowEdge(st, key, downFNPointer, var);
+                            this->flowEdgeOwnership.push_back(fe);
+                            key->outEdges.push_back(fe);
+                            downFNPointer->inEdges.push_back(fe);
+                            varsExclusiveLinExpr += var;
+                        }
+                        // add exclusiveness
+                        GRBmodel.addConstr(varsExclusiveLinExpr <= subViaEdgeUB);
+
+                    }else if(key->type == FlowNodeType::AGGREGATED){
+                        double finlalSubViaUB = (value == 1)? subViaEdgeUB : ViaEdgeUB;
+                        SignalType aggregateSt = key->signal;
+                        GRBVar var = GRBmodel.addVar(ViaEdgeLB, finlalSubViaUB, viaEdgeWeight, GRB_CONTINUOUS);
+                        FlowEdge *fe = new FlowEdge(aggregateSt, key, downFNPointer, var);
+                        this->flowEdgeOwnership.push_back(fe);
+                        key->outEdges.push_back(fe);
+                        downFNPointer->inEdges.push_back(fe);
+                        varsExclusiveLinExpr += var;
+                    }
+                }
+
+                // add vars from upVia -> up nodes
+                std::unordered_map<FlowNode *, int> topOccurence;
+                ++topOccurence[metalFlowNodeArr[viaLayer][vcCanvasY-1][vcCanvasX-1]];
+                ++topOccurence[metalFlowNodeArr[viaLayer][vcCanvasY-1][vcCanvasX]];
+                ++topOccurence[metalFlowNodeArr[viaLayer][vcCanvasY][vcCanvasX-1]];
+                ++topOccurence[metalFlowNodeArr[viaLayer][vcCanvasY][vcCanvasX]];
+                
+                for(const auto &[key, value] : topOccurence){
+                    if(key->type == FlowNodeType::OBSTACLES){
+                        continue;
+                    }else if(key->type == FlowNodeType::EMPTY){
+                        GRBLinExpr varsExclusiveLinExpr = 0.0;
+                        for(SignalType &st : this->flowSOIIdxToSig){
+                            GRBVar var = GRBmodel.addVar(ViaEdgeLB, subViaEdgeUB, viaEdgeWeight, GRB_CONTINUOUS);
+                            FlowEdge *fe = new FlowEdge(st, topFNPointer, key, var);
+                            this->flowEdgeOwnership.push_back(fe);
+                            topFNPointer->outEdges.push_back(fe);
+                            key->inEdges.push_back(fe);
+                            varsExclusiveLinExpr += var;
+                        }
+                        // add exclusiveness
+                        GRBmodel.addConstr(varsExclusiveLinExpr <= subViaEdgeUB);
+
+                    }else if(key->type == FlowNodeType::AGGREGATED){
+                        double finlalSubViaUB = (value == 1)? subViaEdgeUB : ViaEdgeUB;
+                        SignalType aggregateSt = key->signal;
+                        GRBVar var = GRBmodel.addVar(ViaEdgeLB, finlalSubViaUB, viaEdgeWeight, GRB_CONTINUOUS);
+                        FlowEdge *fe = new FlowEdge(aggregateSt, topFNPointer , key, var);
+                        this->flowEdgeOwnership.push_back(fe);
+                        topFNPointer->outEdges.push_back(fe);
+                        key->inEdges.push_back(fe);
+                    }
+                }
+
+            }
+        }
+
+        // STEP 3. build super-source decision variables
+        for(auto &[st, nodes] : this->superSourceConnectedNodes){
+            FlowNode *spSource = &superSource[flowSOISigToIdx[st]];
+
+            for(FlowNode *fn : nodes){
+                GRBVar var = GRBmodel.addVar(0, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+                FlowEdge *fe = new FlowEdge(st, spSource, fn, var);
+                this->flowEdgeOwnership.push_back(fe);
+                spSource->outEdges.push_back(fe);
+                fn->inEdges.push_back(fe);
+            }
+        }
+        
+        // STEP 4. build super-sink decision varaibles
+        for(const auto&[st, nodes] : this->superSinkConnectedNodes){
+            FlowNode *spSink = &superSink[flowSOISigToIdx[st]];
+            double signalLowerBound = minChipletBudgetAvgPctg * (SOIBudget[flowSOISigToIdx[st]] / nodes.size());
+
+            for(FlowNode *fn : nodes){
+                GRBVar var = GRBmodel.addVar(signalLowerBound, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+                FlowEdge *fe = new FlowEdge(st, fn, spSink, var);
+                this->flowEdgeOwnership.push_back(fe);
+                fn->outEdges.push_back(fe);
+                spSink->inEdges.push_back(fe);
+            }
+        }
+
+        // step 5. add flow constraints for each signal for each cell
+        for(FlowNode &fn : metalFlowNodeOwnership){
+            if(fn.inEdges.empty() && fn.outEdges.empty()) continue;
+
+            std::vector<std::vector<FlowEdge *>> nodeInEdges(flowSOIIdxToSig.size());
+            std::vector<std::vector<FlowEdge *>> nodeOutEdges(flowSOIIdxToSig.size());
+
+            for(FlowEdge *fe : fn.inEdges){
+                nodeInEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+            }
+            for(FlowEdge *fe : fn.outEdges){
+                nodeOutEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+            }
+
+            for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+                if(nodeInEdges[i].empty() && nodeOutEdges[i].empty()) continue;
+                else if(nodeInEdges[i].empty()){
+                    GRBLinExpr varsLinExpr = 0.0;
+                    for(FlowEdge *fe : nodeOutEdges[i]){
+                        varsLinExpr += fe->var;
+                    }
+                    GRBmodel.addConstr(varsLinExpr == 0.0); 
+                }else if(nodeOutEdges[i].empty()){
+                    GRBLinExpr varsLinExpr = 0.0;
+                    for(FlowEdge *fe : nodeInEdges[i]){
+                        varsLinExpr += fe->var;
+                    }
+                    GRBmodel.addConstr(varsLinExpr == 0.0); 
+                }else{
+                    GRBLinExpr inExpr = 0.0;
+                    GRBLinExpr outExpr = 0.0;
+                    for (FlowEdge* fe : nodeInEdges[i]){
+                        inExpr += fe->var;
+                    } 
+                    for (FlowEdge* fe : nodeOutEdges[i]){
+                        outExpr += fe->var; 
+                    }
+                    GRBmodel.addConstr(inExpr == outExpr);
+                }
+            }
+        } 
+
+        for(int i = 0; i < viaFlowTopNodeArr.size(); ++i){
+            for(FlowNode &fn : viaFlowTopNodeArr[i]){
+
+                if(fn.inEdges.empty() && fn.outEdges.empty()) continue;
+
+                std::vector<std::vector<FlowEdge *>> nodeInEdges(flowSOIIdxToSig.size());
+                std::vector<std::vector<FlowEdge *>> nodeOutEdges(flowSOIIdxToSig.size());
+
+                for(FlowEdge *fe : fn.inEdges){
+                    nodeInEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+                }
+                for(FlowEdge *fe : fn.outEdges){
+                    nodeOutEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+                }
+
+                for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+                    if(nodeInEdges[i].empty() && nodeOutEdges[i].empty()) continue;
+                    else if(nodeInEdges[i].empty()){
+                        GRBLinExpr varsLinExpr = 0.0;
+                        for(FlowEdge *fe : nodeOutEdges[i]){
+                            varsLinExpr += fe->var;
+                        }
+                        GRBmodel.addConstr(varsLinExpr == 0.0); 
+                    }else if(nodeOutEdges[i].empty()){
+                        GRBLinExpr varsLinExpr = 0.0;
+                        for(FlowEdge *fe : nodeInEdges[i]){
+                            varsLinExpr += fe->var;
+                        }
+                        GRBmodel.addConstr(varsLinExpr == 0.0); 
+                    }else{
+                        GRBLinExpr inExpr = 0.0;
+                        GRBLinExpr outExpr = 0.0;
+                        for (FlowEdge* fe : nodeInEdges[i]){
+                            inExpr += fe->var;
+                        } 
+                        for (FlowEdge* fe : nodeOutEdges[i]){
+                            outExpr += fe->var; 
+                        }
+                        GRBmodel.addConstr(inExpr == outExpr);
+                    }
+                }
+            } 
+        }
+
+        for(int i = 0; i < viaFlowDownNodeArr.size(); ++i){
+            for(FlowNode &fn : viaFlowDownNodeArr[i]){
+
+                if(fn.inEdges.empty() && fn.outEdges.empty()) continue;
+
+                std::vector<std::vector<FlowEdge *>> nodeInEdges(flowSOIIdxToSig.size());
+                std::vector<std::vector<FlowEdge *>> nodeOutEdges(flowSOIIdxToSig.size());
+
+                for(FlowEdge *fe : fn.inEdges){
+                    nodeInEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+                }
+                for(FlowEdge *fe : fn.outEdges){
+                    nodeOutEdges[flowSOISigToIdx[fe->signal]].push_back(fe);
+                }
+
+                for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+                    if(nodeInEdges[i].empty() && nodeOutEdges[i].empty()) continue;
+                    else if(nodeInEdges[i].empty()){
+                        GRBLinExpr varsLinExpr = 0.0;
+                        for(FlowEdge *fe : nodeOutEdges[i]){
+                            varsLinExpr += fe->var;
+                        }
+                        GRBmodel.addConstr(varsLinExpr == 0.0); 
+                    }else if(nodeOutEdges[i].empty()){
+                        GRBLinExpr varsLinExpr = 0.0;
+                        for(FlowEdge *fe : nodeInEdges[i]){
+                            varsLinExpr += fe->var;
+                        }
+                        GRBmodel.addConstr(varsLinExpr == 0.0); 
+                    }else{
+                        GRBLinExpr inExpr = 0.0;
+                        GRBLinExpr outExpr = 0.0;
+                        for (FlowEdge* fe : nodeInEdges[i]){
+                            inExpr += fe->var;
+                        } 
+                        for (FlowEdge* fe : nodeOutEdges[i]){
+                            outExpr += fe->var; 
+                        }
+                        GRBmodel.addConstr(inExpr == outExpr);
+                    }
+                }
+            } 
+        }
+
+        // STEP 6: Add special flow constraints for superSource and superSink
+        for(int i = 0; i < superSource.size(); ++i){
+            double budget = SOIBudget[i];
+
+            GRBLinExpr sourceLinExpr = 0.0;
+            for(FlowEdge *fe : superSource[i].outEdges){
+                sourceLinExpr += fe->var;
+            }
+            GRBmodel.addConstr(sourceLinExpr == budget);
+
+            GRBLinExpr sinkLinExpr = 0.0;
+            for(FlowEdge *fe : superSink[i].inEdges){
+                sinkLinExpr += fe->var;
+            }
+            GRBmodel.addConstr(sinkLinExpr == budget);
+        }
+
+        // STEP 7. run the solver
+        GRBmodel.optimize();
+        int status = GRBmodel.get(GRB_IntAttr_Status);
+        std::cout << "Gurobi Optimization Status: " << status << " — ";
+
+        switch (status) {
+            case GRB_OPTIMAL:
+                std::cout << "Optimal solution found." << std::endl;
+                std::cout << "Objective value: " << GRBmodel.get(GRB_DoubleAttr_ObjVal) << std::endl;
+                break;
+
+            case GRB_INFEASIBLE:
+                std::cout << "Model is infeasible." << std::endl;
+                std::cout << "Computing IIS (Irreducible Inconsistent Subsystem) for analysis..." << std::endl;
+                GRBmodel.computeIIS();
+                GRBmodel.write("infeasible_model.ilp");  // Save conflicting constraints
+                std::cout << "IIS written to 'infeasible_model.ilp'." << std::endl;
+                break;
+
+            case GRB_UNBOUNDED:
+                std::cout << "Model is unbounded." << std::endl;
+                std::cout << "Check for missing constraints or variables with no bounds." << std::endl;
+                break;
+
+            case GRB_INF_OR_UNBD:
+                std::cout << "Model is either infeasible or unbounded." << std::endl;
+                std::cout << "Consider disabling dual reductions: model.set(GRB_IntParam_DualReductions, 0);" << std::endl;
+                break;
+
+            case GRB_TIME_LIMIT:
+                std::cout << "Time limit reached before finding an optimal solution." << std::endl;
+                break;
+
+            case GRB_INTERRUPTED:
+                std::cout << "Optimization was interrupted." << std::endl;
+                break;
+
+            case GRB_CUTOFF:
+                std::cout << "Optimization stopped due to reaching the cutoff parameter." << std::endl;
+                break;
+
+            default:
+                std::cout << "Unhandled status code. Refer to Gurobi documentation for details." << std::endl;
+                break;
+        }
+       
+        /* Extract Results*/
+        // write the results back:
+        for(int layer = 0; layer < m_metalGridLayers; ++layer){
+            for(int y = 0; y < m_metalGridHeight; ++y){
+                for(int x = 0; x < m_metalGridWidth; ++x){
+                    
+                    FlowNode *fn = metalFlowNodeArr[layer][y][x];
+                    if(fn->type != FlowNodeType::EMPTY) continue;
+
+                    std::unordered_map<SignalType, double> vote;
+                    for(FlowEdge *fe : fn->inEdges){
+                        double result = fe->var.get(GRB_DoubleAttr_X);
+                        if(result > 1e-6){
+                            vote[fe->signal] += result;
+                        }
+                    }
+
+                    if(!vote.empty()){
+                        SignalType winner;
+                        double winnerValue = -1;
+                        for(const auto &[st, sum] : vote){
+                            if(sum > winnerValue){
+                                winner = st;
+                                winnerValue = sum;
+                            }
+                        }
+
+                        MetalCell &mc = this->metalGrid[calMetalIdx(layer, y, x)];
+                        mc.type = CellType::MARKED;
+                        mc.signal = winner;
+                        // std::cout << "Winner of (" << layer << ", " << y << ", " << x << ") is " << winner << std::endl;
+                    }
+                }
+            }
+        }
+
+        for(int layer = 0; layer < m_viaGridLayers; ++layer){
+            for(int idx = 0; idx < m_viaGrid2DCount[layer]; ++idx){
+                ViaCell &vc = this->viaGrid[calViaIdx(layer, idx)];
+                if(vc.type != CellType::EMPTY) continue;
+
+                FlowNode &fn = viaFlowDownNodeArr[layer][idx];
+
+
+                std::unordered_map<SignalType, double> vote;
+                for(FlowEdge *fe : fn.outEdges){
+                    double result = fe->var.get(GRB_DoubleAttr_X);
+                    if(result > 1e-6){
+                        vote[fe->signal] += result;
+                    }
+                }
+
+                if(!vote.empty()){
+                    SignalType winner;
+                    double winnerValue = -1;
+                    for(const auto &[st, sum] : vote){
+                        if(sum > winnerValue){
+                            winner = st;
+                            winnerValue = sum;
+                        }
+                    }
+                    
+                    vc.type = CellType::MARKED;
+                    vc.signal = winner;
+                }
+            }
+        }
 
     } catch (GRBException &e) {
         std::cerr << "Gurobi error: " << e.getMessage() << std::endl;
     }
 }
-
-
-
-
-// void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
-//     try {
-//         GRBEnv GRBenv = GRBEnv(true);
-//         GRBenv.set("LogFile", logFile);
-//         GRBenv.set(GRB_IntParam_OutputFlag, outputLevel);  // Print to terminal
-//         GRBenv.start();
-
-//         GRBModel GRBmodel = GRBModel(GRBenv);
-
-
-//         /* Create decision Varaibles for variables */
-//         int maxLabel =  static_cast<int>(initialiseIndexing());
-        
-//         // these are maps to the metalGrid DiffusionChamber
-//         size_t metalGridSize = metalGrid.size();
-//         std::vector<DiffusionChamber *> metalGridAggregatedPtr(metalGridSize, nullptr);
-//         std::vector<std::vector<FlowEdge>> metalGridInEdges(metalGridSize);
-//         std::vector<std::vector<FlowEdge>> metalGridOutEdges(metalGridSize);
-
-
-//         std::vector<DiffusionChamber> aggregatedMetalCells(maxLabel);
-//         std::vector<std::vector<FlowEdge>> aggregatedMetalCellsInEdges(maxLabel);
-//         std::vector<std::vector<FlowEdge>> aggregatedMetalCellsOutEdges(maxLabel);
-        
-//         std::vector<bool> processedAggregatedcells(maxLabel, false);
-//         processedAggregatedcells[0] = true;
-        
-//         std::vector<DiffusionChamber> phonyViaCells(viaGrid.size());
-//         std::unordered_map<SignalType, DiffusionChamber> superSource;
-//         std::unordered_map<SignalType, DiffusionChamber> superSink;
-
-//         std::vector<SignalType> signalOfInterest;
-//         for (const auto& [signal, _] : currentBudget) {
-//             signalOfInterest.push_back(signal);
-//         }
-//         std::vector<DiffusionChamber> superSource(signalOfInterest.size());
-//         std::vector<DiffusionChamber> superSink(signalOfInterest.size());
-
-
-
-//         // construct decision variables for metal Layers, where
-//         for(size_t layer = m_ubumpConnectedMetalLayerIdx; layer <= m_c4ConnectedMetalLayerIdx; ++layer){
-//             for(size_t mIdx = getMetalIdxBegin(layer); mIdx < getMetalIdxEnd(layer); ++mIdx){
-//                 MetalCell &mc = this->metalGrid[mIdx];
-//                 MetalCell *mcPointer = &mc;
-//                 CellType mcCellType = mc.type;
-                
-//                 if(mcCellType == CellType::EMPTY){
-//                     MetalCell *mcNorthCell = mc.northCell;
-//                     MetalCell *mcSouthCell = mc.southCell;
-//                     MetalCell *mcEastCell = mc.eastCell;
-//                     MetalCell *mcWestCell = mc.westCell;
-
-//                     bool cellIsVia = (mc.fullDirection & CELL_UP_DOWN_DIR);
-
-//                     if(mcNorthCell != nullptr){
-//                         CellType mcNorthCellType = mcNorthCell->type;
-//                         if((mcNorthCellType == CellType::EMPTY) && (!(mc.canvasY & 1) || cellIsVia)){
-//                             GRBLinExpr varsExclusiveLinExpr = 0.0;
-//                             for(const SignalType st : signalOfInterest){
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(st, mcPointer, mcNorthCell, var);
-//                                 metalGridInEdges[mcNorthCell->index].emplace_back(st, mcPointer, mcNorthCell, var);
-//                                 varsExclusiveLinExpr += var;
-//                             }
-//                             // add exclusiveness
-//                             GRBmodel.addConstr(varsExclusiveLinExpr <= 1.0);
-
-//                         }else if((mcNorthCellType == CellType::PREPLACED) || (mcNorthCellType == CellType::MARKED)){
-//                             // the current flow "toward" the aggregated cell, only one st type
-//                             SignalType northCellSt = mcNorthCell->signal;
-//                             CellLabel northCellAggregatedLabel = metalGridLabel[mcNorthCell->index];
-//                             DiffusionChamber *agCellPointer = &aggregatedMetalCells[northCellAggregatedLabel];
-
-//                             if(layer == m_ubumpConnectedMetalLayerIdx){
-//                                 // current go towards clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(northCellSt, mcPointer, agCellPointer, var);
-//                                 aggregatedMetalCellsInEdges[northCellAggregatedLabel].emplace_back(northCellSt, mcPointer, agCellPointer, var); 
-//                             }else if(layer == m_c4ConnectedMetalLayerIdx){
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(northCellSt, agCellPointer, mcPointer, var);
-//                                 aggregatedMetalCellsOutEdges[northCellAggregatedLabel].emplace_back(northCellSt, agCellPointer, mcPointer, var); 
-//                             }else{
-//                                 // there are both ways
-//                                 GRBVar var1 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(northCellSt, mcPointer, agCellPointer, var1);
-//                                 aggregatedMetalCellsInEdges[northCellAggregatedLabel].emplace_back(northCellSt, mcPointer, agCellPointer, var1); 
-
-//                                 GRBVar var2 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(northCellSt, agCellPointer, mcPointer, var2);
-//                                 aggregatedMetalCellsOutEdges[northCellAggregatedLabel].emplace_back(northCellSt, agCellPointer, mcPointer, var2); 
-//                             }
-
-//                         }
-//                     }
-
-//                     if(mcSouthCell != nullptr){
-//                         CellType mcSouthCellType = mcSouthCell->type;
-//                         if((mcSouthCellType == CellType::EMPTY) && (!(mc.canvasY & 1) || (cellIsVia))){
-//                             GRBLinExpr varsExclusiveLinExpr = 0.0;
-//                             for(const SignalType st : signalOfInterest){
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(st, mcPointer, mcSouthCell, var);
-//                                 metalGridInEdges[mcNorthCell->index].emplace_back(st, mcPointer, mcSouthCell, var);
-//                                 varsExclusiveLinExpr += var;
-//                             }
-//                             // add exclusiveness
-//                             GRBmodel.addConstr(varsExclusiveLinExpr <= 1.0);
-//                         }else if((mcSouthCellType == CellType::PREPLACED) || (mcSouthCellType == CellType::MARKED)){
-//                             SignalType southCellSt = mcSouthCell->signal;
-//                             CellLabel southCellAggregatedLabel = metalGridLabel[mcSouthCell->index];
-//                             DiffusionChamber *agCellPointer = &aggregatedMetalCells[southCellAggregatedLabel];
-                            
-//                             if(layer == m_ubumpConnectedMetalLayerIdx){
-//                                 // current go towards clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(southCellSt, mcPointer, agCellPointer, var);
-//                                 aggregatedMetalCellsInEdges[southCellAggregatedLabel].emplace_back(southCellSt, mcPointer, agCellPointer, var); 
-//                             }else if(layer == m_c4ConnectedMetalLayerIdx){
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(southCellSt, agCellPointer, mcPointer, var);
-//                                 aggregatedMetalCellsOutEdges[southCellAggregatedLabel].emplace_back(southCellSt, agCellPointer, mcPointer, var); 
-//                             }else{
-//                                 // there are both ways
-//                                 GRBVar var1 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(southCellSt, mcPointer, agCellPointer, var1);
-//                                 aggregatedMetalCellsInEdges[southCellAggregatedLabel].emplace_back(southCellSt, mcPointer, agCellPointer, var1); 
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var2 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(southCellSt, agCellPointer, mcPointer, var2);
-//                                 aggregatedMetalCellsOutEdges[southCellAggregatedLabel].emplace_back(southCellSt, agCellPointer, mcPointer, var2); 
-//                             }
-
-//                         }
-//                     }
-
-//                     if(mcEastCell != nullptr){
-//                         CellType mcEastCellType = mcEastCell->type;
-//                         if((mcEastCellType == CellType::EMPTY) && ((mc.canvasX & 1) || (cellIsVia))){
-//                             GRBLinExpr varsExclusiveLinExpr = 0.0;
-//                             for(const SignalType st : signalOfInterest){
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(st, mcPointer, mcEastCell, var);
-//                                 metalGridInEdges[mcNorthCell->index].emplace_back(st, mcPointer, mcEastCell, var);
-//                                 varsExclusiveLinExpr += var;
-//                             }
-//                             // add exclusiveness
-//                             GRBmodel.addConstr(varsExclusiveLinExpr <= 1.0);
-//                         }else if((mcEastCellType == CellType::PREPLACED) || (mcEastCellType == CellType::MARKED)){
-//                             SignalType eastCellSt = mcEastCell->signal;
-//                             CellLabel eastCellAggregatedLabel = metalGridLabel[mcEastCell->index];
-//                             DiffusionChamber *agCellPointer = &aggregatedMetalCells[eastCellAggregatedLabel];
-
-//                             if(layer == m_ubumpConnectedMetalLayerIdx){
-//                                 // current go towards clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(eastCellSt, mcPointer, agCellPointer, var);
-//                                 aggregatedMetalCellsInEdges[eastCellAggregatedLabel].emplace_back(eastCellSt, mcPointer, agCellPointer, var); 
-//                             }else if(layer == m_c4ConnectedMetalLayerIdx){
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(eastCellSt, agCellPointer, mcPointer, var);
-//                                 aggregatedMetalCellsOutEdges[eastCellAggregatedLabel].emplace_back(eastCellSt, agCellPointer, mcPointer, var); 
-//                             }else{
-//                                 // there are both ways
-//                                 GRBVar var1 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(eastCellSt, mcPointer, agCellPointer, var1);
-//                                 aggregatedMetalCellsInEdges[eastCellAggregatedLabel].emplace_back(eastCellSt, mcPointer, agCellPointer, var1); 
-
-//                                 GRBVar var2 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(eastCellSt, agCellPointer, mcPointer, var2);
-//                                 aggregatedMetalCellsOutEdges[eastCellAggregatedLabel].emplace_back(eastCellSt, agCellPointer, mcPointer, var2); 
-//                             }
-//                         }
-//                     }
-
-//                     if(mcWestCell != nullptr){
-//                         CellType mcWestCellType = mcWestCell->type;
-//                         if((mcWestCellType == CellType::EMPTY) && ((mc.canvasX & 1) || (cellIsVia))){
-//                             GRBLinExpr varsExclusiveLinExpr = 0.0;
-//                             for(const SignalType st : signalOfInterest){
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(st, mcPointer, mcWestCell, var);
-//                                 metalGridInEdges[mcNorthCell->index].emplace_back(st, mcPointer, mcWestCell, var);
-//                                 varsExclusiveLinExpr += var;
-//                             }
-//                             // add exclusiveness
-//                             GRBmodel.addConstr(varsExclusiveLinExpr <= 1.0);
-//                         }else if((mcWestCellType == CellType::PREPLACED) || (mcWestCellType == CellType::MARKED)){
-//                             SignalType westCellSt = mcWestCell->signal;
-//                             CellLabel westCellAggregatedLabel = metalGridLabel[mcWestCell->index];
-//                             DiffusionChamber *agCellPointer = &aggregatedMetalCells[westCellAggregatedLabel];
-
-//                             if(layer == m_ubumpConnectedMetalLayerIdx){
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(westCellSt, mcPointer, agCellPointer, var);
-//                                 aggregatedMetalCellsInEdges[westCellAggregatedLabel].emplace_back(westCellSt, mcPointer, agCellPointer, var); 
-//                             }else if(layer == m_c4ConnectedMetalLayerIdx){
-//                                 // curret leave clusters (aggregated cells)
-//                                 GRBVar var = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(westCellSt, agCellPointer, mcPointer, var);
-//                                 aggregatedMetalCellsOutEdges[westCellAggregatedLabel].emplace_back(westCellSt, agCellPointer, mcPointer, var); 
-//                             }else{
-//                                 // there are both ways
-//                                 GRBVar var1 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridOutEdges[mIdx].emplace_back(westCellSt, mcPointer, agCellPointer, var1);
-//                                 aggregatedMetalCellsInEdges[westCellAggregatedLabel].emplace_back(westCellSt, mcPointer, agCellPointer, var1);
-                                
-//                                 GRBVar var2 = GRBmodel.addVar(0.0, 1.0, 1.0, GRB_CONTINUOUS);
-//                                 metalGridInEdges[mIdx].emplace_back(westCellSt, agCellPointer, mcPointer, var2);
-//                                 aggregatedMetalCellsOutEdges[westCellAggregatedLabel].emplace_back(westCellSt, agCellPointer, mcPointer, var2); 
-
-//                             }
-//                         }
-//                     }
-                    
-//                 }else if(mcCellType == CellType::MARKED || mcCellType == CellType::PREPLACED){
-//                     CellLabel aggregateLabel = metalGridLabel[mIdx];
-//                     DiffusionChamber &agCell = aggregatedMetalCells[aggregateLabel];
-//                     metalGridAggregatedPtr[mIdx] = &agCell;
-
-//                     if(processedAggregatedcells[aggregateLabel]) continue;
-//                     processedAggregatedcells[aggregateLabel] = true;
-                    
-//                     agCell.metalViaType = DiffusionChamberType::METAL;
-//                     agCell.canvasLayer = layer;
-//                     agCell.index = aggregateLabel;
-//                     agCell.signal = mc.signal;
-//                 }
-//             }
-//         }
-
-//         // create both ways for cells that are in on the side of indexes
-
-
-        
-        
-
-//     } catch (GRBException &e) {
-//         std::cerr << "Gurobi error: " << e.getMessage() << std::endl;
-//     }
-// }
-
 
 void DiffusionEngine::checkConnections(){
     for(int layer = 0; layer < m_metalGridLayers; ++layer){

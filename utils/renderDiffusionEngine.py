@@ -36,7 +36,7 @@ SIGNAL_COLORS = {
     "POWER_9": "#b0f294",
     "POWER_10": "#8d57a3",
     "GROUND": "#5cb85c",
-    "OBSTACLE": "#663300"
+    "OBSTACLE": "#B8B8B8"
 }
 
 SIGNAL_LABEL_COLORS = {

@@ -30,18 +30,18 @@
 #include "gurobi_c++.h"
 
 FlowEdge::FlowEdge(SignalType st, FlowNode* u, FlowNode* v):
-    st(st), u(u), v(v) {}
+    signal(st), u(u), v(v) {}
 
 FlowEdge::FlowEdge(SignalType st, FlowNode* u, FlowNode* v, GRBVar var): 
-    st(st), u(u), v(v), var(var) {}
+    signal(st), u(u), v(v), var(var) {}
 
 std::ostream &operator << (std::ostream &os, const FlowEdge &fe){
-    return os << "FlowEdge[" << fe.u->label << " -- " << fe.st << " -- " << fe.v->label << "]";
+    return os << "FlowEdge[" << fe.u->label << " -- " << fe.signal << " -- " << fe.v->label << "]";
 }
 
 size_t std::hash<FlowEdge>::operator()(const FlowEdge &key) const {
     std::size_t seed = 0;
-    boost::hash_combine(seed, key.st);
+    boost::hash_combine(seed, key.signal);
     boost::hash_combine(seed, key.u);
     boost::hash_combine(seed, key.v);
     return seed;

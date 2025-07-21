@@ -36,7 +36,7 @@ class FlowEdge{
 public:
     FlowNode *u;
     FlowNode *v;
-    SignalType st;
+    SignalType signal;
 
     GRBVar var;
     
