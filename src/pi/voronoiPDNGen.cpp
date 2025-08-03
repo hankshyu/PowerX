@@ -71,6 +71,9 @@ void VoronoiPDNGen::fixRepeatedPoints(std::unordered_map<SignalType, std::vector
         for(const Cord &cord : it->second){
             std::unordered_map<Cord, SignalType>::iterator fit = table.find(cord);
             if(fit != table.end()){
+                if(fit->second != st){
+                    std::cout << "Conflict! " << fit->second << ", " << st << ", " << cord << std::endl;
+                }
                 assert(fit->second == st);
                 haveFix = true;
                 // std::cout << "[PowerX:FixRepeatedPoints] Repeated points found, fixed " << cord << std::endl;
@@ -366,164 +369,104 @@ void VoronoiPDNGen::connectLayers(int upLayerIdx, int downLayerIdx){
 
 
     for(const SignalType &st : allSigTypes){
-        // check if existing points already exists in the upLayerIdx and downLayerIdx
-        FCord upCordAvg(0, 0);
-        FCord downCordAvg(0, 0);
-
-        if(pointsOfLayers[upLayerIdx].count(st) != 0){
-            for(const Cord &c : pointsOfLayers[upLayerIdx][st]){
-                upCordAvg.x(upCordAvg.x() + c.x());
-                upCordAvg.y(upCordAvg.y() + c.y());
-            }
-            upCordAvg.x(upCordAvg.x() / pointsOfLayers[upLayerIdx][st].size());
-            upCordAvg.y(upCordAvg.y() / pointsOfLayers[upLayerIdx][st].size());
-        }else{
-            upCordAvg = FCord(-1, -1);
-        }
-
-        if(pointsOfLayers[downLayerIdx].count(st) != 0){
-            for(const Cord &c : pointsOfLayers[downLayerIdx][st]){
-                downCordAvg.x(downCordAvg.x() + c.x());
-                downCordAvg.y(downCordAvg.y() + c.y());
-            }
-            downCordAvg.x(downCordAvg.x() / pointsOfLayers[downLayerIdx][st].size());
-            downCordAvg.y(downCordAvg.y() / pointsOfLayers[downLayerIdx][st].size());
-        }else{
-            downCordAvg = FCord(-1, -1);
-        } 
 
         // select candidates that should not be occupied and pass the pad test
+        std::unordered_set<Cord> upLayerExistingPoints;
+        std::unordered_set<Cord> upLayerCompetingPoints;
+        std::unordered_set<Cord> upLayerOccupiedPoints;
 
-        std::unordered_set<Cord> upLayerBlockingPoints;
-        std::unordered_set<Cord> downLayerBlockingPoints;
-        std::unordered_set<Cord> allEmptyVias;
-        
+        std::unordered_set<Cord> downLayerExistingPoints;
+        std::unordered_set<Cord> downLayerCompetingPoints;
+        std::unordered_set<Cord> downLayerOccupiedPoints;
+
+
         for(auto cit = pointsOfLayers[upLayerIdx].begin(); cit != pointsOfLayers[upLayerIdx].end(); ++cit){
-            if(cit->first == st) continue;
-            upLayerBlockingPoints.insert(cit->second.begin(), cit->second.end());
+            if(cit->first == st){
+                upLayerExistingPoints.insert(cit->second.begin(), cit->second.end());
+            }else if (POWER_SIGNAL_SET.count(cit->first) != 0){
+                upLayerCompetingPoints.insert(cit->second.begin(), cit->second.end());
+                upLayerOccupiedPoints.insert(cit->second.begin(), cit->second.end());
+            }else{
+                upLayerOccupiedPoints.insert(cit->second.begin(), cit->second.end());
+            }
         }
 
         for(auto cit = pointsOfLayers[downLayerIdx].begin(); cit != pointsOfLayers[downLayerIdx].end(); ++cit){
-            if(cit->first == st) continue;
-            downLayerBlockingPoints.insert(cit->second.begin(), cit->second.end());
+            if(cit->first == st){
+                downLayerExistingPoints.insert(cit->second.begin(), cit->second.end());
+            }else if (POWER_SIGNAL_SET.count(cit->first) != 0){
+                downLayerCompetingPoints.insert(cit->second.begin(), cit->second.end());
+                downLayerOccupiedPoints.insert(cit->second.begin(), cit->second.end());
+            }else{
+                downLayerOccupiedPoints.insert(cit->second.begin(), cit->second.end());
+            }
         }
 
-        std::unordered_set<Cord> occupiedVias;
-        for(auto cit = viaLayers[upLayerIdx].preplacedCords.begin(); cit != viaLayers[upLayerIdx].preplacedCords.end(); ++cit){
-            occupiedVias.insert(cit->second.begin(), cit->second.end());
+        std::vector<Cord> allEmptyVias;
+
+        std::unordered_set<Cord> allPreplacedVias;
+
+        if((viaLayers[upLayerIdx].preplacedCords.find(st) != viaLayers[upLayerIdx].preplacedCords.end()) && (!viaLayers[upLayerIdx].preplacedCords[st].empty())) continue;
+        
+        for(const auto &[st, cords] : viaLayers[upLayerIdx].preplacedCords){
+            allPreplacedVias.insert(cords.begin(), cords.end());
         }
 
         for(int j = 0; j < getPinHeight(); ++j){
             for(int i = 0; i < getPinHeight(); ++i){
                 Cord c(i, j);
-                if(occupiedVias.count(c) != 0) continue;
-                if(upLayerBlockingPoints.count(c) != 0) continue;
-                if(downLayerBlockingPoints.count(c) != 0) continue;
-                
-                allEmptyVias.insert(Cord(i, j));
+                if(allPreplacedVias.count(c) != 0) continue;
+                if(upLayerOccupiedPoints.count(c) != 0) continue;
+                if(downLayerOccupiedPoints.count(c) != 0) continue;
+
+
+                allEmptyVias.push_back(Cord(i, j));
+            }
+        }
+        assert(!allEmptyVias.empty());
+
+        std::vector<flen_t> upShortestFriendlyDistance(allEmptyVias.size(), FLEN_T_MAX);
+        std::vector<flen_t> downShortestFriendlyDistance(allEmptyVias.size(), FLEN_T_MAX);
+
+        std::vector<flen_t> shortestCompetitorDistance(allEmptyVias.size(), FLEN_T_MAX);
+        for(int i = 0; i < allEmptyVias.size(); ++i){
+            Cord c = allEmptyVias[i];
+            FCord onCanvasVia(c.x() - 0.5, c.y() - 0.5);
+            for(const Cord & c : upLayerExistingPoints){
+                FCord upC(c.x(), c.y());
+                flen_t dist = calEuclideanDistance(onCanvasVia, upC);
+                if(dist < upShortestFriendlyDistance[i]) upShortestFriendlyDistance[i] = dist;
+            }
+            for(const Cord & c : downLayerExistingPoints){
+                FCord downC(c.x(), c.y());
+                flen_t dist = calEuclideanDistance(onCanvasVia, downC);
+                if(dist < downShortestFriendlyDistance[i]) downShortestFriendlyDistance[i] = dist;
+            }
+            for(const Cord & c : upLayerCompetingPoints){
+                FCord upComp(c.x(), c.y());
+                flen_t dist = calEuclideanDistance(onCanvasVia, upComp);
+                if(dist < shortestCompetitorDistance[i]) shortestCompetitorDistance[i] = dist;
+            }
+            for(const Cord & c : downLayerCompetingPoints){
+                FCord downComp(c.x(), c.y());
+                flen_t dist = calEuclideanDistance(onCanvasVia, downComp);
+                if(dist < shortestCompetitorDistance[i]) shortestCompetitorDistance[i] = dist;
             }
         }
 
-        for(std::unordered_set<Cord>::iterator it = allEmptyVias.begin(); it != allEmptyVias.end(); ){
-            // test pads are valid
-            Cord pin(*it);
-            len_t xHigh = pin.x();
-            len_t xLow = (xHigh > 0)? xHigh-1 : xHigh;
-            len_t yHigh = pin.y();
-            len_t yLow = (yHigh > 0)? yHigh-1 : yHigh;
+        size_t bestIdx = 0;
+        flen_t bestValue = shortestCompetitorDistance[0] - (std::max(upShortestFriendlyDistance[0], downShortestFriendlyDistance[0]));
 
-            Cord ll(xLow, yLow);
-            Cord lr(xHigh, yLow);
-            Cord ul(xLow, yHigh);
-            Cord ur(xHigh, yHigh);
-
-            bool pinValid = true;
-            for(auto cit = metalLayers[upLayerIdx].preplacedCords.begin(); cit != metalLayers[upLayerIdx].preplacedCords.end(); ++cit){
-                SignalType findingSt = cit->first;
-                if(findingSt == st){
-                    continue;
-                }else if(metalLayers[upLayerIdx].canvas[ll.y()][ll.x()] != st && metalLayers[upLayerIdx].canvas[ll.y()][ll.x()] != SignalType::EMPTY){
-                    pinValid = false;
-                    break;
-                }else if(metalLayers[upLayerIdx].canvas[lr.y()][lr.x()] != st && metalLayers[upLayerIdx].canvas[lr.y()][lr.x()] != SignalType::EMPTY){
-                    pinValid = false;
-                    break;
-                }else if(metalLayers[upLayerIdx].canvas[ul.y()][ul.x()] != st && metalLayers[upLayerIdx].canvas[ul.y()][ul.x()] != SignalType::EMPTY){
-                    pinValid = false;
-                    break;
-                }else if(metalLayers[upLayerIdx].canvas[ur.y()][ur.x()] != st && metalLayers[upLayerIdx].canvas[ur.y()][ur.x()] != SignalType::EMPTY){
-                    pinValid = false;
-                    break;
-                }
+        std::vector<flen_t> deltaDistance(allEmptyVias.size(), 0);
+        for(size_t i = 1; i < allEmptyVias.size(); ++i){
+            flen_t currValue = shortestCompetitorDistance[i] - (std::max(upShortestFriendlyDistance[i], downShortestFriendlyDistance[i]));
+            if(currValue > bestValue){
+                bestValue = currValue;
+                bestIdx = i;
             }
-
-            if(pinValid){
-                for(auto cit = metalLayers[downLayerIdx].preplacedCords.begin(); cit != metalLayers[downLayerIdx].preplacedCords.end(); ++cit){
-                    SignalType findingSt = cit->first;
-                    if(findingSt == st){
-                        continue;
-                    }else if(metalLayers[downLayerIdx].canvas[ll.y()][ll.x()] != st && metalLayers[downLayerIdx].canvas[ll.y()][ll.x()] != SignalType::EMPTY){
-                        pinValid = false;
-                        break;
-                    }else if(metalLayers[downLayerIdx].canvas[lr.y()][lr.x()] != st && metalLayers[downLayerIdx].canvas[lr.y()][lr.x()] != SignalType::EMPTY){
-                        pinValid = false;
-                        break;
-                    }else if(metalLayers[downLayerIdx].canvas[ul.y()][ul.x()] != st && metalLayers[downLayerIdx].canvas[ul.y()][ul.x()] != SignalType::EMPTY){
-                        pinValid = false;
-                        break;
-                    }else if(metalLayers[downLayerIdx].canvas[ur.y()][ur.x()] != st && metalLayers[downLayerIdx].canvas[ur.y()][ur.x()] != SignalType::EMPTY){
-                        pinValid = false;
-                        break;
-                    }
-                }
-            }
-
-            // erase or increment
-            if(!pinValid) it = allEmptyVias.erase(it);
-            else ++it;
         }
         
-        // select the candidates that is closest to upCord
-        flen_t minDistance = FLEN_T_MAX;
-        Cord currBest(-1, -1);
-
-        for(const Cord &c : allEmptyVias){
-            flen_t distance = 0;
-            if(upCordAvg != FCord(-1, -1)) distance += calEuclideanDistance(upCordAvg, c);
-            if(downCordAvg != FCord(-1, -1)) distance += calEuclideanDistance(downCordAvg, c);
-
-            if(distance < minDistance){
-                minDistance = distance;
-                currBest = c;
-            }
-        }
-
-        // ccurrBest is selected to bridge up and down metal layer, push to preplaced
-        viaLayers[upLayerIdx].preplacedCords[st].push_back(currBest);
-        viaLayers[upLayerIdx].setCanvas(currBest, st);
-
-        Cord llPad(currBest.x() - 1, currBest.y() - 1);
-        Cord lrPad(currBest.x(), currBest.y() - 1);
-        Cord ulPad(currBest.x() - 1, currBest.y());
-        Cord urPad(currBest.x(), currBest.y());
-
-        metalLayers[upLayerIdx].preplacedCords[st].push_back(llPad);
-        metalLayers[upLayerIdx].preplacedCords[st].push_back(lrPad);
-        metalLayers[upLayerIdx].preplacedCords[st].push_back(ulPad);
-        metalLayers[upLayerIdx].preplacedCords[st].push_back(urPad);
-        metalLayers[upLayerIdx].setCanvas(llPad, st);
-        metalLayers[upLayerIdx].setCanvas(lrPad, st);
-        metalLayers[upLayerIdx].setCanvas(ulPad, st);
-        metalLayers[upLayerIdx].setCanvas(urPad, st);
-
-        metalLayers[downLayerIdx].preplacedCords[st].push_back(llPad);
-        metalLayers[downLayerIdx].preplacedCords[st].push_back(lrPad);
-        metalLayers[downLayerIdx].preplacedCords[st].push_back(ulPad);
-        metalLayers[downLayerIdx].preplacedCords[st].push_back(urPad);
-        metalLayers[downLayerIdx].setCanvas(llPad, st);
-        metalLayers[downLayerIdx].setCanvas(lrPad, st);
-        metalLayers[downLayerIdx].setCanvas(ulPad, st);
-        metalLayers[downLayerIdx].setCanvas(urPad, st);
+        Cord currBest(allEmptyVias[bestIdx]);
 
         // push to points
         this->pointsOfLayers[upLayerIdx][st].push_back(currBest);
@@ -533,6 +476,9 @@ void VoronoiPDNGen::connectLayers(int upLayerIdx, int downLayerIdx){
 }
 
 void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    fixRepeatedPoints(layerPoints);
+    fixRepeatedSegments(layerSegments);
+    
     const int FLUTE_ACC = 9; // 0 ~ 9
     for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
         SignalType targetSig = it->first;
@@ -581,6 +527,8 @@ void VoronoiPDNGen::runFLUTERouting(std::unordered_map<SignalType, std::vector<C
 }
 
 void VoronoiPDNGen::runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    fixRepeatedPoints(layerPoints);
+    fixRepeatedSegments(layerSegments);
     
     for(std::unordered_map<SignalType, std::vector<Cord>>::iterator it = layerPoints.begin(); it != layerPoints.end(); ++it){
         SignalType targetSig = it->first;
@@ -851,6 +799,12 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
 }
 
 void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    
+    std::unordered_set<Cord> allPoints;
+    for(const auto &[st, vcord] : layerPoints){
+        allPoints.insert(vcord.begin(), vcord.end());
+    }
+    
     std::stack<std::pair<OrderedSegment, SignalType>> toFix;
     for(std::unordered_map<SignalType, std::vector<OrderedSegment>>::iterator it = layerSegments.begin(); it != layerSegments.end(); ++it){
         SignalType st = it->first;
@@ -858,6 +812,10 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
             OrderedSegment os = *osit;
             Cord osLow(os.getLow());
             Cord osHigh(os.getHigh());
+            if(calDistanceSquared(osLow, osHigh) <= 2){
+                osit++;
+                continue;
+            }
             FCord centre(double(osLow.x() + osHigh.x())/2, double(osLow.y() + osHigh.y())/2);
             double radius = calEuclideanDistance(osLow, osHigh) / 2;
 
@@ -881,6 +839,36 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
         }
     }
 
+
+    auto findNearestAvailableGridPoint = [&](const FCord &fproj) -> Cord {
+        int px = std::round(fproj.x());
+        int py = std::round(fproj.y());
+
+        for (int r = 0; r < 50; ++r) { // search radius
+            for (int dx = -r; dx <= r; ++dx) {
+                int dy = r - std::abs(dx);
+
+                for (int sign : {-1, 1}) {
+                    int nx = px + dx;
+                    int ny = py + sign * dy;
+                    Cord candidate(nx, ny);
+                    if (allPoints.find(candidate) == allPoints.end())
+                        return candidate;
+                }
+
+                // center line (dy == 0)
+                if (dy == 0) {
+                    Cord candidate(px + dx, py);
+                    if (allPoints.find(candidate) == allPoints.end())
+                        return candidate;
+                }
+            }
+        }
+
+        return Cord(px, py); // fallback even if already exists
+    };
+
+
     while(!toFix.empty()){
         std::pair<OrderedSegment, SignalType> tftop = toFix.top();
         toFix.pop();
@@ -889,6 +877,7 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
         SignalType fixst = tftop.second;
         Cord osLow(fixos.getLow());
         Cord osHigh(fixos.getHigh());
+
         FCord centre(double(osLow.x() + osHigh.x())/2, double(osLow.y() + osHigh.y())/2);
         double radius = calEuclideanDistance(osLow, osHigh) / 2;
 
@@ -913,40 +902,23 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
             // calculate the projection of c3 on line(osLow, osHigh) 
             if(osLow.x() > osHigh.x()) std::swap(osLow, osHigh);
 
-            Cord ab(osHigh.x() - osLow.x(), osHigh.y() - osLow.y());
-            Cord ac(c3.x() - osLow.x(), c3.y() - osLow.y());
+            FCord ab(osHigh.x() - osLow.x(), osHigh.y() - osLow.y());
+            FCord ac(c3.x() - osLow.x(), c3.y() - osLow.y());
             double t = double(ac.x()*ab.x() + ac.y()*ab.y()) / double(ab.x()*ab.x() + ab.y()*ab.y());
-            Cord projection(osLow.x() + ab.x()*t, osLow.y() + ab.y()*t);
-            if(projection == osLow){
-                if(osLow.y() < osHigh.y()){
-                    projection.x(projection.x()+1);
-                    projection.y(projection.y()+1);
-                }else if(osLow.y()== osHigh.y()){
-                    projection.x(projection.x()+1);
-                }else{ // osLow.y() > osHigh.y()
-                    projection.x(projection.x()+1);
-                    projection.y(projection.y()-1);
-                }
-            }else if(projection == osHigh){
+            FCord projection(osLow.x() + ab.x()*t, osLow.y() + ab.y()*t);
+            
+            Cord gridProj = findNearestAvailableGridPoint(projection);
+            assert(allPoints.count(gridProj) == 0);
 
-                if(osLow.y() < osHigh.y()){
-                    projection.x(projection.x()-1);
-                    projection.y(projection.y()-1);
-                }else if(osLow.y() == osHigh.y()){
-
-                    projection.x(projection.x()-1);
-                }else{ // osLow.y() > osHigh.y()
-
-                    projection.x(projection.x()-1);
-                    projection.y(projection.y()+1);
-                }
-            }
-            layerPoints[fixst].push_back(projection);
-
-            OrderedSegment nos1(osLow, projection);
-            OrderedSegment nos2(projection, osHigh);
+            layerPoints[fixst].push_back(gridProj);
+            allPoints.insert(gridProj);
+            
+            OrderedSegment nos1(osLow, gridProj);
+            OrderedSegment nos2(gridProj, osHigh);
             toFix.push(std::pair<OrderedSegment, SignalType>(nos1, fixst));
             toFix.push(std::pair<OrderedSegment, SignalType>(nos2, fixst));
+            // std::cout << "toFix add: " << osLow << " " << gridProj << " " << osHigh << std::endl;
+
         }else{
             layerSegments[fixst].push_back(fixos);
         }
@@ -1305,13 +1277,23 @@ void VoronoiPDNGen::enhanceCrossLayerPI(){
         }
     }
 
-    
+    // Accouting the total number of blocks
+    std::unordered_map<SignalType, size_t> totalGridCount;
+    for(int mLayer = 0; mLayer < m_metalLayerCount; ++mLayer){
+        for(int j = 0; j < m_gridHeight; ++j){
+            for(int i = 0; i < m_gridWidth; ++i){
+                ++totalGridCount[metalLayers[mLayer].canvas[j][i]];
+            }
+        }
+    }
+
 
     // start trading
     using namespace boost::polygon::operators;
     for(int upLayerIdx = 0; upLayerIdx < (m_metalLayerCount-1); ++upLayerIdx){
         int downLayerIdx = upLayerIdx + 1;
         std::cout << "Trading Layer = " << upLayerIdx << " & " << downLayerIdx  << std::endl;
+        
         // calculate the signal area as a trading reference
         std::unordered_map<SignalType, int> upOccurence = countSignalTypeOccurrences(metalLayers[upLayerIdx].canvas);
         std::unordered_map<SignalType, int> downOccurence = countSignalTypeOccurrences(metalLayers[downLayerIdx].canvas);
@@ -1352,11 +1334,15 @@ void VoronoiPDNGen::enhanceCrossLayerPI(){
                 origSize = dps::getShapesCount(dpsDownLayerDownSigType);
                 dpsDownLayerDownSigType -= rect;
                 bool canMakeDownUp = (dps::getShapesCount(dpsDownLayerDownSigType) <= origSize);
+                
+                // bool canMakeUpDown = true;
+                // bool canMakeDownUp = true;
+                
                 if((!canMakeUpDown) && (!canMakeDownUp)) continue;
                 
 
                 // start trading
-                if((totalOccurrence[upSigType] >= totalOccurrence[downSigType]) && canMakeUpDown){
+                if((totalGridCount[upSigType] > totalGridCount[downSigType]) && canMakeUpDown){
                     --totalOccurrence[upSigType];
                     metalLayers[upLayerIdx].setCanvas(j, i, downSigType);
                     upLayerDPS[upSigType] = dpsUpLayerUpSigType;

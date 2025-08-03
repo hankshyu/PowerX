@@ -25,6 +25,8 @@
 #include <ostream>
 #include <unordered_map>
 #include <algorithm>
+#include <sstream>
+#include <stdexcept>
 
 // 2. Boost Library:
 
@@ -48,6 +50,22 @@ std::unordered_map<SignalType, int> countSignalTypeOccurrences(const std::vector
 
 std::ostream& operator<<(std::ostream& os, SignalType st) {
     return os << to_string(st);
+}
+
+#include <sstream>
+#include <stdexcept>
+
+std::istream& operator>>(std::istream& is, SignalType& st) {
+    std::string token;
+    is >> token;
+
+    try {
+        st = convertToSignalType(token);
+    } catch (const std::exception&) {
+        is.setstate(std::ios::failbit);  // Mark stream as failed
+    }
+
+    return is;
 }
 
 SignalType convertToSignalType (const std::string &str){

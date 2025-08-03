@@ -81,6 +81,7 @@ constexpr inline const char* to_string(SignalType st) {
 std::unordered_map<SignalType, int> countSignalTypeOccurrences(const std::vector<std::vector<SignalType>> &canvas);
 
 std::ostream& operator<<(std::ostream& os, SignalType st);
+std::istream& operator>>(std::istream& is, SignalType& st);
 SignalType convertToSignalType (const std::string &str);
 constexpr uint8_t toIdx(SignalType id) {return static_cast<uint8_t>(id);}
 

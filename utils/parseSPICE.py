@@ -766,6 +766,7 @@ if __name__ == "__main__":
         maxVdrop = -1
         minCurrent = 99999999
         maxCurrent = -1
+        totalPower = 0
         minPower = 99999999
         maxPower = -1
 
@@ -787,6 +788,7 @@ if __name__ == "__main__":
                     if entry.current > maxCurrent: maxCurrent = entry.current
                     if entry.power < minPower: minPower = entry.power
                     if entry.power > maxPower: maxPower = entry.power
+                    totalPower += entry.power
 
                     if entry.definition == "ubump":
                         ub = Interconnects()
@@ -886,7 +888,7 @@ if __name__ == "__main__":
             ub.power = entry.power
             ubumpArr.append(ub)
             
-        print(f"Final Min/Max Vdrop:{minVdrop}/{maxVdrop}, Current:{minCurrent}/{maxCurrent}, Power:{minPower}/{maxPower}")
+        print(f"Final Min/Max Vdrop:{minVdrop}/{maxVdrop}, Current:{minCurrent}/{maxCurrent}, Total Power:{totalPower}, Max Power:{maxPower}")
         if args.currStats:
             
             viaCurrents = []

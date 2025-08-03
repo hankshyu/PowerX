@@ -1,10 +1,10 @@
 import paramiko
 from scp import SCPClient
 
-# hostname = '140.112.20.243'
-# port = 10073
-hostname = '192.168.48.73'
-port = 22
+hostname = '140.112.20.243'
+port = 10073
+# hostname = '192.168.48.73'
+# port = 22
 
 username = 'orange'
 password = 'irislab123'

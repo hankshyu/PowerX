@@ -23,6 +23,8 @@
 // 1. C++ STL:
 #include <cstddef>
 #include <vector>
+#include <unordered_set>
+#include <unordered_map>
 
 // 2. Boost Library:
 
@@ -37,6 +39,9 @@
 
 #include "flowNode.hpp"
 #include "flowEdge.hpp"
+
+#include "candVertex.hpp"
+#include "signalTree.hpp"
 
 // 4. Gurobi Library
 #include "gurobi_c++.h"
@@ -79,8 +84,8 @@ public:
     double subViaEdgeUB = ViaEdgeUB / 2.5;
     double viaEdgeWeight = 0.1;
 
-    double ViaBudgetAvgQuota = 0.25;
-    double viaBudgetCurrentQuota = 0.75;
+    double ViaBudgetAvgQuota = 0.2;
+    double viaBudgetCurrentQuota = 0.7;
 
     double minChipletBudgetAvgPctg = 0.75;
 
@@ -101,6 +106,15 @@ public:
     std::unordered_map<SignalType, std::vector<FlowNode *>> superSinkConnectedNodes;
 
     std::vector<FlowEdge *> flowEdgeOwnership;
+
+    /* Filler related attributes */
+    std::unordered_set<DiffusionChamber *> allPreplacedNodes;
+    std::unordered_set<DiffusionChamber *> allPreplacedOrMarkedNodes;
+    std::unordered_set<DiffusionChamber *> allCandidateNodes;
+
+    std::unordered_map<DiffusionChamber *, std::vector<SignalType>> overlapNodes;
+    std::unordered_map<SignalType, SignalTree> signalTrees;
+
 
 
     DiffusionEngine(const std::string &fileName);
@@ -139,6 +153,8 @@ public:
     void linkNeighbors();
 
     void writeBackToPDN();
+    void exportResultsToFile(const std::string &filePath);
+    void importResultsFromFile(const std::string &filePath);
     
     /* These are functions for multi-source DFS (Diffusion)*/
     void runDiffusionTop(double diffusionRate);
@@ -154,6 +170,9 @@ public:
     void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
 
+    /* These are functions for Resistor Network Solving to fill empty spaces */
+    void initialiseFiller();
+    void initialiseSignalTrees();
 
 
     // make sure the connections are correct, only for verification

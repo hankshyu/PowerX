@@ -22,6 +22,9 @@
 #include <cassert>
 #include <ostream>
 #include <vector>
+#include <istream>
+#include <string>
+
 
 // 2. Boost Library:
 #include "boost/functional/hash.hpp"
@@ -46,10 +49,27 @@ std::ostream& operator<<(std::ostream& os, CellType ct){
         case CellType::MARKED:
             return os << "CellType::MARKED";
             break;
+        case CellType::CANDIDATE:
+            return os << "CellType::CANDIDATE";
+            break;
         default:
             return os << "CellType::UNkNOWN";
             break;
     }
+}
+
+std::istream& operator>>(std::istream& is, CellType& ct) {
+    std::string token;
+    is >> token;
+
+    if (token == "CellType::EMPTY") ct = CellType::EMPTY;
+    else if (token == "CellType::OBSTACLES") ct = CellType::OBSTACLES;
+    else if (token == "CellType::PREPLACED") ct = CellType::PREPLACED;
+    else if (token == "CellType::MARKED") ct = CellType::MARKED;
+    else if (token == "CellType::CANDIDATE") ct = CellType::CANDIDATE;
+    else is.setstate(std::ios::failbit);  // Invalid input
+
+    return is;
 }
 
 std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct){

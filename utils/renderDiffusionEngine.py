@@ -48,6 +48,7 @@ SIGNAL_LABEL_COLORS = {
 }
 
 SKIRT_COLORS = {
+    "CellType::CANDIDATE" : "#FFC1CC",
     "CellType::OBSTACLES" : SIGNAL_COLORS["OBSTACLE"],
     "CellType::PREPLACED" : "#FF0000",
     "CellType::MARKED"    : "#00FF00",
@@ -233,8 +234,11 @@ if __name__ == '__main__':
                         alpha=0.8
                     )
                     ax.add_patch(skirtRect)
+                    if cellType == "CellType::CANDIDATE":
+                        coreCentreColor = SKIRT_COLORS[cellType]
+                    else:
+                        coreCentreColor = SIGNAL_COLORS[cellSt]
 
-                    coreCentreColor = SIGNAL_COLORS[cellSt]
                     coreCentreAlpha = 0.9
 
                     if cellSt == "EMPTY" and len(cellIdxLabels) != 0:
@@ -334,7 +338,11 @@ if __name__ == '__main__':
                     )
                     ax.add_patch(skirtRect)
 
-                    coreCentreColor = SIGNAL_COLORS[cellSt]
+                    if cellType == "CellType::CANDIDATE":
+                        coreCentreColor = SKIRT_COLORS[cellType]
+                    else:
+                        coreCentreColor = SIGNAL_COLORS[cellSt]
+
                     coreCentreAlpha = 0.9
 
                     if cellSt == "EMPTY" and len(cellIdxLabels) != 0:

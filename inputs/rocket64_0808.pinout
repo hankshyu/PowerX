@@ -8,7 +8,7 @@ TECHNOLOGY_END
 
 PDN_PREPLACE_START
 METAL_LAYER 0 "inputs/preplaced_m0.txt"
-METAL_LAYER 1 "inputs/preplaced_m1_1.txt"
+METAL_LAYER 1 "inputs/preplaced_m1_2.txt"
 METAL_LAYER 2 "inputs/preplaced_m2.txt"
 
 VIA_LAYER 0 "inputs/preplaced_v0.txt"

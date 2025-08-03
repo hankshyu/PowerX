@@ -23,7 +23,7 @@
 // Dependencies
 // 1. C++ STL:
 #include <cstdint>
-#include <ostream>
+#include <iostream>
 #include <vector>
 #include <limits>
 // 2. Boost Library:
@@ -44,9 +44,12 @@ enum class CellType : uint8_t{
     OBSTACLES = 1,
     PREPLACED = 2,
     MARKED = 3, 
+
+    CANDIDATE = 4
 };
 
 std::ostream& operator<<(std::ostream& os, CellType ct);
+std::istream& operator>>(std::istream& is, CellType& ct);
 
 enum class DiffusionChamberType : uint8_t{
     UNKNOWN = 0,

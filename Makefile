@@ -20,14 +20,21 @@ OPENMP_LIB_PATH = /opt/homebrew/opt/libomp
 OPENMP_COMPILE_FLAGS = -Xpreprocessor -fopenmp -I$(OPENMP_LIB_PATH)/include
 OPENMP_LINK_FLAGS = -L$(OPENMP_LIB_PATH)/lib -lomp
 
+PETSC_CFLAGS = $(shell pkg-config --cflags PETSc)
+PETSC_LIBS = $(shell pkg-config --libs PETSc)
+
+# OPENMPI_INCLUDE_PATH = /opt/homebrew/Cellar/open-mpi/5.0.8/include
+OPENMPI_LIB_PATH = /opt/homebrew/Cellar/open-mpi/5.0.8/lib
+MPI_LINK_FLAGS = -L$(OPENMPI_LIB_PATH) -lmpi
+
 # CXX = /opt/homebrew/opt/gcc/bin/g++-15
 CXX = clang++
 
 OPTFLAGS = -O2
-FLAGS = -std=c++17 -stdlib=libc++ -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
-		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) -I$(GUROBI_INCLUDE_PATH) $(OPENMP_COMPILE_FLAGS) -D_Alignof=alignof
+FLAGS = -std=c++17 -stdlib=libc++ -I/opt/homebrew/include -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
+		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) -I$(GUROBI_INCLUDE_PATH) $(OPENMP_COMPILE_FLAGS) $(PETSC_CFLAGS) -D_Alignof=alignof
 
-LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -L$(GUROBI_LIB_PATH) $(OPENMP_LINK_FLAGS) -lm -lgurobi_c++ -lgurobi120 \
+LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -L$(GUROBI_LIB_PATH) $(OPENMP_LINK_FLAGS) $(PETSC_LIBS) $(MPI_LINK_FLAGS) -lm -lgurobi_c++ -lgurobi120 \
 		$(FLUTE_LIB_PATH)/libflute.a $(GEOS_LIB_PATH)/libgeos.a $(GEOS_LIB_PATH)/libgeos_c.a
 
 INF_OBJS =	isotropy.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
@@ -42,7 +49,7 @@ PRESSUREMODEL_OBJS = 	fpoint.o fbox.o fpolygon.o fmultipolygon.o \
 						viaBody.o softBody.o \
 						pressureSimulator.o
 
-DIFFUSIONMODEL_OBJS =	diffusionChamber.o metalCell.o viaCell.o flowNode.o flowEdge.o diffusionEngine.o
+DIFFUSIONMODEL_OBJS =	diffusionChamber.o metalCell.o viaCell.o flowNode.o flowEdge.o candVertex.o signalTree.o diffusionEngine.o circuitSolver.o
 
 _OBJS = main.o timeProfiler.o visualiser.o units.o $(INF_OBJS) $(PI_OBJS) $(PRESSUREMODEL_OBJS) $(DIFFUSIONMODEL_OBJS)
 

@@ -18,9 +18,11 @@
 
 // Dependencies
 // 1. C++ STL:
+#include <fstream>
 #include <queue>
 #include <algorithm>
 #include <limits>
+#include <cassert>
 // 2. Boost Library:
 
 // 3. Texo Library:
@@ -838,11 +840,43 @@ void DiffusionEngine::writeBackToPDN(){
             }
         }
     }
-
-
-
-
 }
+
+void DiffusionEngine::exportResultsToFile(const std::string &filePath){
+    
+    std::ofstream ofs(filePath, std::ios::out);
+    assert(ofs.is_open());
+
+    for(int i = 0; i < metalGrid.size(); ++i){
+        MetalCell &mc = metalGrid[i];
+        ofs << i << " " << mc.type << " " << mc.signal << std::endl;
+    }
+
+    for(int i = 0; i < viaGrid.size(); ++i){
+        ViaCell &vc = viaGrid[i];
+        ofs << i << " " << vc.type << " " << vc.signal << std::endl;
+    }
+
+    ofs.close();
+}
+
+void DiffusionEngine::importResultsFromFile(const std::string &filePath){
+    std::ifstream ifs(filePath, std::ios::in);
+    assert(ifs.is_open());
+    int label;
+    for(int i = 0; i < metalGrid.size(); ++i){
+        MetalCell &mc = metalGrid[i];
+        ifs >> label >> mc.type >> mc.signal;
+    }
+
+    for(int i = 0; i < viaGrid.size(); ++i){
+        ViaCell &vc = viaGrid[i];
+         ifs >> label >> vc.type >> vc.signal;
+    }
+    ifs.close();
+}
+
+
 
 void DiffusionEngine::runDiffusionTop(double diffusionRate){
 
@@ -1536,20 +1570,20 @@ void DiffusionEngine::initialiseMCFSolver(){
         SOIBudget[i] = minViaLayerSumBudget * ((ViaBudgetAvgQuota / SOIBudget.size()) + viaBudgetCurrentQuota * currentBudget[flowSOIIdxToSig[i]]);
     }
 
-    // for displaying
-    std::cout << "Display requrests: " << std::endl;
-    for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
-        std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << std::endl;
-    }
-    std::cout << "Display superSource" << std::endl;
-    for(FlowNode &fn : superSource){
-        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    }
+    // // for displaying
+    // std::cout << "Display requrests: " << std::endl;
+    // for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+    //     std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << std::endl;
+    // }
+    // std::cout << "Display superSource" << std::endl;
+    // for(FlowNode &fn : superSource){
+    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    // }
 
-    std::cout << "Display superSink" << std::endl;
-    for(FlowNode &fn : superSink){
-        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    }
+    // std::cout << "Display superSink" << std::endl;
+    // for(FlowNode &fn : superSink){
+    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    // }
 
 }
 
@@ -2048,6 +2082,140 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
         std::cerr << "Gurobi error: " << e.getMessage() << std::endl;
     }
 }
+
+void DiffusionEngine::initialiseFiller(){
+
+    for(const auto&[st, bg] : currentBudget){
+        signalTrees[st] = SignalTree(st, uBump.signalTypeToInstances[st].size(), currentBudget[st]);
+    }
+
+    std::unordered_set<DiffusionChamber *> visitedNode;
+
+    std::queue<DiffusionChamber *> q;
+    DiffusionChamber *firstDS = &metalGrid[0];
+    visitedNode.insert(firstDS);
+    q.push(firstDS);
+
+    auto visitNeighborOnlyInsert = [&](DiffusionChamber *dc){
+        if(dc == nullptr) return;
+
+        if(visitedNode.count(dc) == 0){
+            visitedNode.insert(dc);
+            q.push(dc);
+        }
+    };
+
+    auto visitNeighborCheckCandidate = [&](DiffusionChamber *dc, SignalType treeSt){
+        if(dc == nullptr) return;
+
+        if(dc->type == CellType::EMPTY){
+            dc->type = CellType::CANDIDATE; 
+            dc->signal = treeSt;
+            allCandidateNodes.insert(dc);
+            signalTrees[treeSt].candidateNodes.insert(dc);
+        }else if(dc->type == CellType::CANDIDATE){
+            std::unordered_map<DiffusionChamber *, std::vector<SignalType>>::iterator it = overlapNodes.find(dc);
+            if(it == overlapNodes.end()){ // originally not an overlap node
+                SignalType origSignal = dc->signal;
+                if(origSignal != treeSt){
+                    dc->signal = SignalType::UNKNOWN;
+                    overlapNodes[dc] = {origSignal, treeSt};
+                    signalTrees[treeSt].candidateNodes.insert(dc);
+                }
+            }else{ // already an overlap node
+                if(std::find(it->second.begin(), it->second.end(), treeSt) == it->second.end()){
+                    overlapNodes[dc].push_back(treeSt); 
+                    signalTrees[treeSt].candidateNodes.insert(dc);
+                }
+            }
+        }
+
+
+
+        if(visitedNode.count(dc) == 0){
+            visitedNode.insert(dc);
+            q.push(dc);
+        }
+    };
+
+    while(!q.empty()){
+        DiffusionChamber *dc = q.front(); 
+        q.pop();
+
+        CellType dcCellType = dc->type;
+
+        if((dcCellType != CellType::PREPLACED) && (dcCellType != CellType::MARKED)){
+
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+
+                visitNeighborOnlyInsert(mc->northCell);
+                visitNeighborOnlyInsert(mc->southCell);
+                visitNeighborOnlyInsert(mc->eastCell);
+                visitNeighborOnlyInsert(mc->westCell);
+
+                visitNeighborOnlyInsert(mc->upCell);
+                visitNeighborOnlyInsert(mc->downCell);
+            }else{
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+
+                visitNeighborOnlyInsert(vc->upLLCell);
+                visitNeighborOnlyInsert(vc->upULCell);
+                visitNeighborOnlyInsert(vc->upLRCell);
+                visitNeighborOnlyInsert(vc->upURCell);
+
+                visitNeighborOnlyInsert(vc->downLLCell);
+                visitNeighborOnlyInsert(vc->downULCell);
+                visitNeighborOnlyInsert(vc->downLRCell);
+                visitNeighborOnlyInsert(vc->downURCell);
+            }
+            continue;
+        }
+
+        // is preplaced or marked, also fill in possible candidates
+        
+        SignalType dcSignalType = dc->signal;
+
+        if(dcCellType == CellType::PREPLACED){
+            allPreplacedNodes.insert(dc);
+            allPreplacedOrMarkedNodes.insert(dc);
+            signalTrees[dcSignalType].preplacedNodes.insert(dc);
+            signalTrees[dcSignalType].preplacedOrMarkedNodes.insert(dc);
+        }else{
+            allPreplacedOrMarkedNodes.insert(dc);
+            signalTrees[dcSignalType].preplacedOrMarkedNodes.insert(dc);
+        }
+
+
+        if(dc->metalViaType == DiffusionChamberType::METAL){
+            MetalCell *mc = static_cast<MetalCell *>(dc);
+
+            visitNeighborCheckCandidate(mc->northCell, dcSignalType);
+            visitNeighborCheckCandidate(mc->southCell, dcSignalType);
+            visitNeighborCheckCandidate(mc->eastCell, dcSignalType);
+            visitNeighborCheckCandidate(mc->westCell, dcSignalType);
+
+            visitNeighborCheckCandidate(mc->upCell, dcSignalType);
+            visitNeighborCheckCandidate(mc->downCell, dcSignalType);
+        }else{
+            ViaCell *vc = static_cast<ViaCell *>(dc);
+
+            visitNeighborCheckCandidate(vc->upLLCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->upULCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->upLRCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->upURCell, dcSignalType);
+
+            visitNeighborCheckCandidate(vc->downLLCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->downULCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->downLRCell, dcSignalType);
+            visitNeighborCheckCandidate(vc->downURCell, dcSignalType);
+        }
+    }
+
+
+}
+
+
 
 void DiffusionEngine::checkConnections(){
     for(int layer = 0; layer < m_metalGridLayers; ++layer){
