@@ -34,5 +34,5 @@ SignalTree::SignalTree(): signal(SignalType::UNKNOWN), chipletCount(0), currentB
 
 SignalTree::SignalTree(SignalType signal, int chipletCount, double budget): signal(signal), chipletCount(chipletCount), currentBudget(budget) {
     assert(chipletCount >= 1);
-    GIdxToNode = std::vector<DiffusionChamber *>(1+chipletCount, nullptr);
+
 }

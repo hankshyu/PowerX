@@ -25,8 +25,8 @@ const std::string TIMERTAG_ASTAR_M7 = "Run A* Baseline Algo on M7";
 void printWelcomeBanner();
 void printExitBanner();
 
-int main(int argc, char const *argv[]){
-
+int main(int argc, char **argv){
+    PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
         "Mark PP Pads Canvas",
@@ -38,6 +38,8 @@ int main(int argc, char const *argv[]){
         "Run MCF Solver",
 
         "Init Filler",
+        "Init SignalTrees",
+        "Initial Evaluation"
         
     };
 
@@ -69,22 +71,30 @@ int main(int argc, char const *argv[]){
         // timeProfiler.pauseTimer(timeSpan[4]);
     */
 
-    // timeProfiler.startTimer(timeSpan[5]);
-    // dse.initialiseMCFSolver();
-    // timeProfiler.pauseTimer(timeSpan[5]);
+    timeProfiler.startTimer(timeSpan[5]);
+    dse.initialiseMCFSolver();
+    timeProfiler.pauseTimer(timeSpan[5]);
 
-    // timeProfiler.startTimer(timeSpan[6]);
-    // dse.runMCFSolver("", 1);
-    // timeProfiler.pauseTimer(timeSpan[6]);
-    // dse.exportResultsToFile("outputs/result.txt");
+    timeProfiler.startTimer(timeSpan[6]);
+    dse.runMCFSolver("", 0);
+    timeProfiler.pauseTimer(timeSpan[6]);
+    dse.exportResultsToFile("outputs/result.txt");
 
-    dse.importResultsFromFile("outputs/result.txt");
+    // dse.importResultsFromFile("outputs/result.txt");
 
 
     timeProfiler.startTimer(timeSpan[7]);
     dse.initialiseFiller();
     timeProfiler.pauseTimer(timeSpan[7]);
+    dse.checkFillerInitialisation();
 
+    // timeProfiler.startTimer(timeSpan[8]);
+    // dse.initialiseSignalTrees();
+    // timeProfiler.pauseTimer(timeSpan[8]);
+
+    // timeProfiler.startTimer(timeSpan[9]);
+    // // dse.runInitialEvaluation();
+    // timeProfiler.pauseTimer(timeSpan[9]);
     
     dse.writeBackToPDN();
     

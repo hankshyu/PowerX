@@ -173,11 +173,13 @@ public:
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();
     void initialiseSignalTrees();
+    void runInitialEvaluation();
 
 
     // make sure the connections are correct, only for verification
     void checkConnections();
     void checkNeighbors();
+    void checkFillerInitialisation();
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);

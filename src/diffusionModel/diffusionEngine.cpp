@@ -2130,8 +2130,6 @@ void DiffusionEngine::initialiseFiller(){
             }
         }
 
-
-
         if(visitedNode.count(dc) == 0){
             visitedNode.insert(dc);
             q.push(dc);
@@ -2211,11 +2209,299 @@ void DiffusionEngine::initialiseFiller(){
             visitNeighborCheckCandidate(vc->downURCell, dcSignalType);
         }
     }
-
-
 }
 
+void DiffusionEngine::initialiseSignalTrees(){
 
+    for(auto &[st, sigTree] : this->signalTrees){
+
+        int chipletCount = sigTree.chipletCount;
+        sigTree.GIdxToNode = std::vector<DiffusionChamber *>(chipletCount + 1, nullptr);
+
+        // fill in pinIn (current in nodes) related logics
+        sigTree.pinInIdxBegin = sigTree.chipletCount + 1;
+        
+        std::unordered_set<Cord> allC4Pads;
+        for(const Cord& pinCord : this->c4.signalTypeToAllCords[st]){
+            len_t pinCordX = pinCord.x();
+            len_t pinCordY = pinCord.y();
+            allC4Pads.emplace(pinCordX, pinCordY);
+            allC4Pads.emplace(pinCordX - 1, pinCordY);
+            allC4Pads.emplace(pinCordX, pinCordY - 1);
+            allC4Pads.emplace(pinCordX - 1, pinCordY - 1);
+        }
+        sigTree.pinInIdxEnd = sigTree.pinInIdxBegin + allC4Pads.size();
+
+        for(const Cord &pinCord : allC4Pads){
+            MetalCell *mc = &metalGrid[calMetalIdx(m_c4ConnectedMetalLayerIdx, pinCord.y(), pinCord.x())];
+            assert(mc->signal == st);
+            assert(allPreplacedOrMarkedNodes.count(mc) == 1);
+            assert(allCandidateNodes.count(mc) == 0);
+            assert(sigTree.preplacedOrMarkedNodes.count(mc) == 1);
+            assert(sigTree.candidateNodes.count(mc) == 0);
+            sigTree.GIdxToNode.push_back(mc);
+            sigTree.nodeToGIdx[mc] = sigTree.GIdxToNode.size() - 1;
+        }
+
+        // fill in pinOut (current out nodes) related logics
+        sigTree.pinOutIdxBegin = sigTree.pinInIdxEnd;
+        
+        std::unordered_set<Cord> alluBumpPads;
+
+        // for(const Cord& pinCord : this->uBump.signalTypeToAllCords[st]){
+        //     len_t pinCordX = pinCord.x();
+        //     len_t pinCordY = pinCord.y();
+        //     alluBumpPads.emplace(pinCordX, pinCordY);
+        //     alluBumpPads.emplace(pinCordX - 1, pinCordY);
+        //     alluBumpPads.emplace(pinCordX, pinCordY - 1);
+        //     alluBumpPads.emplace(pinCordX - 1, pinCordY - 1);
+        // }
+        // sigTree.pinOutIdxEnd = sigTree.pinOutIdxBegin + alluBumpPads.size();
+
+
+        std::vector<size_t> chipletOutIdxBegin(chipletCount);
+        std::vector<size_t> chipletOutIdxEnd(chipletCount);
+        std::vector<std::unordered_set<Cord>> chipletAllPads(chipletCount);
+
+        int instIdx = 0;
+        for(const std::string &instName : this->uBump.signalTypeToInstances[st]){
+            if(instIdx == 0) chipletOutIdxBegin[instIdx] = sigTree.pinInIdxEnd;
+            else chipletOutIdxBegin[instIdx] = chipletOutIdxEnd[instIdx-1];
+
+            Rectangle &rec = this->uBump.instanceToRectangleMap[instName];
+            len_t recLLX = rec::getXL(rec);
+            len_t recLLY = rec::getYL(rec);
+
+            BallOut *bo = this->uBump.instanceToBallOutMap[instName];
+            for(const Cord &c : bo->SignalTypeToAllCords[st]){
+
+                len_t pinCordX = c.x() + recLLX;
+                len_t pinCordY = c.y() + recLLY;
+
+                chipletAllPads[instIdx].emplace(pinCordX, pinCordY);
+                chipletAllPads[instIdx].emplace(pinCordX - 1, pinCordY);
+                chipletAllPads[instIdx].emplace(pinCordX, pinCordY - 1);
+                chipletAllPads[instIdx].emplace(pinCordX - 1, pinCordY - 1);
+
+                alluBumpPads.emplace(pinCordX, pinCordY);
+                alluBumpPads.emplace(pinCordX - 1, pinCordY);
+                alluBumpPads.emplace(pinCordX, pinCordY - 1);
+                alluBumpPads.emplace(pinCordX - 1, pinCordY - 1);
+            }
+            chipletOutIdxEnd[instIdx] = chipletOutIdxBegin[instIdx] + chipletAllPads[instIdx].size();
+            instIdx++;
+        }
+        sigTree.pinOutIdxEnd = sigTree.pinOutIdxBegin + alluBumpPads.size();
+
+        for(int i = 0; i < chipletCount; ++i){
+            for(const Cord& pinCord : chipletAllPads[i]){
+                MetalCell *mc = &metalGrid[calMetalIdx(m_ubumpConnectedMetalLayerIdx, pinCord.y(), pinCord.x())];
+                assert(mc->signal == st);
+                assert(allPreplacedOrMarkedNodes.count(mc) == 1);
+                assert(allCandidateNodes.count(mc) == 0);
+                assert(sigTree.preplacedOrMarkedNodes.count(mc) == 1);
+                assert(sigTree.candidateNodes.count(mc) == 0);
+
+                sigTree.GIdxToNode.push_back(mc);
+                sigTree.nodeToGIdx[mc] = sigTree.GIdxToNode.size() - 1;
+            }
+        }
+
+
+
+        // for(const Cord &pinCord : alluBumpPads){
+        //     MetalCell *mc = &metalGrid[calMetalIdx(m_ubumpConnectedMetalLayerIdx, pinCord.y(), pinCord.x())];
+        //     assert(mc->signal == st);
+        //     assert(allPreplacedOrMarkedNodes.count(mc) == 1);
+        //     assert(allCandidateNodes.count(mc) == 0);
+        //     assert(sigTree.preplacedOrMarkedNodes.count(mc) == 1);
+        //     assert(sigTree.candidateNodes.count(mc) == 0);
+
+        //     sigTree.GIdxToNode.push_back(mc);
+        //     sigTree.nodeToGIdx[mc] = sigTree.GIdxToNode.size() - 1;
+        // }
+
+        for(DiffusionChamber *dc : sigTree.preplacedOrMarkedNodes){
+            if(sigTree.nodeToGIdx.count(dc) == 0){
+                sigTree.GIdxToNode.push_back(dc);
+                sigTree.nodeToGIdx[dc] = sigTree.GIdxToNode.size() - 1;
+            }
+        }
+
+        /* Initialize GV = I vectoers */
+        PetscInt expSize = chipletCount;
+        PetscInt nSize = sigTree.GIdxToNode.size();
+        sigTree.exp_size = expSize;
+        sigTree.n_size = nSize;
+        
+        // Set up I_n
+       MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.I_n);
+        Mat &I_n = sigTree.I_n;
+        for (PetscInt k = 0; k < expSize; ++k) {
+            PetscInt src = 0;        // always inject at node 0
+            PetscInt sink = k + 1;   // withdraw at node 1..expSize
+            MatSetValue(I_n, src, k, +1.0, INSERT_VALUES);
+            MatSetValue(I_n, sink, k, -1.0, INSERT_VALUES);
+        }
+        MatAssemblyBegin(I_n, MAT_FINAL_ASSEMBLY);
+        MatAssemblyEnd(I_n, MAT_FINAL_ASSEMBLY);
+
+        // Initialise V_n as answer holder (same size as I_n)
+        MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.V_n);
+
+        Mat &V_n = sigTree.V_n;
+        MatAssemblyBegin(V_n, MAT_FINAL_ASSEMBLY);
+        MatAssemblyEnd(V_n, MAT_FINAL_ASSEMBLY);
+
+        // Set up G_n
+        MatCreate(PETSC_COMM_WORLD, &sigTree.G_n);
+        Mat &G_n = sigTree.G_n;
+        MatSetSizes(G_n, PETSC_DECIDE, PETSC_DECIDE, nSize, nSize);
+        MatSetType(G_n, MATAIJ);
+        MatSetUp(G_n);
+
+        PetscInt pinInIdxBegin = sigTree.pinInIdxBegin;
+        PetscInt pinInIdxEnd = sigTree.pinInIdxEnd;
+
+        // fill in [0][0] and it's vertical and horizontal values
+        MatSetValue(G_n, 0, 0, (sigTree.pinInIdxEnd  - sigTree.pinInIdxBegin), INSERT_VALUES);
+        for(PetscInt i = pinInIdxBegin; i < pinInIdxEnd; ++i){
+            MatSetValue(G_n, 0, i, -1, INSERT_VALUES);
+            MatSetValue(G_n, i, 0, -1, INSERT_VALUES);
+        }
+
+        // fill in [1][1] to [n][n] and thier viertical and horizontal values
+        PetscInt pinOutIdxBegin = sigTree.pinOutIdxBegin;
+        PetscInt pinOutIdxEnd = sigTree.pinOutIdxEnd;
+        for(PetscInt i = 1; i <= expSize; ++i){
+            MatSetValue(G_n, i, i, chipletAllPads[i-1].size() , INSERT_VALUES);
+            for(PetscInt j = chipletOutIdxBegin[i-1]; j < chipletOutIdxEnd[i-1]; ++j){
+                MatSetValue(G_n, i, j, -1, INSERT_VALUES);
+                MatSetValue(G_n, j, i, -1, INSERT_VALUES);
+            }
+        }
+
+        // fill in the rest of G_n
+        auto fillGnSubProcess = [&](DiffusionChamber *dc, PetscInt currIdx, PetscInt &diagonalValue){
+            if(dc == nullptr) return;
+            if(sigTree.preplacedOrMarkedNodes.count(dc) == 1){
+                ++diagonalValue;
+                size_t neighborGIdx = sigTree.nodeToGIdx[dc];
+                if (neighborGIdx > currIdx){
+                    MatSetValue(G_n, currIdx, neighborGIdx, -1, INSERT_VALUES);
+                    MatSetValue(G_n, neighborGIdx, currIdx, -1, INSERT_VALUES);
+                } 
+            }
+        };
+
+
+        for(PetscInt i = sigTree.pinInIdxBegin; i < sigTree.n_size; ++i){
+            DiffusionChamber *dc = sigTree.GIdxToNode[i];
+
+            PetscInt diagonalValue = (i < sigTree.pinOutIdxEnd)? 1 : 0;
+
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->northCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->southCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->eastCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->westCell), i, diagonalValue);
+
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->upCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(mc->downCell), i, diagonalValue);
+
+            }else{ // DiffusionChamberType::VA
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->upLLCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->upULCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->upLRCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->upURCell), i, diagonalValue);
+
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downLLCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downULCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downLRCell), i, diagonalValue);
+                fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downURCell), i, diagonalValue);
+            }
+
+            MatSetValue(G_n, i, i, diagonalValue, INSERT_VALUES);
+        }
+        MatAssemblyBegin(G_n, MAT_FINAL_ASSEMBLY);
+        MatAssemblyEnd(G_n, MAT_FINAL_ASSEMBLY);
+
+
+        PetscViewer viewer;
+        PetscViewerASCIIOpen(PETSC_COMM_SELF, NULL, &viewer); // NULL means print to stdout
+        PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_DENSE); // for dense format, or PETSC_VIEWER_ASCII_MATLAB
+
+        MatView(G_n, viewer);
+        PetscViewerDestroy(&viewer);
+
+        return;
+    }
+}
+
+void DiffusionEngine::runInitialEvaluation(){
+    for(auto &[st, sigTree] : this->signalTrees){
+        PetscInt expSize = sigTree.exp_size;
+        PetscInt nSize = sigTree.n_size;
+        Mat &G_n = sigTree.G_n;
+        Mat &I_n = sigTree.I_n;
+        Mat &V_n = sigTree.V_n;
+        KSP &ksp_n = sigTree.ksp_n;
+
+        // 1. Create and configure KSP with MUMPS-based LU (required for MatMatSolve with dense RHS)
+        KSPCreate(PETSC_COMM_SELF, &ksp_n);                     // Create KSP for sequential use
+        KSPSetOperators(ksp_n, G_n, G_n);                       // Use G_n as both A and preconditioner
+        KSPSetType(ksp_n, KSPPREONLY);                          // No iterative solver, just direct solve
+
+        PC pc;
+        KSPGetPC(ksp_n, &pc);
+        PCSetType(pc, PCLU);                                     // Use LU instead of CHOLESKY
+        PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);           // REQUIRED: enable MatMatSolve support
+
+        KSPSetUp(ksp_n);                                        // Finalize setup
+
+        // 2. Extract the factorized matrix (LU or Cholesky depending on solver)
+        Mat F;
+        PCFactorGetMatrix(pc, &F);
+
+
+        // 3. Solve G_n * V_n = I_n using the cached Cholesky factor
+        MatMatSolve(F, I_n, V_n);
+
+
+        PetscPrintf(PETSC_COMM_WORLD, "\nVoltage matrix V_n (rows 0 to %d):\n", expSize);
+        for (PetscInt i = 0; i <= expSize; ++i) {
+            PetscPrintf(PETSC_COMM_WORLD, "Row %2d: ", i);
+            for (PetscInt k = 0; k < expSize; ++k) {
+                PetscScalar value;
+                MatGetValues(V_n, 1, &i, 1, &k, &value);
+                PetscPrintf(PETSC_COMM_WORLD, "%10.6f ", PetscRealPart(value));
+            }
+            PetscPrintf(PETSC_COMM_WORLD, "\n");
+        }
+
+        // for (PetscInt k = 0; k < expSize; ++k) {
+        //     PetscInt src = 0;
+        //     PetscInt sink = k+1;
+
+        //     Vec Vk;
+        //     VecCreateSeq(PETSC_COMM_SELF, nSize, &Vk);
+        //     MatGetColumnVector(V_n, Vk, k);
+
+        //     PetscScalar v_src, v_sink;
+        //     VecGetValues(Vk, 1, &src, &v_src);
+        //     VecGetValues(Vk, 1, &sink, &v_sink);
+
+        //     double R_k = PetscRealPart(v_src - v_sink);
+        //     std::cout << st << " ";
+        //     PetscPrintf(PETSC_COMM_WORLD, "R_0_%d = %.6f ohms\n", (int)sink, R_k);
+        //     VecDestroy(&Vk);
+        // }
+    }
+}
 
 void DiffusionEngine::checkConnections(){
     for(int layer = 0; layer < m_metalGridLayers; ++layer){
@@ -2446,4 +2732,86 @@ void DiffusionEngine::checkNeighbors(){
     std::cout << "Pass Via Cells Check Neighbors test" << std::endl;
 
     
+}
+
+void DiffusionEngine::checkFillerInitialisation(){
+
+    assert(std::all_of(allPreplacedNodes.begin(), allPreplacedNodes.end(), [&](DiffusionChamber* dc) {
+        return allPreplacedOrMarkedNodes.count(dc) > 0;}));
+
+    assert(std::all_of(allCandidateNodes.begin(), allCandidateNodes.end(), [&](DiffusionChamber* dc) {
+        return allPreplacedOrMarkedNodes.count(dc) == 0;}));
+
+    for(auto &[st, sigTree] : signalTrees){
+        assert(std::all_of(sigTree.preplacedNodes.begin(), sigTree.preplacedNodes.end(), [&](DiffusionChamber* dc) {
+            return allPreplacedNodes.count(dc) > 0;}));
+        assert(std::all_of(sigTree.preplacedOrMarkedNodes.begin(), sigTree.preplacedOrMarkedNodes.end(), [&](DiffusionChamber* dc) {
+            return allPreplacedOrMarkedNodes.count(dc) > 0;}));
+        assert(std::all_of(sigTree.preplacedNodes.begin(), sigTree.preplacedNodes.end(), [&](DiffusionChamber* dc) {
+            return sigTree.preplacedOrMarkedNodes.count(dc) > 0;}));
+        
+        assert(std::all_of(sigTree.preplacedOrMarkedNodes.begin(), sigTree.preplacedOrMarkedNodes.end(), [&](DiffusionChamber* dc) {
+            return ((dc->signal == st)&&(dc->type == CellType::PREPLACED) || (dc->type == CellType::MARKED));}));
+        assert(std::all_of(sigTree.candidateNodes.begin(), sigTree.candidateNodes.end(), [&](DiffusionChamber* dc) {
+            return dc->type == CellType::CANDIDATE;}));
+        
+        for(auto &[st2, sigTree2] : signalTrees){
+            if(st2 == st) continue;
+            assert(std::all_of(sigTree.preplacedOrMarkedNodes.begin(), sigTree.preplacedOrMarkedNodes.end(), [&](DiffusionChamber* dc) {
+                return sigTree2.preplacedOrMarkedNodes.count(dc) == 0;}));
+            assert(std::all_of(sigTree.preplacedOrMarkedNodes.begin(), sigTree.preplacedOrMarkedNodes.end(), [&](DiffusionChamber* dc) {
+                return sigTree2.candidateNodes.count(dc) == 0;}));
+            
+            for(DiffusionChamber *dc1 : sigTree.candidateNodes){
+                for(DiffusionChamber *dc2: sigTree2.candidateNodes){
+                    if(dc1 == dc2){
+                        assert(dc1->signal == SignalType::UNKNOWN);
+                        assert(overlapNodes.count(dc1) == 1);
+                        assert(std::find(overlapNodes[dc1].begin(), overlapNodes[dc1].end(), st) != overlapNodes[dc1].end());
+                        assert(std::find(overlapNodes[dc1].begin(), overlapNodes[dc1].end(), st2) != overlapNodes[dc1].end());
+                    }
+                }
+            }
+        }
+
+        // make sure that each node has connected to at least one node that's st
+        for(DiffusionChamber *dc : sigTree.candidateNodes){
+            
+            auto testIsConnected = [&](DiffusionChamber *dc, bool &hasOneSt){
+                if(dc != nullptr && dc->signal == st && (allPreplacedOrMarkedNodes.count(dc) > 0)){
+                    hasOneSt = true;
+                }
+            };
+
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                bool hasOneSt = false;
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+
+                testIsConnected(mc->northCell, hasOneSt);
+                testIsConnected(mc->southCell, hasOneSt);
+                testIsConnected(mc->eastCell, hasOneSt);
+                testIsConnected(mc->westCell, hasOneSt);
+                testIsConnected(mc->upCell, hasOneSt);
+                testIsConnected(mc->downCell, hasOneSt);
+
+                assert(hasOneSt);
+            }else{
+                bool hasOneSt = false;
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+
+                testIsConnected(vc->upLLCell, hasOneSt);
+                testIsConnected(vc->upLRCell, hasOneSt);
+                testIsConnected(vc->upULCell, hasOneSt);
+                testIsConnected(vc->upURCell, hasOneSt);
+
+                testIsConnected(vc->downLLCell, hasOneSt);
+                testIsConnected(vc->downLRCell, hasOneSt);
+                testIsConnected(vc->downULCell, hasOneSt);
+                testIsConnected(vc->downURCell, hasOneSt);
+ 
+                assert(hasOneSt);
+            }
+        }
+    }
+    std::cout << "Pass checkFillerInitialisation test!" << std::endl;
 }

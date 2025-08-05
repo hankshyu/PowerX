@@ -20,8 +20,13 @@ OPENMP_LIB_PATH = /opt/homebrew/opt/libomp
 OPENMP_COMPILE_FLAGS = -Xpreprocessor -fopenmp -I$(OPENMP_LIB_PATH)/include
 OPENMP_LINK_FLAGS = -L$(OPENMP_LIB_PATH)/lib -lomp
 
-PETSC_CFLAGS = $(shell pkg-config --cflags PETSc)
-PETSC_LIBS = $(shell pkg-config --libs PETSc)
+# PETSC_CFLAGS = $(shell pkg-config --cflags PETSc)
+# PETSC_LIBS = $(shell pkg-config --libs PETSc)
+
+PETSC_DIR = ./lib/petsc
+PETSC_ARCH = arch-darwin-c-opt
+PETSC_CFLAGS = -I$(PETSC_DIR)/include -I$(PETSC_DIR)/$(PETSC_ARCH)/include
+PETSC_LIBS = -L$(PETSC_DIR)/$(PETSC_ARCH)/lib -lpetsc
 
 # OPENMPI_INCLUDE_PATH = /opt/homebrew/Cellar/open-mpi/5.0.8/include
 OPENMPI_LIB_PATH = /opt/homebrew/Cellar/open-mpi/5.0.8/lib
@@ -31,7 +36,7 @@ MPI_LINK_FLAGS = -L$(OPENMPI_LIB_PATH) -lmpi
 CXX = clang++
 
 OPTFLAGS = -O2
-FLAGS = -std=c++17 -stdlib=libc++ -I/opt/homebrew/include -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
+FLAGS = -std=c++20 -stdlib=libc++ -I/opt/homebrew/include -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
 		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) -I$(GUROBI_INCLUDE_PATH) $(OPENMP_COMPILE_FLAGS) $(PETSC_CFLAGS) -D_Alignof=alignof
 
 LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -L$(GUROBI_LIB_PATH) $(OPENMP_LINK_FLAGS) $(PETSC_LIBS) $(MPI_LINK_FLAGS) -lm -lgurobi_c++ -lgurobi120 \
