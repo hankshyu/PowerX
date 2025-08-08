@@ -77,7 +77,10 @@ public:
 
     double aggrMetalEdgeLB = 0.0;
     double aggrMetalEdgeUB = 2.0;
-    double aggrMetalEdgeWeight = 0.2;
+    double aggrMetalEdgeWeight = 0;
+    double mustRouteAggrMEUBPctg = 0.5;
+    double mustRouteTotalBudgetPctg = 0.05;
+    double mustRouteBudgetMin = 0.4;
     
     double ViaEdgeLB = 0.0;
     double ViaEdgeUB = 1.75;
@@ -89,13 +92,18 @@ public:
 
     double minChipletBudgetAvgPctg = 0.75;
 
+
     // sorting by ascending order of current requirement
     std::vector<SignalType> flowSOIIdxToSig;
     std::unordered_map<SignalType, int> flowSOISigToIdx;
     std::vector<double> SOIBudget;
+
+    std::vector<double> mustTouchTotalBudget;
+    std::vector<double> mustTouchPerBudget;
     
     std::vector<FlowNode> superSource;
     std::vector<FlowNode> superSink;
+    std::vector<FlowNode> interSink;
 
     std::vector<std::vector<FlowNode>> viaFlowTopNodeArr;
     std::vector<std::vector<FlowNode>> viaFlowDownNodeArr;
@@ -104,6 +112,8 @@ public:
     std::vector<std::vector<std::vector<FlowNode *>>> metalFlowNodeArr;
     std::unordered_map<SignalType, std::vector<FlowNode *>> superSourceConnectedNodes;
     std::unordered_map<SignalType, std::vector<FlowNode *>> superSinkConnectedNodes;
+
+    std::unordered_map<SignalType, std::vector<FlowNode *>> mustTouchNodes;
 
     std::vector<FlowEdge *> flowEdgeOwnership;
 
@@ -166,9 +176,10 @@ public:
     void commit();
 
 
-    /* These are functions for MCF (Multi-commodity Flow)*/
+    /* These are functions for MCF (Multi-commodity Flow), outputLevel = 0(silent) 1(verbose) */
     void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
+    void verifyAndFixMCFResult(bool verbose = false);
 
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();

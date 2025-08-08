@@ -44,8 +44,6 @@ public:
     int chipletCount;
     double currentBudget; // in pctg;
 
-    
-
     std::unordered_set<DiffusionChamber *> preplacedNodes;
     std::unordered_set<DiffusionChamber *> preplacedOrMarkedNodes;
     std::unordered_set<DiffusionChamber *> candidateNodes;

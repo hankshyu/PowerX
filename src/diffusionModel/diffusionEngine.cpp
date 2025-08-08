@@ -877,7 +877,6 @@ void DiffusionEngine::importResultsFromFile(const std::string &filePath){
 }
 
 
-
 void DiffusionEngine::runDiffusionTop(double diffusionRate){
 
     std::vector<std::string> timeSpan = {
@@ -945,6 +944,10 @@ void DiffusionEngine::runDiffusionTop(double diffusionRate){
 }
 
 int DiffusionEngine::initialiseIndexing(){
+
+    cellLabelToSigType.clear();
+    sigTypeToAllCellLabels.clear();
+
     cellLabelToSigType.push_back(SignalType::EMPTY);
     CellLabel labelIdx = 1;
 
@@ -958,7 +961,7 @@ int DiffusionEngine::initialiseIndexing(){
 
     std::vector<bool> metalVisited(metalGridSize, false);
     std::vector<bool> viaVisited(viaGridsize, false);
-    // a pass of cellidx is sufficient to iterate all nodes, because no cell 
+    // a pass of cellidx is sufficient to iterate all nodes
     for(size_t cellIdx = 0; cellIdx < (metalGridSize + viaGridsize); ++cellIdx){
         
         bool processingMetal = (cellIdx < metalGridSize);
@@ -967,6 +970,7 @@ int DiffusionEngine::initialiseIndexing(){
         
         SignalType paintingType;
         DiffusionChamber *dcPointer;
+        
         
         if(processingMetal){
             MetalCell &mc = this->metalGrid[cellIdx];
@@ -1333,7 +1337,7 @@ void DiffusionEngine::stage(){
 void DiffusionEngine::initialiseMCFSolver(){
     
     // initialise flowSOIIdxToSig, flowSOISigToIdx
-    // initialise superSource, superSink
+    // initialise superSource, superSink, and intersink
 
     // create flowSOIIdxToSig using signals in currentBudget and in ascending order of current budget
     for (const auto& [sig, _] : currentBudget) {
@@ -1349,6 +1353,7 @@ void DiffusionEngine::initialiseMCFSolver(){
         
         superSource.emplace_back(FlowNodeType::SUPER_SOURCE, CELL_LABEL_EMPTY, -1, sig);
         superSink.emplace_back(FlowNodeType::SUPER_SINK, CELL_LABEL_EMPTY, -1, sig);
+        interSink.emplace_back(FlowNodeType::INTER_SINK, CELL_LABEL_EMPTY, -1, sig);
     }
 
     // initialise viaFlowTopNodeArr, viaFlowDownNodeArr
@@ -1360,7 +1365,7 @@ void DiffusionEngine::initialiseMCFSolver(){
         viaFlowDownNodeArr[viaLayer].resize(layerViaCount, FlowNode(FlowNodeType::VIA_DOWN, CELL_LABEL_EMPTY, viaLayer));
     }
 
-    // initialise metalFlowNodeOwnership first, than like the pointer to metalFlowNodeArr
+    // initialise metalFlowNodeOwnership first, than link the pointer to metalFlowNodeArr
     int metalNodeCount = static_cast<int>(initialiseIndexing());
     std::vector<bool> aggregatedNodesProcessed(metalNodeCount, false);
     for(int i = 0; i < metalNodeCount; ++i){
@@ -1380,6 +1385,8 @@ void DiffusionEngine::initialiseMCFSolver(){
 
     std::unordered_map<SignalType, std::vector<CellLabel>> superSourceConnIdx;
     std::unordered_map<SignalType, std::vector<CellLabel>> superSinkConnIdx;
+    std::unordered_map<SignalType, std::vector<CellLabel>> mustTouchNodeIdx;
+
 
     for(size_t layer = 0; layer < m_metalGridLayers; ++layer){
         for(size_t y = 0; y < m_metalGridHeight; ++y){
@@ -1388,7 +1395,6 @@ void DiffusionEngine::initialiseMCFSolver(){
                 MetalCell &mc = this->metalGrid[mcIdx];
                 
                 CellLabel mcCellLabel = this->metalGridLabel[mcIdx];
-
 
                 if(mc.type == CellType::EMPTY){
                     int newIdx = metalFlowNodeOwnership.size();
@@ -1450,14 +1456,19 @@ void DiffusionEngine::initialiseMCFSolver(){
                     tmpMetalLabel[layer][y][x] = newIdx;
                     if(aggregatedNodesProcessed[newIdx]) continue;
 
+
                     aggregatedNodesProcessed[newIdx] = true;
                     FlowNode &fn = metalFlowNodeOwnership[newIdx];
                     fn.layer = layer;
                     fn.signal = mcSignal;
+
+
                     if(layer == m_ubumpConnectedMetalLayerIdx){
                         superSinkConnIdx[mcSignal].push_back(mcCellLabel);
                     }else if(layer == m_c4ConnectedMetalLayerIdx){
                         superSourceConnIdx[mcSignal].push_back(mcCellLabel);
+                    }else{
+                        mustTouchNodeIdx[mcSignal].push_back(mcCellLabel);
                     }
 
                     
@@ -1474,6 +1485,8 @@ void DiffusionEngine::initialiseMCFSolver(){
             }
         }
     }
+    
+    // owership array is built, FlowNode * will not change, link to pointer is now available
     // transform superSource and superSink idx to FlowNode*
 
     for (const auto& [signal, connVec] : superSourceConnIdx) {
@@ -1488,6 +1501,12 @@ void DiffusionEngine::initialiseMCFSolver(){
         }
     }
 
+    for (const auto& [signal, connVec] : mustTouchNodeIdx) {
+        for (const CellLabel& label : connVec){
+            FlowNode *fn = &metalFlowNodeOwnership[label];
+            this->mustTouchNodes[signal].push_back(fn);
+        }
+    }
 
     // paint the via pads as special nodes as well
     for(int viaIdx = 0; viaIdx < getAllViaIdxEnd(); ++viaIdx){
@@ -1552,6 +1571,10 @@ void DiffusionEngine::initialiseMCFSolver(){
     // calculate SOIBudget according to viadistribution & currentBudget array
 
     SOIBudget.resize(flowSOIIdxToSig.size(), std::numeric_limits<double>::max());
+    mustTouchTotalBudget.resize(flowSOIIdxToSig.size());
+    mustTouchPerBudget.resize(flowSOIIdxToSig.size());
+
+
     double minViaLayerSumBudget = std::numeric_limits<double>::max();
     for(size_t viaLayer = 0; viaLayer < m_viaGridLayers; ++viaLayer){
         double emptyViaCount = static_cast<double>(m_viaGrid2DCount[viaLayer]);
@@ -1567,23 +1590,37 @@ void DiffusionEngine::initialiseMCFSolver(){
     }
 
     for(int i = 0; i < SOIBudget.size(); ++i){
-        SOIBudget[i] = minViaLayerSumBudget * ((ViaBudgetAvgQuota / SOIBudget.size()) + viaBudgetCurrentQuota * currentBudget[flowSOIIdxToSig[i]]);
+        double soiBudget = minViaLayerSumBudget * ((ViaBudgetAvgQuota / SOIBudget.size()) + viaBudgetCurrentQuota * currentBudget[flowSOIIdxToSig[i]]);
+        SOIBudget[i] = soiBudget;
+        SignalType st = flowSOIIdxToSig[i];
+        
+        if((mustTouchNodes.find(st) == mustTouchNodes.end()) || (mustTouchNodes[st].empty())){
+            mustTouchTotalBudget[i] = mustTouchPerBudget[i] = 0;
+
+        }else{
+            mustTouchTotalBudget[i] = std::min(aggrMetalEdgeUB*mustRouteAggrMEUBPctg, (soiBudget*mustRouteTotalBudgetPctg));
+            mustTouchPerBudget[i] = mustTouchTotalBudget[i] / static_cast<double>(mustTouchNodes[st].size());
+        }
     }
 
-    // // for displaying
-    // std::cout << "Display requrests: " << std::endl;
-    // for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
-    //     std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << std::endl;
-    // }
-    // std::cout << "Display superSource" << std::endl;
-    // for(FlowNode &fn : superSource){
-    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    // }
 
-    // std::cout << "Display superSink" << std::endl;
-    // for(FlowNode &fn : superSink){
-    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    // }
+
+    // for displaying
+    std::cout << "Display requrests: " << std::endl;
+    for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+        std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << ", mtBudget = " << mustTouchPerBudget[i] << std::endl;
+    }
+    
+    std::cout << "Display superSource" << std::endl;
+    for(FlowNode &fn : superSource){
+        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    }
+
+    std::cout << "Display superSink" << std::endl;
+    for(FlowNode &fn : superSink){
+        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    }
+
 
 }
 
@@ -1617,71 +1654,65 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
                     for(const Cord &neighborDir : fourNeighbors){
                         int nx = x + neighborDir.x();
                         int ny = y + neighborDir.y();
+                        if(!in2DRange(ny, nx)) continue;
 
-                        if(in2DRange(ny, nx)){
-                            FlowNode *neighborFnPointer = this->metalFlowNodeArr[layer][ny][nx];
-
-                            if(neighborFnPointer->type == FlowNodeType::EMPTY){
-                                // create two directions,
-                                // from this -> north
-                                // from node -> this
-                                if((UpDownDir && (neighborDir.y() != 0)) || (!UpDownDir && (neighborDir.x() != 0)) || (fnPointer->isSuperNode)){
-                                    GRBLinExpr varsExclusiveLinExpr = 0.0;
-                                    for(SignalType &st : this->flowSOIIdxToSig){
-                                        GRBVar var = GRBmodel.addVar(normalMetalEdgeLB, normalMetalEdgeUB, normalMetalEdgeWeight, GRB_CONTINUOUS);
-                                        FlowEdge *fe = new FlowEdge(st, fnPointer, neighborFnPointer, var);
-                                        this->flowEdgeOwnership.push_back(fe);
-                                        fnPointer->outEdges.push_back(fe);
-                                        neighborFnPointer->inEdges.push_back(fe);
-                                        varsExclusiveLinExpr += var;
-                                    }
-                                    // add exclusiveness
-                                    GRBmodel.addConstr(varsExclusiveLinExpr <= normalMetalEdgeUB);
-                                }
-
-                                
-
-
-                            }else if(neighborFnPointer->type == FlowNodeType::AGGREGATED){
-                                if(layer == m_ubumpConnectedMetalLayerIdx){
-                                    // only goes from this -> neighbor(aggregated)
-                                    SignalType targetSt = neighborFnPointer->signal;
-                                    GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
-                                    FlowEdge *fe = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var);
+                        FlowNode *neighborFnPointer = this->metalFlowNodeArr[layer][ny][nx];
+                        if(neighborFnPointer->type == FlowNodeType::EMPTY){
+                            // create two directions,
+                            // from this -> north
+                            // from node -> this
+                            if((UpDownDir && (neighborDir.y() != 0)) || (!UpDownDir && (neighborDir.x() != 0)) || (fnPointer->isSuperNode)){
+                                GRBLinExpr varsExclusiveLinExpr = 0.0;
+                                for(SignalType &st : this->flowSOIIdxToSig){
+                                    GRBVar var = GRBmodel.addVar(normalMetalEdgeLB, normalMetalEdgeUB, normalMetalEdgeWeight, GRB_CONTINUOUS);
+                                    FlowEdge *fe = new FlowEdge(st, fnPointer, neighborFnPointer, var);
                                     this->flowEdgeOwnership.push_back(fe);
                                     fnPointer->outEdges.push_back(fe);
                                     neighborFnPointer->inEdges.push_back(fe);
-                                    
-                                }else if(layer == m_c4ConnectedMetalLayerIdx){
-                                    // only goes from neighbor(aggregated) -> this
-                                    SignalType targetSt = neighborFnPointer->signal;
-                                    GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
-                                    FlowEdge *fe = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var);
-                                    this->flowEdgeOwnership.push_back(fe);
-                                    neighborFnPointer->outEdges.push_back(fe);
-                                    fnPointer->inEdges.push_back(fe);
-                                
-                                }else{
-                                    // goes both ways
-                                    SignalType targetSt = neighborFnPointer->signal;
-                                    
-                                    GRBVar var0 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
-                                    FlowEdge *fe0 = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var0);
-                                    this->flowEdgeOwnership.push_back(fe0);
-                                    fnPointer->outEdges.push_back(fe0);
-                                    neighborFnPointer->inEdges.push_back(fe0);
-
-                                    GRBVar var1 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
-                                    FlowEdge *fe1 = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var1);
-                                    this->flowEdgeOwnership.push_back(fe1);
-                                    neighborFnPointer->outEdges.push_back(fe1);
-                                    fnPointer->inEdges.push_back(fe1);
-
+                                    varsExclusiveLinExpr += var;
                                 }
+                                // add exclusiveness
+                                GRBmodel.addConstr(varsExclusiveLinExpr <= normalMetalEdgeUB);
                             }
 
+                        }else if(neighborFnPointer->type == FlowNodeType::AGGREGATED){
 
+                            
+                            if(layer == m_c4ConnectedMetalLayerIdx){
+                                // only goes from neighbor(aggregated) -> this
+                                SignalType targetSt = neighborFnPointer->signal;
+                                GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                FlowEdge *fe = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var);
+                                this->flowEdgeOwnership.push_back(fe);
+                                neighborFnPointer->outEdges.push_back(fe);
+                                fnPointer->inEdges.push_back(fe);
+                            
+                            }else if(layer == m_ubumpConnectedMetalLayerIdx){
+                                // only goes from this -> neighbor(aggregated)
+                                SignalType targetSt = neighborFnPointer->signal;
+                                GRBVar var = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                FlowEdge *fe = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var);
+                                this->flowEdgeOwnership.push_back(fe);
+                                fnPointer->outEdges.push_back(fe);
+                                neighborFnPointer->inEdges.push_back(fe);
+                            }else{
+                                // go both directions
+                                SignalType targetSt = neighborFnPointer->signal;
+                                
+                                GRBVar var0 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                FlowEdge *fe0 = new FlowEdge(targetSt, fnPointer, neighborFnPointer, var0);
+                                this->flowEdgeOwnership.push_back(fe0);
+                                fnPointer->outEdges.push_back(fe0);
+                                neighborFnPointer->inEdges.push_back(fe0);
+
+                                GRBVar var1 = GRBmodel.addVar(aggrMetalEdgeLB, aggrMetalEdgeUB, aggrMetalEdgeWeight, GRB_CONTINUOUS);
+                                FlowEdge *fe1 = new FlowEdge(targetSt, neighborFnPointer, fnPointer, var1);
+                                this->flowEdgeOwnership.push_back(fe1);
+                                neighborFnPointer->outEdges.push_back(fe1);
+                                fnPointer->inEdges.push_back(fe1);
+                            }
                         }
+                        
                     }
 
                 }
@@ -1803,7 +1834,7 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
             }
         }
         
-        // STEP 4. build super-sink decision varaibles
+        // STEP 4. build super-sink decision varaibles and
         for(const auto&[st, nodes] : this->superSinkConnectedNodes){
             FlowNode *spSink = &superSink[flowSOISigToIdx[st]];
             double signalLowerBound = minChipletBudgetAvgPctg * (SOIBudget[flowSOISigToIdx[st]] / nodes.size());
@@ -1814,6 +1845,22 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
                 this->flowEdgeOwnership.push_back(fe);
                 fn->outEdges.push_back(fe);
                 spSink->inEdges.push_back(fe);
+            }
+        }
+
+        for(const auto&[st, nodes] : this->mustTouchNodes){
+            if(nodes.empty()) continue;
+
+            FlowNode *mustTouchSink = &interSink[flowSOISigToIdx[st]];
+            
+            double signalLowerBound = mustRouteBudgetMin * mustTouchPerBudget[flowSOISigToIdx[st]];
+
+            for(FlowNode *fn : nodes){
+                GRBVar var = GRBmodel.addVar(signalLowerBound, GRB_INFINITY, 0.0, GRB_CONTINUOUS);
+                FlowEdge *fe = new FlowEdge(st, fn, mustTouchSink, var);
+                this->flowEdgeOwnership.push_back(fe);
+                fn->outEdges.push_back(fe);
+                mustTouchSink->inEdges.push_back(fe);
             }
         }
 
@@ -1833,7 +1880,8 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
 
             for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
                 if(nodeInEdges[i].empty() && nodeOutEdges[i].empty()) continue;
-                else if(nodeInEdges[i].empty()){
+                
+                if(nodeInEdges[i].empty()){
                     GRBLinExpr varsLinExpr = 0.0;
                     for(FlowEdge *fe : nodeOutEdges[i]){
                         varsLinExpr += fe->var;
@@ -1844,7 +1892,7 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
                     for(FlowEdge *fe : nodeInEdges[i]){
                         varsLinExpr += fe->var;
                     }
-                    GRBmodel.addConstr(varsLinExpr == 0.0); 
+                    GRBmodel.addConstr(varsLinExpr == 0.0);
                 }else{
                     GRBLinExpr inExpr = 0.0;
                     GRBLinExpr outExpr = 0.0;
@@ -1855,6 +1903,10 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
                         outExpr += fe->var; 
                     }
                     GRBmodel.addConstr(inExpr == outExpr);
+
+                    // if(fn.type == FlowNodeType::AGGREGATED){
+                    //     GRBmodel.addConstr(inExpr >= minPreplacedSumFlow);
+                    // }
                 }
             }
         } 
@@ -1947,69 +1999,83 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
             } 
         }
 
-        // STEP 6: Add special flow constraints for superSource and superSink
+        // STEP 6: Add special flow constraints for superSource, superSink, and interSink
         for(int i = 0; i < superSource.size(); ++i){
             double budget = SOIBudget[i];
+            double mustTouchSigTotalBudget = mustTouchTotalBudget[i];
+
 
             GRBLinExpr sourceLinExpr = 0.0;
             for(FlowEdge *fe : superSource[i].outEdges){
                 sourceLinExpr += fe->var;
             }
-            GRBmodel.addConstr(sourceLinExpr == budget);
+            GRBmodel.addConstr(sourceLinExpr == (budget + mustTouchSigTotalBudget));
 
             GRBLinExpr sinkLinExpr = 0.0;
             for(FlowEdge *fe : superSink[i].inEdges){
                 sinkLinExpr += fe->var;
             }
             GRBmodel.addConstr(sinkLinExpr == budget);
+
+            if(mustTouchSigTotalBudget == 0) continue;
+
+            GRBLinExpr interSinkLinExpr = 0.0;
+            for(FlowEdge *fe : interSink[i].inEdges){
+                interSinkLinExpr += fe->var;
+            }
+            GRBmodel.addConstr(interSinkLinExpr == mustTouchSigTotalBudget);
         }
+
+
 
         // STEP 7. run the solver
         GRBmodel.optimize();
-        int status = GRBmodel.get(GRB_IntAttr_Status);
-        std::cout << "Gurobi Optimization Status: " << status << " — ";
 
-        switch (status) {
-            case GRB_OPTIMAL:
-                std::cout << "Optimal solution found." << std::endl;
-                std::cout << "Objective value: " << GRBmodel.get(GRB_DoubleAttr_ObjVal) << std::endl;
-                break;
+        if(outputLevel != 0){
+            int status = GRBmodel.get(GRB_IntAttr_Status);
+            std::cout << "Gurobi Optimization Status: " << status << " — ";
+            
+            switch (status) {
+                case GRB_OPTIMAL:
+                    std::cout << "Optimal solution found." << std::endl;
+                    std::cout << "Objective value: " << GRBmodel.get(GRB_DoubleAttr_ObjVal) << std::endl;
+                    break;
 
-            case GRB_INFEASIBLE:
-                std::cout << "Model is infeasible." << std::endl;
-                std::cout << "Computing IIS (Irreducible Inconsistent Subsystem) for analysis..." << std::endl;
-                GRBmodel.computeIIS();
-                GRBmodel.write("infeasible_model.ilp");  // Save conflicting constraints
-                std::cout << "IIS written to 'infeasible_model.ilp'." << std::endl;
-                break;
+                case GRB_INFEASIBLE:
+                    std::cout << "Model is infeasible." << std::endl;
+                    std::cout << "Computing IIS (Irreducible Inconsistent Subsystem) for analysis..." << std::endl;
+                    GRBmodel.computeIIS();
+                    GRBmodel.write("infeasible_model.ilp");  // Save conflicting constraints
+                    std::cout << "IIS written to 'infeasible_model.ilp'." << std::endl;
+                    break;
 
-            case GRB_UNBOUNDED:
-                std::cout << "Model is unbounded." << std::endl;
-                std::cout << "Check for missing constraints or variables with no bounds." << std::endl;
-                break;
+                case GRB_UNBOUNDED:
+                    std::cout << "Model is unbounded." << std::endl;
+                    std::cout << "Check for missing constraints or variables with no bounds." << std::endl;
+                    break;
 
-            case GRB_INF_OR_UNBD:
-                std::cout << "Model is either infeasible or unbounded." << std::endl;
-                std::cout << "Consider disabling dual reductions: model.set(GRB_IntParam_DualReductions, 0);" << std::endl;
-                break;
+                case GRB_INF_OR_UNBD:
+                    std::cout << "Model is either infeasible or unbounded." << std::endl;
+                    std::cout << "Consider disabling dual reductions: model.set(GRB_IntParam_DualReductions, 0);" << std::endl;
+                    break;
 
-            case GRB_TIME_LIMIT:
-                std::cout << "Time limit reached before finding an optimal solution." << std::endl;
-                break;
+                case GRB_TIME_LIMIT:
+                    std::cout << "Time limit reached before finding an optimal solution." << std::endl;
+                    break;
 
-            case GRB_INTERRUPTED:
-                std::cout << "Optimization was interrupted." << std::endl;
-                break;
+                case GRB_INTERRUPTED:
+                    std::cout << "Optimization was interrupted." << std::endl;
+                    break;
 
-            case GRB_CUTOFF:
-                std::cout << "Optimization stopped due to reaching the cutoff parameter." << std::endl;
-                break;
+                case GRB_CUTOFF:
+                    std::cout << "Optimization stopped due to reaching the cutoff parameter." << std::endl;
+                    break;
 
-            default:
-                std::cout << "Unhandled status code. Refer to Gurobi documentation for details." << std::endl;
-                break;
+                default:
+                    std::cout << "Unhandled status code. Refer to Gurobi documentation for details." << std::endl;
+                    break;
+            }
         }
-       
         /* Extract Results*/
         // write the results back:
         for(int layer = 0; layer < m_metalGridLayers; ++layer){
@@ -2081,6 +2147,73 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
     } catch (GRBException &e) {
         std::cerr << "Gurobi error: " << e.getMessage() << std::endl;
     }
+}
+
+void DiffusionEngine::verifyAndFixMCFResult(bool verbose){
+
+    int totalIndexes = initialiseIndexing();
+    if(verbose) std::cout << "Multi-Commodity Flow Result Report: " << std::endl;
+
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> sigToLabels;
+    std::vector<std::vector<DiffusionChamber *>> cellLabelToDiffusionchambers(totalIndexes);
+
+
+    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){
+                
+        MetalCell &mc = metalGrid[mcIdx];
+        if((mc.type != CellType::MARKED) && (mc.type != CellType::PREPLACED)) continue;
+
+        SignalType mcSigType = mc.signal;
+        
+        CellLabel mcLabel = metalGridLabel[mcIdx];
+        sigToLabels[mcSigType].insert(mcLabel);
+        cellLabelToDiffusionchambers[mcLabel].push_back(&mc);
+    }
+
+    for(size_t vcIdx = 0; vcIdx < viaGrid.size(); ++ vcIdx){
+        ViaCell &vc = viaGrid[vcIdx];
+        if((vc.type != CellType::MARKED) && (vc.type != CellType::PREPLACED)) continue;
+
+        SignalType vcSigType = vc.signal;
+        CellLabel vcLabel = viaGridLabel[vcIdx];
+        sigToLabels[vcSigType].insert(vcLabel);
+        cellLabelToDiffusionchambers[vcLabel].push_back(&vc);
+    }
+
+    if(verbose){
+        for(const auto&[st, us] : sigToLabels){
+            std::cout << st << " has label count: " << us.size() << ": ";
+            for(const CellLabel &cl : us){
+                std::cout << cl << ", ";
+            }
+            std::cout << std::endl;
+            for(const CellLabel &cl : us){
+                std::unordered_set<int> metalLayers;
+                std::unordered_set<int> viaLayers;
+                for(DiffusionChamber *dc : cellLabelToDiffusionchambers[cl]){
+                    if(dc->metalViaType == DiffusionChamberType::METAL){
+                        metalLayers.insert(dc->canvasLayer);
+                    }else{
+                        viaLayers.insert(dc->canvasLayer);
+                    }
+                }
+                std::cout << "Cl = " << cl << "with count: " << cellLabelToDiffusionchambers[cl].size() << ", ";
+                std::cout << " on layer M:";
+                for(int l : metalLayers) std::cout << l << ", ";
+                std::cout << " V: ";
+                for(int l : viaLayers) std::cout << l << "->" << l+1 << ", ";
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    
+
+
+
+
+        
+
 }
 
 void DiffusionEngine::initialiseFiller(){
@@ -2239,6 +2372,7 @@ void DiffusionEngine::initialiseSignalTrees(){
             assert(allCandidateNodes.count(mc) == 0);
             assert(sigTree.preplacedOrMarkedNodes.count(mc) == 1);
             assert(sigTree.candidateNodes.count(mc) == 0);
+            
             sigTree.GIdxToNode.push_back(mc);
             sigTree.nodeToGIdx[mc] = sigTree.GIdxToNode.size() - 1;
         }
@@ -2247,17 +2381,6 @@ void DiffusionEngine::initialiseSignalTrees(){
         sigTree.pinOutIdxBegin = sigTree.pinInIdxEnd;
         
         std::unordered_set<Cord> alluBumpPads;
-
-        // for(const Cord& pinCord : this->uBump.signalTypeToAllCords[st]){
-        //     len_t pinCordX = pinCord.x();
-        //     len_t pinCordY = pinCord.y();
-        //     alluBumpPads.emplace(pinCordX, pinCordY);
-        //     alluBumpPads.emplace(pinCordX - 1, pinCordY);
-        //     alluBumpPads.emplace(pinCordX, pinCordY - 1);
-        //     alluBumpPads.emplace(pinCordX - 1, pinCordY - 1);
-        // }
-        // sigTree.pinOutIdxEnd = sigTree.pinOutIdxBegin + alluBumpPads.size();
-
 
         std::vector<size_t> chipletOutIdxBegin(chipletCount);
         std::vector<size_t> chipletOutIdxEnd(chipletCount);
@@ -2293,9 +2416,16 @@ void DiffusionEngine::initialiseSignalTrees(){
         }
         sigTree.pinOutIdxEnd = sigTree.pinOutIdxBegin + alluBumpPads.size();
 
+        size_t chipletAllPadsSize = 0;
+        for(const auto &us : chipletAllPads){
+            chipletAllPadsSize += us.size();
+        }
+        assert(chipletAllPadsSize == alluBumpPads.size());
+
         for(int i = 0; i < chipletCount; ++i){
             for(const Cord& pinCord : chipletAllPads[i]){
                 MetalCell *mc = &metalGrid[calMetalIdx(m_ubumpConnectedMetalLayerIdx, pinCord.y(), pinCord.x())];
+                
                 assert(mc->signal == st);
                 assert(allPreplacedOrMarkedNodes.count(mc) == 1);
                 assert(allCandidateNodes.count(mc) == 0);
@@ -2307,26 +2437,18 @@ void DiffusionEngine::initialiseSignalTrees(){
             }
         }
 
-
-
-        // for(const Cord &pinCord : alluBumpPads){
-        //     MetalCell *mc = &metalGrid[calMetalIdx(m_ubumpConnectedMetalLayerIdx, pinCord.y(), pinCord.x())];
-        //     assert(mc->signal == st);
-        //     assert(allPreplacedOrMarkedNodes.count(mc) == 1);
-        //     assert(allCandidateNodes.count(mc) == 0);
-        //     assert(sigTree.preplacedOrMarkedNodes.count(mc) == 1);
-        //     assert(sigTree.candidateNodes.count(mc) == 0);
-
-        //     sigTree.GIdxToNode.push_back(mc);
-        //     sigTree.nodeToGIdx[mc] = sigTree.GIdxToNode.size() - 1;
-        // }
-
         for(DiffusionChamber *dc : sigTree.preplacedOrMarkedNodes){
             if(sigTree.nodeToGIdx.count(dc) == 0){
                 sigTree.GIdxToNode.push_back(dc);
                 sigTree.nodeToGIdx[dc] = sigTree.GIdxToNode.size() - 1;
             }
         }
+        
+        if(sigTree.GIdxToNode.size() !=(sigTree.preplacedOrMarkedNodes.size() + 1 + chipletCount)){
+            std::cout << "uno size = " << sigTree.GIdxToNode.size() << ", " << allPreplacedOrMarkedNodes.size() << ", " << chipletCount << std::endl;
+            std::cout << sigTree.pinInIdxBegin << ", " << sigTree.pinInIdxEnd << ", " << sigTree.pinOutIdxBegin << ", " << sigTree.pinOutIdxEnd << std::endl;
+        }
+        assert(sigTree.GIdxToNode.size() == sigTree.preplacedOrMarkedNodes.size() + 1 + chipletCount);
 
         /* Initialize GV = I vectoers */
         PetscInt expSize = chipletCount;
@@ -2334,8 +2456,46 @@ void DiffusionEngine::initialiseSignalTrees(){
         sigTree.exp_size = expSize;
         sigTree.n_size = nSize;
         
+
+
+        auto PrintNonZeroRows = [&](const Mat &A) {
+            PetscInt nrows, ncols;
+            MatGetSize(A, &nrows, &ncols);
+
+            bool hasNonZeroRow = false;
+
+            for (PetscInt i = 0; i < nrows; ++i) {
+                const PetscInt* cols;
+                const PetscScalar* vals;
+                PetscInt ncols_row;
+
+                MatGetRow(A, i, &ncols_row, &cols, &vals);
+
+                bool rowHasNonZero = false;
+                std::ostringstream rowStream;
+                for (PetscInt j = 0; j < ncols_row; ++j) {
+                    if (vals[j] != 0.0) {  // filter out explicit zero values
+                        rowHasNonZero = true;
+                        rowStream << "(col " << cols[j] << " : " << vals[j] << ") ";
+                    }
+                }
+
+                if (rowHasNonZero) {
+                    hasNonZeroRow = true;
+                    std::cout << "Row " << i << ": " << rowStream.str() << "\n";
+                }
+
+                MatRestoreRow(A, i, &ncols_row, &cols, &vals);
+            }
+
+            if (!hasNonZeroRow) {
+                std::cout << "Matrix is all zero.\n";
+            }
+        };
+
+
         // Set up I_n
-       MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.I_n);
+        MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.I_n);
         Mat &I_n = sigTree.I_n;
         for (PetscInt k = 0; k < expSize; ++k) {
             PetscInt src = 0;        // always inject at node 0
@@ -2346,6 +2506,9 @@ void DiffusionEngine::initialiseSignalTrees(){
         MatAssemblyBegin(I_n, MAT_FINAL_ASSEMBLY);
         MatAssemblyEnd(I_n, MAT_FINAL_ASSEMBLY);
 
+        // std::cout << "Displaying St = " << st << "\'s I_n: " << std::endl;
+        // PrintNonZeroRows(I_n);
+
         // Initialise V_n as answer holder (same size as I_n)
         MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.V_n);
 
@@ -2353,12 +2516,103 @@ void DiffusionEngine::initialiseSignalTrees(){
         MatAssemblyBegin(V_n, MAT_FINAL_ASSEMBLY);
         MatAssemblyEnd(V_n, MAT_FINAL_ASSEMBLY);
 
+        // std::cout << "Displaying St = " << st << "\'s V_n: " << std::endl;
+        // PrintNonZeroRows(V_n);
+
+        auto CheckConductanceMatrix = [&](const Mat &G, bool allowZeroDiagonal = false) {
+            MatAssemblyBegin(G, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(G, MAT_FINAL_ASSEMBLY);
+
+            PetscInt nrows, ncols;
+            MatGetSize(G, &nrows, &ncols);
+            bool ok = true;
+
+            for (PetscInt i = 0; i < nrows; ++i) {
+                const PetscInt* cols;
+                const PetscScalar* vals;
+                PetscInt ncols_row;
+
+                MatGetRow(G, i, &ncols_row, &cols, &vals);
+
+                double diagonal = 0.0;
+                double offdiag_sum = 0.0;
+                bool hasDiagonal = false;
+
+                for (PetscInt j = 0; j < ncols_row; ++j) {
+                    if (cols[j] == i) {
+                        diagonal = vals[j];
+                        hasDiagonal = true;
+                        if (diagonal < 0.0) {
+                            std::cout << "G[" << i << "][" << i << "] = " << diagonal << " < 0\n";
+                            ok = false;
+                        }
+                    } else {
+                        if (vals[j] > 0.0) {
+                            std::cout << "G[" << i << "][" << cols[j] << "] = " << vals[j] << " > 0\n";
+                            ok = false;
+                        }
+                        offdiag_sum += std::abs(vals[j]);
+                    }
+                }
+
+                if (!hasDiagonal) {
+                    if (!allowZeroDiagonal) {
+                        std::cout << "G[" << i << "][" << i << "] missing (assumed zero), which is not allowed\n";
+                        ok = false;
+                    }
+                }
+
+                if (std::abs(diagonal - offdiag_sum) > 1e-10) {
+                    if (!(allowZeroDiagonal && diagonal == 0.0)) {
+                        std::cout << "G[" << i << "][" << i << "] = " << diagonal
+                                << " != sum(|off-diags|) = " << offdiag_sum << "\n";
+                        ok = false;
+                    }
+                }
+
+                MatRestoreRow(G, i, &ncols_row, &cols, &vals);
+            }
+
+            if (ok)
+                std::cout << "Conductance matrix structure is valid.\n";
+        };
+
+        auto CheckAllRowsNonZero = [&](const Mat &A) {
+            PetscInt nrows, ncols;
+            MatGetSize(A, &nrows, &ncols);
+            bool allValid = true;
+
+            for (PetscInt i = 0; i < nrows; ++i) {
+                const PetscInt* cols;
+                const PetscScalar* vals;
+                PetscInt ncols_row;
+
+                MatGetRow(A, i, &ncols_row, &cols, &vals);
+
+                if (ncols_row == 0) {
+                    std::cout << "Row " << i << " is completely empty (zero row).\n";
+                    allValid = false;
+                }
+
+                MatRestoreRow(A, i, &ncols_row, &cols, &vals);
+            }
+
+            if (allValid) {
+                std::cout << "All rows are non-zero and structurally valid.\n";
+            }
+        };
+
         // Set up G_n
         MatCreate(PETSC_COMM_WORLD, &sigTree.G_n);
         Mat &G_n = sigTree.G_n;
         MatSetSizes(G_n, PETSC_DECIDE, PETSC_DECIDE, nSize, nSize);
         MatSetType(G_n, MATAIJ);
         MatSetUp(G_n);
+
+        // Declare symmetry before inserting values
+        MatSetOption(G_n, MAT_SYMMETRIC, PETSC_TRUE);
+        // Optional: Declare SPD if grounding a node later
+        MatSetOption(G_n, MAT_SPD, PETSC_TRUE);
 
         PetscInt pinInIdxBegin = sigTree.pinInIdxBegin;
         PetscInt pinInIdxEnd = sigTree.pinInIdxEnd;
@@ -2369,6 +2623,9 @@ void DiffusionEngine::initialiseSignalTrees(){
             MatSetValue(G_n, 0, i, -1, INSERT_VALUES);
             MatSetValue(G_n, i, 0, -1, INSERT_VALUES);
         }
+
+        // std::cout << "Verifying St = " << st << "\'s G_n 1: " << std::endl;
+        // CheckConductanceMatrix(G_n, true);
 
         // fill in [1][1] to [n][n] and thier viertical and horizontal values
         PetscInt pinOutIdxBegin = sigTree.pinOutIdxBegin;
@@ -2381,6 +2638,9 @@ void DiffusionEngine::initialiseSignalTrees(){
             }
         }
 
+        // std::cout << "Verifying St = " << st << "\'s G_n 2: " << std::endl;
+        // CheckConductanceMatrix(G_n, true);
+
         // fill in the rest of G_n
         auto fillGnSubProcess = [&](DiffusionChamber *dc, PetscInt currIdx, PetscInt &diagonalValue){
             if(dc == nullptr) return;
@@ -2390,12 +2650,50 @@ void DiffusionEngine::initialiseSignalTrees(){
                 if (neighborGIdx > currIdx){
                     MatSetValue(G_n, currIdx, neighborGIdx, -1, INSERT_VALUES);
                     MatSetValue(G_n, neighborGIdx, currIdx, -1, INSERT_VALUES);
-                } 
+                }
             }
         };
 
+        auto dbgDisplayNodeHelper = [&](DiffusionChamber *dc){
+            if(dc == nullptr){
+                std::cout << "nullptr" << std::endl;
+                return;
+            } 
+            std::cout << ((dc->metalViaType == DiffusionChamberType::METAL)? "M" : "V") << " ";
+            std::cout << "(" << dc->canvasLayer << ", " << dc->canvasX << ", " << dc->canvasY << ") ";
+            std::cout << "type = " << dc->type << ", signal = " << dc->signal << std::endl; 
+        };
 
-        for(PetscInt i = sigTree.pinInIdxBegin; i < sigTree.n_size; ++i){
+        auto dbgDisplayNode = [&](DiffusionChamber *dc){
+            std::cout << "dbg of node: ";
+            dbgDisplayNodeHelper(dc);
+         
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+                dbgDisplayNodeHelper(mc->northCell);
+                dbgDisplayNodeHelper(mc->southCell);
+                dbgDisplayNodeHelper(mc->eastCell);
+                dbgDisplayNodeHelper(mc->westCell);
+                dbgDisplayNodeHelper(mc->upCell);
+                dbgDisplayNodeHelper(mc->downCell);
+            }else{ // DiffusionChamberType::VA
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+
+                dbgDisplayNodeHelper(vc->upLLCell);
+                dbgDisplayNodeHelper(vc->upLRCell);
+                dbgDisplayNodeHelper(vc->upULCell);
+                dbgDisplayNodeHelper(vc->upURCell);
+
+                dbgDisplayNodeHelper(vc->downLLCell);
+                dbgDisplayNodeHelper(vc->downLRCell);
+                dbgDisplayNodeHelper(vc->downULCell);
+                dbgDisplayNodeHelper(vc->downURCell);
+       
+            }   
+
+        };
+
+        for(PetscInt i = sigTree.pinInIdxBegin+1; i < sigTree.n_size; ++i){
             DiffusionChamber *dc = sigTree.GIdxToNode[i];
 
             PetscInt diagonalValue = (i < sigTree.pinOutIdxEnd)? 1 : 0;
@@ -2424,21 +2722,42 @@ void DiffusionEngine::initialiseSignalTrees(){
                 fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downLRCell), i, diagonalValue);
                 fillGnSubProcess(static_cast<DiffusionChamber *>(vc->downURCell), i, diagonalValue);
             }
+            if(i < sigTree.pinOutIdxEnd){
+                if(diagonalValue == 1){
+                    std::cout << "caught unlink 0." << i << "error!" << std::endl;
+                    dbgDisplayNode(dc);
+                }
+            }else{
+                if(diagonalValue == 0){
+                    std::cout << "caught unlink 1." << i << "error!" << std::endl;
+                    dbgDisplayNode(dc);
+                }
+            }
 
+            // assert(diagonalValue != 0);
             MatSetValue(G_n, i, i, diagonalValue, INSERT_VALUES);
         }
+
+
+        
+        
         MatAssemblyBegin(G_n, MAT_FINAL_ASSEMBLY);
         MatAssemblyEnd(G_n, MAT_FINAL_ASSEMBLY);
+       
+        // ground one node (idx = sigTree.pinInIdxBegin, clear row/column and  set diagonal = 1
+        PetscInt groundIdx = sigTree.pinInIdxBegin;
+        MatZeroRowsColumns(G_n, 1, &groundIdx, 1.0, NULL, NULL);
+        // for (PetscInt i = 0; i < nSize; ++i) {
+        //     MatSetValue(G_n, groundIdx, i, 0.0, INSERT_VALUES);
+        //     MatSetValue(G_n, i, groundIdx, 0.0, INSERT_VALUES);
+        // }
+        // MatSetValue(G_n, groundIdx, groundIdx, 1.0, INSERT_VALUES);
+        
+        std::cout << "Verifying St = " << st << "\'s G_n 3: " << groundIdx << std::endl;
+        CheckConductanceMatrix(G_n, true);
+        CheckAllRowsNonZero(G_n);
 
 
-        PetscViewer viewer;
-        PetscViewerASCIIOpen(PETSC_COMM_SELF, NULL, &viewer); // NULL means print to stdout
-        PetscViewerPushFormat(viewer, PETSC_VIEWER_ASCII_DENSE); // for dense format, or PETSC_VIEWER_ASCII_MATLAB
-
-        MatView(G_n, viewer);
-        PetscViewerDestroy(&viewer);
-
-        return;
     }
 }
 
@@ -2451,26 +2770,24 @@ void DiffusionEngine::runInitialEvaluation(){
         Mat &V_n = sigTree.V_n;
         KSP &ksp_n = sigTree.ksp_n;
 
-        // 1. Create and configure KSP with MUMPS-based LU (required for MatMatSolve with dense RHS)
-        KSPCreate(PETSC_COMM_SELF, &ksp_n);                     // Create KSP for sequential use
-        KSPSetOperators(ksp_n, G_n, G_n);                       // Use G_n as both A and preconditioner
-        KSPSetType(ksp_n, KSPPREONLY);                          // No iterative solver, just direct solve
+        // 1. Create and configure KSP with CHOLMOD-based Cholesky
+        KSPCreate(PETSC_COMM_SELF, &ksp_n);              // Sequential context
+        KSPSetOperators(ksp_n, G_n, G_n);                // Use G_n for both A and preconditioner
+        KSPSetType(ksp_n, KSPPREONLY);                   // Direct solve, no iterations
 
         PC pc;
         KSPGetPC(ksp_n, &pc);
-        PCSetType(pc, PCLU);                                     // Use LU instead of CHOLESKY
-        PCFactorSetMatSolverType(pc, MATSOLVERMUMPS);           // REQUIRED: enable MatMatSolve support
+        PCSetType(pc, PCCHOLESKY);                       // Use Cholesky
+        PCFactorSetMatSolverType(pc, MATSOLVERCHOLMOD);  // Use CHOLMOD (SuiteSparse with OpenMP)
 
-        KSPSetUp(ksp_n);                                        // Finalize setup
+        KSPSetUp(ksp_n);                                 // Finalize setup
 
-        // 2. Extract the factorized matrix (LU or Cholesky depending on solver)
+        // 2. Extract the factorized matrix
         Mat F;
         PCFactorGetMatrix(pc, &F);
 
-
-        // 3. Solve G_n * V_n = I_n using the cached Cholesky factor
+        // 3. Solve G_n * V_n = I_n
         MatMatSolve(F, I_n, V_n);
-
 
         PetscPrintf(PETSC_COMM_WORLD, "\nVoltage matrix V_n (rows 0 to %d):\n", expSize);
         for (PetscInt i = 0; i <= expSize; ++i) {

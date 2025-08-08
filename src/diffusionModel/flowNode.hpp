@@ -39,6 +39,7 @@ enum class FlowNodeType : uint8_t{
     VIA_DOWN,
     SUPER_SOURCE,
     SUPER_SINK,
+    INTER_SINK,
 };
 
 std::ostream& operator<<(std::ostream& os, FlowNodeType fnt);

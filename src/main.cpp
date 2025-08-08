@@ -26,7 +26,7 @@ void printWelcomeBanner();
 void printExitBanner();
 
 int main(int argc, char **argv){
-    PetscInitialize(&argc, &argv, NULL, NULL);
+    // PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
         "Mark PP Pads Canvas",
@@ -36,6 +36,7 @@ int main(int argc, char **argv){
         
         "Init MCF Solver",
         "Run MCF Solver",
+        
 
         "Init Filler",
         "Init SignalTrees",
@@ -76,24 +77,27 @@ int main(int argc, char **argv){
     timeProfiler.pauseTimer(timeSpan[5]);
 
     timeProfiler.startTimer(timeSpan[6]);
-    dse.runMCFSolver("", 0);
+    dse.runMCFSolver("", 1);
+    dse.verifyAndFixMCFResult(true);
     timeProfiler.pauseTimer(timeSpan[6]);
+
+
     dse.exportResultsToFile("outputs/result.txt");
 
     // dse.importResultsFromFile("outputs/result.txt");
 
 
-    timeProfiler.startTimer(timeSpan[7]);
-    dse.initialiseFiller();
-    timeProfiler.pauseTimer(timeSpan[7]);
-    dse.checkFillerInitialisation();
+    // timeProfiler.startTimer(timeSpan[7]);
+    // dse.initialiseFiller();
+    // timeProfiler.pauseTimer(timeSpan[7]);
+    // dse.checkFillerInitialisation();
 
     // timeProfiler.startTimer(timeSpan[8]);
     // dse.initialiseSignalTrees();
     // timeProfiler.pauseTimer(timeSpan[8]);
 
     // timeProfiler.startTimer(timeSpan[9]);
-    // // dse.runInitialEvaluation();
+    // dse.runInitialEvaluation();
     // timeProfiler.pauseTimer(timeSpan[9]);
     
     dse.writeBackToPDN();
@@ -103,13 +107,12 @@ int main(int argc, char **argv){
     visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
     visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
 
-    // visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    // visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
+    visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
 
 
-    
     // VoronoiPDNGen vpg(FILEPATH_BUMPS);
     // vpg.markPreplacedAndInsertPads();
     // vpg.initPointsAndSegments();
