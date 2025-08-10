@@ -223,8 +223,8 @@ C4Bump::C4Bump(const std::string &fileName){
             }
 
 
-            const int LLToRepresentationWidth = m_clusterPinCountWidth/2 + 1;
-            const int LLToRepresentationHeight = m_clusterPinCountHeight/2 + 1;
+            const int LLToRepresentationWidth = m_clusterPinCountWidth/2;
+            const int LLToRepresentationHeight = m_clusterPinCountHeight/2;
             
             const int LLXInitValue = m_leftBorder;
             int LLX = LLXInitValue;

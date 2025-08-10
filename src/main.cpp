@@ -36,6 +36,7 @@ int main(int argc, char **argv){
         
         "Init MCF Solver",
         "Run MCF Solver",
+        "Post MCF Local Repair",
         
 
         "Init Filler",
@@ -66,11 +67,9 @@ int main(int argc, char **argv){
     dse.initialiseGraphWithPreplaced();
     timeProfiler.pauseTimer(timeSpan[3]);
     
-    /*
-        // timeProfiler.startTimer(timeSpan[4]);
-        // dse.fillEnclosedRegions();
-        // timeProfiler.pauseTimer(timeSpan[4]);
-    */
+    // timeProfiler.startTimer(timeSpan[4]);
+    // dse.fillEnclosedRegions();
+    // timeProfiler.pauseTimer(timeSpan[4]);
 
     timeProfiler.startTimer(timeSpan[5]);
     dse.initialiseMCFSolver();
@@ -78,9 +77,11 @@ int main(int argc, char **argv){
 
     timeProfiler.startTimer(timeSpan[6]);
     dse.runMCFSolver("", 1);
-    dse.verifyAndFixMCFResult(true);
     timeProfiler.pauseTimer(timeSpan[6]);
-
+    
+    timeProfiler.startTimer(timeSpan[7]);
+    dse.postMCFLocalRepair(true);
+    timeProfiler.pauseTimer(timeSpan[7]);
 
     dse.exportResultsToFile("outputs/result.txt");
 

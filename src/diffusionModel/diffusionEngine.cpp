@@ -1605,22 +1605,21 @@ void DiffusionEngine::initialiseMCFSolver(){
 
 
 
-    // for displaying
-    std::cout << "Display requrests: " << std::endl;
-    for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
-        std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << ", mtBudget = " << mustTouchPerBudget[i] << std::endl;
-    }
+    // for debug displaying
+    // std::cout << "Display requrests: " << std::endl;
+    // for(int i = 0; i < flowSOIIdxToSig.size(); ++i){
+    //     std::cout << flowSOIIdxToSig[i] << " " << SOIBudget[i] << ", mtBudget = " << mustTouchPerBudget[i] << std::endl;
+    // }
     
-    std::cout << "Display superSource" << std::endl;
-    for(FlowNode &fn : superSource){
-        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    }
+    // std::cout << "Display superSource" << std::endl;
+    // for(FlowNode &fn : superSource){
+    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    // }
 
-    std::cout << "Display superSink" << std::endl;
-    for(FlowNode &fn : superSink){
-        std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
-    }
-
+    // std::cout << "Display superSink" << std::endl;
+    // for(FlowNode &fn : superSink){
+    //     std::cout << fn.type << " " << fn.label << " " << fn.layer << " " << fn.signal << std::endl;
+    // }
 
 }
 
@@ -2027,11 +2026,11 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
         }
 
 
-
         // STEP 7. run the solver
         GRBmodel.optimize();
 
         if(outputLevel != 0){
+
             int status = GRBmodel.get(GRB_IntAttr_Status);
             std::cout << "Gurobi Optimization Status: " << status << " — ";
             
@@ -2149,25 +2148,23 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
     }
 }
 
-void DiffusionEngine::verifyAndFixMCFResult(bool verbose){
-
+void DiffusionEngine::postMCFLocalRepair(bool verbose){
     int totalIndexes = initialiseIndexing();
     if(verbose) std::cout << "Multi-Commodity Flow Result Report: " << std::endl;
 
-    std::unordered_map<SignalType, std::unordered_set<CellLabel>> sigToLabels;
-    std::vector<std::vector<DiffusionChamber *>> cellLabelToDiffusionchambers(totalIndexes);
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> allLabels;
+    std::vector<std::vector<DiffusionChamber *>> labelsToChambers(totalIndexes);
 
 
-    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){
-                
+    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){ 
         MetalCell &mc = metalGrid[mcIdx];
         if((mc.type != CellType::MARKED) && (mc.type != CellType::PREPLACED)) continue;
 
         SignalType mcSigType = mc.signal;
         
         CellLabel mcLabel = metalGridLabel[mcIdx];
-        sigToLabels[mcSigType].insert(mcLabel);
-        cellLabelToDiffusionchambers[mcLabel].push_back(&mc);
+        allLabels[mcSigType].insert(mcLabel);
+        labelsToChambers[mcLabel].push_back(&mc);
     }
 
     for(size_t vcIdx = 0; vcIdx < viaGrid.size(); ++ vcIdx){
@@ -2176,34 +2173,69 @@ void DiffusionEngine::verifyAndFixMCFResult(bool verbose){
 
         SignalType vcSigType = vc.signal;
         CellLabel vcLabel = viaGridLabel[vcIdx];
-        sigToLabels[vcSigType].insert(vcLabel);
-        cellLabelToDiffusionchambers[vcLabel].push_back(&vc);
+        allLabels[vcSigType].insert(vcLabel);
+        labelsToChambers[vcLabel].push_back(&vc);
     }
 
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> disconnLabels(allLabels);
+    
+    for(const auto &[st, clusters] : c4.signalTypeToAllClusters){
+
+        for(C4PinCluster *c4pc : clusters){
+            Cord &rep = c4pc->representation;
+            size_t cellIdx = calMetalIdx(m_c4ConnectedMetalLayerIdx, rep.y(), rep.x());
+            CellLabel cl = metalGridLabel[cellIdx];
+
+            disconnLabels[st].erase(cl);
+        }
+    }
+
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> connLabels(allLabels);
+    for(const auto&[st, _] : allLabels){
+        std::unordered_set<CellLabel> &stCL = connLabels[st];
+        for (auto it = stCL.begin(); it != stCL.end(); ) {
+            if (disconnLabels[st].count(*it)) it = connLabels[st].erase(it);
+            else ++it;
+        }
+    }
+
+
     if(verbose){
-        for(const auto&[st, us] : sigToLabels){
-            std::cout << st << " has label count: " << us.size() << ": ";
-            for(const CellLabel &cl : us){
-                std::cout << cl << ", ";
-            }
+        for(const auto&[st, us] : allLabels){
+
+            std::cout << st << " has labels: " << std::endl;
+            std::cout << "Total Lables(" << us.size() << "): ";
+
+            for(const CellLabel &cl : us) std::cout << cl << ", ";
             std::cout << std::endl;
+            
+            std::cout << "Connected Labels(" << connLabels[st].size() << "): ";
+            for(const CellLabel &cl : connLabels[st]) std::cout << cl << ", ";
+            std::cout << std::endl;
+            
+            std::cout << "Disconnected Labels(" << disconnLabels[st].size() << "): ";
+            for(const CellLabel &cl : disconnLabels[st]) std::cout << cl << ", ";
+            std::cout << std::endl;
+
             for(const CellLabel &cl : us){
                 std::unordered_set<int> metalLayers;
                 std::unordered_set<int> viaLayers;
-                for(DiffusionChamber *dc : cellLabelToDiffusionchambers[cl]){
+                for(DiffusionChamber *dc : labelsToChambers[cl]){
                     if(dc->metalViaType == DiffusionChamberType::METAL){
                         metalLayers.insert(dc->canvasLayer);
                     }else{
                         viaLayers.insert(dc->canvasLayer);
                     }
                 }
-                std::cout << "Cl = " << cl << "with count: " << cellLabelToDiffusionchambers[cl].size() << ", ";
+                std::cout << "Cl = " << cl << "with count: " << labelsToChambers[cl].size() << ", ";
                 std::cout << " on layer M:";
                 for(int l : metalLayers) std::cout << l << ", ";
                 std::cout << " V: ";
                 for(int l : viaLayers) std::cout << l << "->" << l+1 << ", ";
                 std::cout << std::endl;
             }
+
+            std::cout << std::endl << std::endl;
         }
     }
 

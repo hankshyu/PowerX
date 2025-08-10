@@ -179,7 +179,7 @@ public:
     /* These are functions for MCF (Multi-commodity Flow), outputLevel = 0(silent) 1(verbose) */
     void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
-    void verifyAndFixMCFResult(bool verbose = false);
+    void postMCFLocalRepair(bool verbose = false);
 
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();
