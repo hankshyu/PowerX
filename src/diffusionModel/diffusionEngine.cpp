@@ -18,16 +18,25 @@
 
 // Dependencies
 // 1. C++ STL:
+#include <iostream>
 #include <fstream>
 #include <queue>
 #include <algorithm>
 #include <limits>
 #include <cassert>
+#include <set>
+#include <limits>
+
 // 2. Boost Library:
+#include "boost/graph/adjacency_list.hpp"
+#include "boost/graph/kruskal_min_spanning_tree.hpp"
+#include "boost/range/iterator_range.hpp"
 
 // 3. Texo Library:
 #include "diffusionEngine.hpp"
 #include "timeProfiler.hpp"
+#include "dsu.hpp"
+
 
 
 DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistributionNetwork(fileName) {
@@ -821,6 +830,224 @@ void DiffusionEngine::linkNeighbors(){
     }
 }
 
+void DiffusionEngine::updateAllSkeletons(){
+    int totalIndexes = initialiseIndexing();
+    std::vector<bool>indexUpdated(totalIndexes, false);
+    indexUpdated[0] = true;
+
+    for(size_t metalGridIterateIdx = 0; metalGridIterateIdx < metalGrid.size(); ++metalGridIterateIdx){
+        CellLabel cl = metalGridLabel[metalGridIterateIdx];
+        if(!indexUpdated[cl]){
+            indexUpdated[cl] = true;
+            DiffusionChamber *dc = static_cast<DiffusionChamber *>(&metalGrid[metalGridIterateIdx]);
+            CellType dcCellType = dc->type;
+            if(dcCellType == CellType::PREPLACED || dcCellType == CellType::MARKED){
+                updateLabelSkeletonWithSeed(dc);
+            }
+        }
+    }
+
+    for(size_t viaGridIterateIdx = 0; viaGridIterateIdx < viaGrid.size(); ++viaGridIterateIdx){
+        CellLabel cl = viaGridLabel[viaGridIterateIdx];
+        if(!indexUpdated[cl]){
+            indexUpdated[cl] = true;
+
+            DiffusionChamber *dc = static_cast<DiffusionChamber *>(&metalGrid[viaGridIterateIdx]);
+            CellType dcCellType = dc->type;
+            if(dcCellType == CellType::PREPLACED || dcCellType == CellType::MARKED){
+                updateLabelSkeletonWithSeed(dc);
+            }
+        }
+    }
+}
+
+void DiffusionEngine::updateLabelSkeleton(CellLabel label){
+    // find the first label than update
+    for(size_t metalGridIterateIdx = 0; metalGridIterateIdx < metalGrid.size(); ++metalGridIterateIdx){
+        CellLabel cl = metalGridLabel[metalGridIterateIdx];
+        if(label == cl){
+            updateLabelSkeletonWithSeed(&metalGrid[metalGridIterateIdx]);
+            return;
+        }
+    }
+
+    for(size_t viaGridIterateIdx = 0; viaGridIterateIdx < viaGrid.size(); ++viaGridIterateIdx){
+        CellLabel cl = viaGridLabel[viaGridIterateIdx];
+        if(label == cl){
+            updateLabelSkeletonWithSeed(&viaGrid[viaGridIterateIdx]);
+            return;
+        }
+    }
+}
+
+void DiffusionEngine::updateLabelSkeletonWithSeed(DiffusionChamber *seed){
+
+    // assert(seed->type == CellType::MARKED || seed->type == CellType::PREPLACED);
+
+    // Unweighted original graph
+    typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> G;
+    typedef boost::graph_traits<G>::vertex_descriptor V;
+
+    // Weighted terminal graph (weights = hop distances between terminals)
+    typedef boost::adjacency_list<
+        boost::vecS, 
+        boost::vecS, 
+        boost::undirectedS,
+        boost::no_property, 
+        boost::property<boost::edge_weight_t, int>
+    > TG;
+
+    struct MeetInfo{
+        int i;
+        int j;
+        int dist; 
+
+        V u; 
+        V v;
+    }; 
+
+    G g(8);
+    auto add = [&](int u,int v){ boost::add_edge(u,v,g); };
+    add(0,1); add(1,2); add(2,3); add(3,4);
+    add(1,5); add(5,6); add(6,4); add(2,7); add(1, 4);
+
+    // Terminals that must be connected
+    std::vector<int> T = {0,4,7};
+
+    const int n  = static_cast<int>(boost::num_vertices(g));
+    const int tN = static_cast<int>(T.size());
+
+    // ----- Multi-source BFS on G -----
+    std::vector<int> owner(n, -1);
+    std::vector<int> dist (n, std::numeric_limits<int>::max());
+    std::vector<int> pred (n, -1);
+
+    std::queue<V> q;
+    for (int i = 0; i < tN; ++i) {
+        int s = T[i];
+        owner[s] = i;
+        dist[s]  = 0;
+        pred[s]  = s;
+        q.push(s);
+    }
+
+    std::vector<std::vector<MeetInfo>> best(
+        tN, std::vector<MeetInfo>(tN, {-1,-1,INT_MAX,V(),V()}));
+
+    while (!q.empty()) {
+        V u = q.front(); q.pop();
+        for (auto e : boost::make_iterator_range(boost::out_edges(u, g))) {
+            V v = boost::target(e, g);
+            if (owner[v] == -1) {
+                owner[v] = owner[u];
+                dist[v]  = dist[u] + 1;
+                pred[v]  = static_cast<int>(u);
+                q.push(v);
+            } else if (owner[v] != owner[u]) {
+                int i = owner[u], j = owner[v];
+                if (i > j) std::swap(i, j);
+                int d = dist[u] + 1 + dist[v];
+                if (d < best[i][j].dist) best[i][j] = {i,j,d,u,v};
+            }
+        }
+    }
+    for (int k = 0; k < n; ++k) {
+        if (owner[k] >= 0 && pred[k] == -1) {
+            // If k is the seeded terminal of its region, make it its own predecessor.
+            // Otherwise leave as-is (but this shouldn't happen after BFS).
+            pred[k] = (k == T[owner[k]]) ? k : pred[k];
+        }
+    }
+    // ----- Build sparse terminal graph TG -----
+    TG tg(tN);
+    auto tw = boost::get(boost::edge_weight, tg);
+    for (int i = 0; i < tN; ++i) {
+        for (int j = i+1; j < tN; ++j) {
+            if (best[i][j].dist < INT_MAX) {
+                auto ee = boost::add_edge(i, j, tg).first;
+                tw[ee] = best[i][j].dist;
+            }
+        }
+    }
+
+    // ----- MST on TG -----
+    std::vector<boost::graph_traits<TG>::edge_descriptor> tmst;
+    boost::kruskal_minimum_spanning_tree(tg, std::back_inserter(tmst), boost::weight_map(tw));
+
+    // ----- Reconstruct Steiner edges back in G -----
+    auto append_path = [&](int termIdx, V x, std::set<std::pair<int,int>>& Eset){
+    const int root = T[termIdx];
+    // Hard cap to avoid accidental infinite loops on corrupted pred chains
+    int steps = 0, max_steps = n + 5;
+
+    while (static_cast<int>(x) != root) {
+        int p = pred[x];
+
+        // Guard 1: broken chain
+        if (p == -1) {
+        std::cerr << "[warn] broken predecessor chain while climbing to terminal "
+                    << root << " from vertex " << static_cast<int>(x) << "\n";
+        break;
+        }
+
+        // Guard 2: degenerate self-loop (shouldn’t happen but safe to check)
+        if (p == static_cast<int>(x)) {
+        break;
+        }
+
+        int a = std::min<int>(x, p);
+        int b = std::max<int>(x, p);
+        Eset.insert({a,b});
+        x = static_cast<V>(p);
+
+        if (++steps > max_steps) {
+        std::cerr << "[warn] aborting climb due to step cap; check pred[]/owner[]\n";
+        break;
+        }
+    }
+    };
+
+    std::set<std::pair<int,int>> steiner_edges;
+    for (auto ee : tmst) {
+        int i = boost::source(ee, tg);
+        int j = boost::target(ee, tg);
+        const auto& w = best[i][j];
+        append_path(i, w.u, steiner_edges);
+        steiner_edges.insert({std::min<int>(w.u,w.v), std::max<int>(w.u,w.v)});
+        append_path(j, w.v, steiner_edges);
+    }
+
+    // ----- Prune degree-1 non-terminals -----
+    std::set<int> terminals(T.begin(), T.end());
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        std::vector<int> degree(n, 0);
+        for (auto [a,b] : steiner_edges) {
+            degree[a]++; degree[b]++;
+        }
+        std::vector<std::pair<int,int>> to_remove;
+        for (auto [a,b] : steiner_edges) {
+            if (degree[a]==1 && !terminals.count(a)) to_remove.push_back({a,b});
+            else if (degree[b]==1 && !terminals.count(b)) to_remove.push_back({a,b});
+        }
+        if (!to_remove.empty()) {
+            changed = true;
+            for (auto e : to_remove) {
+            int a = std::min(e.first,e.second);
+            int b = std::max(e.first,e.second);
+            steiner_edges.erase({a,b});
+            }
+        }
+    }
+
+    // ----- Output the Steiner skeleton -----
+    std::cout << "Steiner skeleton edges (u - v):\n";
+    for (auto [a,b] : steiner_edges) {
+        std::cout << a << " - " << b << "\n";
+    }
+}
+
 void DiffusionEngine::writeBackToPDN(){
     for(size_t layer = 0; layer < m_metalGridLayers; ++layer){
         for(size_t y = 0; y < m_metalGridHeight; ++y){
@@ -875,7 +1102,6 @@ void DiffusionEngine::importResultsFromFile(const std::string &filePath){
     }
     ifs.close();
 }
-
 
 void DiffusionEngine::runDiffusionTop(double diffusionRate){
 
@@ -2239,13 +2465,140 @@ void DiffusionEngine::postMCFLocalRepair(bool verbose){
         }
     }
 
-    
+    std::vector<SignalType> repairOrder;
+    for(const auto[st, us] : disconnLabels){
+        if(!us.empty()) repairOrder.push_back(st);
+    }
+    std::sort(repairOrder.begin(), repairOrder.end(), [&](SignalType &st1, SignalType &st2){
+        return disconnLabels[st1].size() > disconnLabels[st2].size();
+    });
 
+    for(int repairSignalIdx = 0; repairSignalIdx < repairOrder.size(); ++repairSignalIdx){
+        SignalType repairSt = repairOrder[repairSignalIdx];
+        std::cout << "Repairing " << repairSt << std::endl;
 
+        std::unordered_set<CellLabel> &rpAllLabels = allLabels[repairSt];
+        std::unordered_set<CellLabel> &rpConnLabels = connLabels[repairSt];
+        std::unordered_set<CellLabel> &rpDisConnLabels = disconnLabels[repairSt];
 
+        //: use OBSTACLES, PREPLACED, MARKED
+        std::vector<CellType> metalCellType(metalGrid.size(), CellType::EMPTY);
+        std::vector<DiffusionChamber *> metalParents(metalGrid.size(), nullptr);
+        std::vector<CellLabel> metalOwner(metalGrid.size(), 0);
 
+        std::vector<CellType> viaCellType(viaGrid.size(), CellType::EMPTY);
+        std::vector<DiffusionChamber *> viaParents(viaGrid.size(), nullptr);
+        std::vector<CellLabel> viaOwner(viaGrid.size(), 0);
+
+        DSU dsu(totalIndexes);
+        std::vector<bool> CellLabelActive(true, totalIndexes);
+        std::queue<DiffusionChamber *> q;
+
+        // unite all connectedLabels;
+        std::vector<CellLabel> connLabelsInVector(rpConnLabels.begin(), rpConnLabels.end());
+        if(connLabelsInVector.size() > 2){
+            CellLabel labelSeed = connLabelsInVector[0];
+            for(int j = 1; j < connLabelsInVector.size(); ++j){
+                dsu.unite(labelSeed, connLabelsInVector[j]);
+            }
+        }
+
+        // initialise labels for metal and via data structure
+        for(int i = 0; i < metalGrid.size(); ++i){
+            MetalCell &mc = metalGrid[i];
+            CellLabel mcCellLabel = metalGridLabel[i];
+            if(mcCellLabel == 0) continue; // empty cell
+
+            if(rpAllLabels.count(mcCellLabel)){
+                metalOwner[i] = mcCellLabel;
+                if(rpConnLabels.count(mcCellLabel)) metalCellType[i] = CellType::PREPLACED;
+                else metalCellType[i] = CellType::MARKED;
+            }else{ // is obstacles or other signals
+                metalCellType[i] = CellType::OBSTACLES;
+                metalOwner[i] = CELL_LABEL_EMPTY;
+            }
+        }
+
+        for(int i = 0; i < viaGrid.size(); ++i){
+            ViaCell &vc = viaGrid[i];
+            CellLabel vcCellLabel = viaGridLabel[i];
+            if(vcCellLabel == 0) continue; // empty cell
+
+            if(rpAllLabels.count(vcCellLabel)){
+                viaOwner[i] = vcCellLabel;
+                if(rpConnLabels.count(vcCellLabel)) viaCellType[i] = CellType::PREPLACED;
+                else viaCellType[i] = CellType::MARKED;
+            }else{
+                viaCellType[i] = CellType::OBSTACLES;
+                viaOwner[i] = CELL_LABEL_EMPTY;
+            }
+        }
+
+        auto pushSeedMetal = [&](CellLabel cetreCellLabel, size_t neighborCellIdx, DiffusionChamber *dc){
+            if(neighborCellIdx == SIZE_T_INVALID) return false;
+            CellType ct = metalCellType[neighborCellIdx];
+            if((ct != CellType::PREPLACED) && (ct != CellType::MARKED)) return false;
+            metalCellType[neighborCellIdx] = CellType::CANDIDATE;
+            metalOwner[neighborCellIdx] = cetreCellLabel;
+            q.emplace(dc);
+
+            return true;
+        };
+
+        auto pushSeedVia = [&](CellLabel cetreCellLabel, size_t neighborCellIdx, DiffusionChamber *dc){
+            if(neighborCellIdx == SIZE_T_INVALID) return false;
+            CellType ct = viaCellType[neighborCellIdx];
+            if((ct != CellType::PREPLACED) && (ct != CellType::MARKED)) return false;
+            viaCellType[neighborCellIdx] = CellType::CANDIDATE;
+            viaOwner[neighborCellIdx] = cetreCellLabel;
+            q.emplace(dc);
+
+            return true;
+        };
+
+        // push seeds (which is the neighbor of the border)
+        for(int i = 0; i < metalGrid.size(); ++i){
+            if(metalCellType[i] != CellType::EMPTY) continue;
+            // check if any of it's neighbor is in the labels set
+            MetalCell &mc = metalGrid[i];
+            CellLabel mcCellLabel = metalGridLabel[i];
+
+            if(pushSeedMetal(mcCellLabel, mc.northCellIdx, mc.northCell)) continue;
+            if(pushSeedMetal(mcCellLabel, mc.southCellIdx, mc.southCell)) continue;
+            if(pushSeedMetal(mcCellLabel, mc.eastCellIdx, mc.eastCell)) continue;
+            if(pushSeedMetal(mcCellLabel, mc.westCellIdx, mc.westCell)) continue;
+
+            if(pushSeedVia(mcCellLabel, mc.upCellIdx, mc.upCell)) continue;
+            if(pushSeedVia(mcCellLabel, mc.downCellIdx, mc.downCell)) continue;
+        }
+
+        for(int i = 0; i < viaGrid.size(); ++i){
+            if(viaCellType[i] != CellType::EMPTY) continue;
+            // check if any of it's neighbor is in the labels set
+            ViaCell &vc = viaGrid[i];
+            CellLabel vcCellLabel = viaGridLabel[i];
+
+            if(pushSeedVia(vcCellLabel, vc.upLLCellIdx, vc.upLLCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.upULCellIdx, vc.upULCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.upLRCellIdx, vc.upLRCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.upURCellIdx, vc.upURCell)) continue;
+
+            if(pushSeedVia(vcCellLabel, vc.downLLCellIdx, vc.downLLCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.downULCellIdx, vc.downULCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.downLRCellIdx, vc.downLRCell)) continue;
+            if(pushSeedVia(vcCellLabel, vc.downURCellIdx, vc.downURCell)) continue;
+        }
+
+        std::cout << "checking pusing seeds: " << std::endl;
+
+        std::cout << q.size() << std::endl;
+        DiffusionChamber *fdc = q.front();
+        std::cout << fdc->metalViaType << " " << fdc->canvasLayer << " " << fdc->canvasX << " " << fdc->canvasY << std::endl;
         
 
+        
+    }
+    
 }
 
 void DiffusionEngine::initialiseFiller(){

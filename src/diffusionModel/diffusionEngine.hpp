@@ -66,9 +66,11 @@ public:
 
     std::vector<MetalCell> metalGrid;
     std::vector<CellLabel> metalGridLabel;
-
+    std::vector<bool> metalIsSkeleton;
+    
     std::vector<ViaCell> viaGrid;
     std::vector<CellLabel> viaGridLabel;
+    std::vector<bool> viaIsSkeleton;
 
     // MCF related attributes
     double normalMetalEdgeLB = 0.0;
@@ -161,6 +163,12 @@ public:
     void fillEnclosedRegions();
     void markHalfOccupiedMetalsAndPins();
     void linkNeighbors();
+
+    void updateAllSkeletons();
+    void updateLabelSkeleton(CellLabel label);
+    // not yet complete
+    void updateLabelSkeletonWithSeed(DiffusionChamber *seed);
+
 
     void writeBackToPDN();
     void exportResultsToFile(const std::string &filePath);

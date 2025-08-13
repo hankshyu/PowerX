@@ -75,13 +75,13 @@ std::istream& operator>>(std::istream& is, CellType& ct) {
 std::ostream& operator<<(std::ostream& os, DiffusionChamberType dct){
         switch (dct){
         case DiffusionChamberType::UNKNOWN:
-            return os << "DiffusionChamberType::EMPTY";
+            return os << "DiffusionChamberType::UNKNOWN";
             break;
         case DiffusionChamberType::METAL:
-            return os << "DiffusionChamberType::OBSTACLES";
+            return os << "DiffusionChamberType::METAL";
             break;
         case DiffusionChamberType::VIA:
-            return os << "DiffusionChamberType::PREPLACED";
+            return os << "DiffusionChamberType::VIA";
             break;
         default:
             return os;

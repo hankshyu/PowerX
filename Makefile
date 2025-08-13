@@ -48,7 +48,7 @@ INF_OBJS =	isotropy.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPo
 	
 PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o objectArray.o c4Bump.o microBump.o \
 			powerDistributionNetwork.o \
-			voronoiPDNGen.o
+			dsu.o voronoiPDNGen.o
 
 PRESSUREMODEL_OBJS = 	fpoint.o fbox.o fpolygon.o fmultipolygon.o \
 						viaBody.o softBody.o \
