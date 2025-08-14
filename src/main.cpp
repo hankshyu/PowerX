@@ -27,7 +27,7 @@ void printExitBanner();
 
 int main(int argc, char **argv){
 
-    // PetscInitialize(&argc, &argv, NULL, NULL);
+    PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
         "Mark PP Pads Canvas",
@@ -37,10 +37,8 @@ int main(int argc, char **argv){
         
         "Init MCF Solver",
         "Run MCF Solver",
-        "Post-MCF Repair Check",
         "Post-MCF Repair",
         
-
         "Init Filler",
         "Init SignalTrees",
         "Initial Evaluation"
@@ -82,35 +80,25 @@ int main(int argc, char **argv){
     timeProfiler.pauseTimer(timeSpan[6]);
     
     timeProfiler.startTimer(timeSpan[7]);
-    dse.findPostMCFLocalFlaws(true);
-    timeProfiler.pauseTimer(timeSpan[7]);
-
-    timeProfiler.startTimer(timeSpan[8]);
     dse.postMCFLocalRepairTop(true);
-    timeProfiler.pauseTimer(timeSpan[8]);
-    std::cout << "complete fixing!!" << std::endl;
-    timeProfiler.startTimer(timeSpan[7]);
-    dse.findPostMCFLocalFlaws(true);
     timeProfiler.pauseTimer(timeSpan[7]);
-
-    dse.updateLabelSkeleton(2);
-
+    
     // dse.exportResultsToFile("outputs/result.txt");
     // dse.importResultsFromFile("outputs/result.txt");
 
 
-    // timeProfiler.startTimer(timeSpan[7]);
-    // dse.initialiseFiller();
-    // timeProfiler.pauseTimer(timeSpan[7]);
+    timeProfiler.startTimer(timeSpan[8]);
+    dse.initialiseFiller();
+    timeProfiler.pauseTimer(timeSpan[8]);
     // dse.checkFillerInitialisation();
 
-    // timeProfiler.startTimer(timeSpan[8]);
-    // dse.initialiseSignalTrees();
-    // timeProfiler.pauseTimer(timeSpan[8]);
+    timeProfiler.startTimer(timeSpan[9]);
+    dse.initialiseSignalTrees();
+    timeProfiler.pauseTimer(timeSpan[9]);
 
-    // timeProfiler.startTimer(timeSpan[9]);
-    // dse.runInitialEvaluation();
-    // timeProfiler.pauseTimer(timeSpan[9]);
+    timeProfiler.startTimer(timeSpan[10]);
+    dse.runInitialEvaluation();
+    timeProfiler.pauseTimer(timeSpan[10]);
     
     dse.writeBackToPDN();
     

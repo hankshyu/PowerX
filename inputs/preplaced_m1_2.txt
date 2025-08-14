@@ -119,7 +119,6 @@ Cord(50, 70)
 
 SIGNAL: SIGNALTYPE::POWER_3
 Cord(35, 20)
-Cord(47, 22)
 Cord(59, 28)
 Cord(65, 27)
 Cord(67, 25)

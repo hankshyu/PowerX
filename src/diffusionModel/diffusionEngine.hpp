@@ -189,10 +189,15 @@ public:
     /* These are functions for MCF (Multi-commodity Flow), outputLevel = 0(silent) 1(verbose) */
     void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
-    void findPostMCFLocalFlaws(bool verbose = false);
+    
     void postMCFLocalRepairTop(bool verbose = false);
-    void postMCFLocalRepairSignal(SignalType repairSt, bool verbose = false);
-    void postMCFForceRepairSignal(SignalType repairSt, bool verbose = false);
+    
+    void findPostMCFLocalFlaws(std::vector<SignalType> &repairLocalDisconnectSignals);
+
+    void reportPostMCFLocalFlaws();
+    
+    void postMCFLocalRepairSignal(SignalType repairSt);
+    void postMCFForceRepairSignal(SignalType repairSt);
 
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();

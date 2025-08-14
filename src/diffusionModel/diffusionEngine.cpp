@@ -2513,9 +2513,66 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
     }
 }
 
-void DiffusionEngine::findPostMCFLocalFlaws(bool verbose){
+void DiffusionEngine::findPostMCFLocalFlaws(std::vector<SignalType> &repairLocalDisconnectSignals){
+    
     int totalIndexes = initialiseIndexing();
-    if(verbose) std::cout << "Multi-Commodity Flow Result Report: " << std::endl;
+
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> allLabels;
+
+    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){ 
+        MetalCell &mc = metalGrid[mcIdx];
+        if((mc.type != CellType::MARKED) && (mc.type != CellType::PREPLACED)) continue;
+
+        SignalType mcSigType = mc.signal;
+        
+        CellLabel mcLabel = metalGridLabel[mcIdx];
+        allLabels[mcSigType].insert(mcLabel);
+    }
+
+    for(size_t vcIdx = 0; vcIdx < viaGrid.size(); ++ vcIdx){
+        ViaCell &vc = viaGrid[vcIdx];
+        if((vc.type != CellType::MARKED) && (vc.type != CellType::PREPLACED)) continue;
+
+        SignalType vcSigType = vc.signal;
+        CellLabel vcLabel = viaGridLabel[vcIdx];
+        allLabels[vcSigType].insert(vcLabel);        
+    }
+
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> disconnLabels(allLabels);
+    
+    for(const auto &[st, clusters] : c4.signalTypeToAllClusters){
+        for(C4PinCluster *c4pc : clusters){
+            Cord &rep = c4pc->representation;
+            size_t cellIdx = calMetalIdx(m_c4ConnectedMetalLayerIdx, rep.y(), rep.x());
+            CellLabel cl = metalGridLabel[cellIdx];
+
+            disconnLabels[st].erase(cl);
+        }
+    }
+
+    std::unordered_map<SignalType, std::unordered_set<CellLabel>> connLabels(allLabels);
+    for(const auto&[st, _] : allLabels){
+        std::unordered_set<CellLabel> &stCL = connLabels[st];
+        for (auto it = stCL.begin(); it != stCL.end(); ) {
+            if (disconnLabels[st].count(*it)) it = connLabels[st].erase(it);
+            else ++it;
+        }
+    }
+
+    repairLocalDisconnectSignals.clear();
+
+    for(const auto[st, us] : disconnLabels){
+        if(!us.empty()) repairLocalDisconnectSignals.push_back(st);
+    }
+    std::sort(repairLocalDisconnectSignals.begin(), repairLocalDisconnectSignals.end(), [&](SignalType &st1, SignalType &st2){
+        return disconnLabels[st1].size() > disconnLabels[st2].size();
+    });
+}
+
+void DiffusionEngine::reportPostMCFLocalFlaws(){
+    
+    int totalIndexes = initialiseIndexing();
+    std::cout << "Multi-Commodity Flow Result Report: " << std::endl;
 
     std::unordered_map<SignalType, std::unordered_set<CellLabel>> allLabels;
     std::vector<std::vector<DiffusionChamber *>> labelsToChambers(totalIndexes);
@@ -2563,64 +2620,79 @@ void DiffusionEngine::findPostMCFLocalFlaws(bool verbose){
         }
     }
 
-    for(const auto[st, us] : disconnLabels){
-        if(!us.empty()) repairLocalDisconnectSignals.push_back(st);
-    }
-    std::sort(repairLocalDisconnectSignals.begin(), repairLocalDisconnectSignals.end(), [&](SignalType &st1, SignalType &st2){
-        return disconnLabels[st1].size() > disconnLabels[st2].size();
-    });
+    bool allLegal = true;
+    for(const auto&[st, us] : allLabels){
+        if(disconnLabels[st].empty()) continue;
+        else allLegal = false;
 
+        std::cout << st << " has labels: " << std::endl;
+        std::cout << "Total Lables(" << us.size() << "): ";
 
-    if(verbose){
-        for(const auto&[st, us] : allLabels){
-            if(disconnLabels[st].empty()) continue;
+        for(const CellLabel &cl : us) std::cout << cl << ", ";
+        std::cout << std::endl;
+        
+        std::cout << "Connected Labels(" << connLabels[st].size() << "): ";
+        for(const CellLabel &cl : connLabels[st]) std::cout << cl << ", ";
+        std::cout << std::endl;
+        
+        std::cout << "Disconnected Labels(" << disconnLabels[st].size() << "): ";
+        for(const CellLabel &cl : disconnLabels[st]) std::cout << cl << ", ";
+        std::cout << std::endl;
 
-            std::cout << st << " has labels: " << std::endl;
-            std::cout << "Total Lables(" << us.size() << "): ";
-
-            for(const CellLabel &cl : us) std::cout << cl << ", ";
-            std::cout << std::endl;
-            
-            std::cout << "Connected Labels(" << connLabels[st].size() << "): ";
-            for(const CellLabel &cl : connLabels[st]) std::cout << cl << ", ";
-            std::cout << std::endl;
-            
-            std::cout << "Disconnected Labels(" << disconnLabels[st].size() << "): ";
-            for(const CellLabel &cl : disconnLabels[st]) std::cout << cl << ", ";
-            std::cout << std::endl;
-
-            for(const CellLabel &cl : us){
-                std::unordered_set<int> metalLayers;
-                std::unordered_set<int> viaLayers;
-                for(DiffusionChamber *dc : labelsToChambers[cl]){
-                    if(dc->metalViaType == DiffusionChamberType::METAL){
-                        metalLayers.insert(dc->canvasLayer);
-                    }else{
-                        viaLayers.insert(dc->canvasLayer);
-                    }
+        for(const CellLabel &cl : us){
+            std::unordered_set<int> metalLayers;
+            std::unordered_set<int> viaLayers;
+            for(DiffusionChamber *dc : labelsToChambers[cl]){
+                if(dc->metalViaType == DiffusionChamberType::METAL){
+                    metalLayers.insert(dc->canvasLayer);
+                }else{
+                    viaLayers.insert(dc->canvasLayer);
                 }
-                std::cout << "Cl = " << cl << "with count: " << labelsToChambers[cl].size() << ", ";
-                std::cout << " on layer M:";
-                for(int l : metalLayers) std::cout << l << ", ";
-                std::cout << " V: ";
-                for(int l : viaLayers) std::cout << l << "->" << l+1 << ", ";
-                std::cout << std::endl;
             }
-            std::cout << std::endl << std::endl;
+            std::cout << "Cl = " << cl << "with count: " << labelsToChambers[cl].size() << ", ";
+            std::cout << " on layer M:";
+            for(int l : metalLayers) std::cout << l << ", ";
+            std::cout << " V: ";
+            for(int l : viaLayers) std::cout << l << "->" << l+1 << ", ";
+            std::cout << std::endl;
         }
+        std::cout << std::endl << std::endl;
     }
+    if(allLegal) std::cout << "All Signals connect and Legal !!" << std::endl;
 
 }
 
 void DiffusionEngine::postMCFLocalRepairTop(bool verbose){
+    if(verbose) std::cout << "Post MCF Local Repair" << std::endl;
+    
+    std::vector<SignalType> repairLocalDisconnectSignals;
+    findPostMCFLocalFlaws(repairLocalDisconnectSignals);
     for(size_t repairIdx = 0; repairIdx < repairLocalDisconnectSignals.size(); ++repairIdx){
-        postMCFLocalRepairSignal(repairLocalDisconnectSignals[repairIdx], verbose);
+        if(verbose) std::cout << "Soft Repairing " << repairLocalDisconnectSignals[repairIdx] << std::endl;
+        postMCFLocalRepairSignal(repairLocalDisconnectSignals[repairIdx]);
+        // if(verbose) reportPostMCFLocalFlaws();
     }
+    
+    findPostMCFLocalFlaws(repairLocalDisconnectSignals);
+    while(!repairLocalDisconnectSignals.empty()){
+        for(size_t repairIdx = 0; repairIdx < repairLocalDisconnectSignals.size(); ++repairIdx){
+            if(verbose) std::cout << "Force Repairing " << repairLocalDisconnectSignals[repairIdx] << std::endl;
+            postMCFForceRepairSignal(repairLocalDisconnectSignals[repairIdx]);
+            findPostMCFLocalFlaws(repairLocalDisconnectSignals);
+            for(size_t repairIdx = 0; repairIdx < repairLocalDisconnectSignals.size(); ++repairIdx){
+                if(verbose) std::cout << "Soft Repairing " << repairLocalDisconnectSignals[repairIdx] << std::endl;
+                postMCFLocalRepairSignal(repairLocalDisconnectSignals[repairIdx]);
+            }
+        }
+        
+        findPostMCFLocalFlaws(repairLocalDisconnectSignals);
+        // if(verbose) reportPostMCFLocalFlaws();
+    }
+    if(verbose) std::cout << "Fixing Complete! " << std::endl;
+    if(verbose) reportPostMCFLocalFlaws();
 }
 
-void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt, bool verbose){
-
-    if(verbose) std::cout << "Local Repairing " << repairSt << std::endl;
+void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt){
 
     int totalIndexes = initialiseIndexing();
     std::unordered_set<CellLabel> allLabels;
@@ -2687,6 +2759,8 @@ void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt, bool verbose
             disconnLabels.erase(cl);
     }
     
+    if(disconnLabels.empty()) return;
+
     connLabels = allLabels;
     for(auto it = connLabels.begin(); it != connLabels.end();){
         if (disconnLabels.count(*it)) it = connLabels.erase(it);
@@ -2957,8 +3031,343 @@ void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt, bool verbose
   
 }
 
-void DiffusionEngine::postMCFForceRepairSignal(SignalType repairSt, bool berbose){
+void DiffusionEngine::postMCFForceRepairSignal(SignalType repairSt){    
+    updateAllSkeletons();
+
+    int totalIndexes = initialiseIndexing();
+    std::unordered_set<CellLabel> allLabels;
+    std::unordered_set<CellLabel> connLabels;
+    std::unordered_set<CellLabel> disconnLabels;
+
+    std::vector<CellLabel> colorToCellLabel = {CELL_LABEL_EMPTY}; // 0 is for supernode
+    std::unordered_map<CellLabel, int> CellLabelToColor;
+
+    std::vector<bool> metalIsEmpty(metalGrid.size(), true);
+    std::vector<bool> viaIsEmpty(viaGrid.size(), true);
+
+    std::vector<int> metalOwner(metalGrid.size(), -1); // first-claimant color id (0..K)
+    std::vector<int> viaOwner(viaGrid.size(), -1); // first-claimant color id (0..K)
+
+    std::vector<DiffusionChamber *> metalParent(metalGrid.size(), nullptr);
+    std::vector<DiffusionChamber *> viaParent(viaGrid.size(), nullptr);
+
+    // std::queue<DiffusionChamber *> q;
+    std::queue<std::pair<DiffusionChamber *, int>> q;
+    std::unordered_set<DiffusionChamber *> qdc;
+
+    std::unordered_map<DiffusionChamber *, DiffusionChamber*> prevMap;
+
+
+
+    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){ 
+        MetalCell &mc = metalGrid[mcIdx];
+        CellType mcCellType = mc.type;
+
+        if(mcCellType == CellType::OBSTACLES){
+            metalIsEmpty[mcIdx] = false;
+        }else if((mcCellType == CellType::MARKED) || (mcCellType == CellType::PREPLACED)){
+            // if(metalIsSkeleton[mcIdx]) metalIsEmpty[mcIdx] = false;
+            
+            if(mc.signal == repairSt){
+                CellLabel mcLabel = metalGridLabel[mcIdx];
+                allLabels.insert(mcLabel);
+            }
+        }
+    }
+
+    for(size_t vcIdx = 0; vcIdx < viaGrid.size(); ++ vcIdx){
+        ViaCell &vc = viaGrid[vcIdx];
+        CellType vcCellType = vc.type;
+
+        if(vcCellType == CellType::OBSTACLES){
+            viaIsEmpty[vcIdx] = false;  
+        }else if((vcCellType == CellType::MARKED) || (vcCellType == CellType::PREPLACED)){
+            // if(viaIsSkeleton[vcIdx]) viaIsEmpty[vcIdx] = false;  
+            if(vc.signal == repairSt){
+                CellLabel vcLabel = viaGridLabel[vcIdx];
+                allLabels.insert(vcLabel);
+            }
+        }
+    }
+
+    disconnLabels = allLabels;
+    assert(c4.signalTypeToAllClusters.count(repairSt));
+    for(C4PinCluster *c4pc : c4.signalTypeToAllClusters[repairSt]){
+            Cord &rep = c4pc->representation;
+            size_t cellIdx = calMetalIdx(m_c4ConnectedMetalLayerIdx, rep.y(), rep.x());
+            CellLabel cl = metalGridLabel[cellIdx];
+
+            disconnLabels.erase(cl);
+    }
+    if(disconnLabels.empty()) return;
     
+    connLabels = allLabels;
+    for(auto it = connLabels.begin(); it != connLabels.end();){
+        if (disconnLabels.count(*it)) it = connLabels.erase(it);
+        else ++it;
+    }
+
+    int totalLabelCount = allLabels.size();
+
+    for(const CellLabel &cl : connLabels){
+        CellLabelToColor[cl] = colorToCellLabel.size();
+        colorToCellLabel.push_back(cl);
+    }
+    for(const CellLabel &cl : disconnLabels){
+        CellLabelToColor[cl] = colorToCellLabel.size();
+        colorToCellLabel.push_back(cl);
+    }
+
+
+    DSU dsu(colorToCellLabel.size());
+    for(const CellLabel &cl : connLabels){
+        dsu.unite(0, CellLabelToColor[cl]); // unite with super node;
+    }
+
+    // seeding process
+    auto pushSeedMetal = [&](int color, size_t neighborCellIdx, DiffusionChamber *dc){
+        if(neighborCellIdx == SIZE_T_INVALID) return false;
+        if(!metalIsEmpty[neighborCellIdx]) return false;
+
+        q.emplace(dc, color);
+        qdc.insert(dc);
+        prevMap[dc] = nullptr;
+
+        return true;
+    };
+
+    auto pushSeedVia = [&](int color, size_t neighborCellIdx, DiffusionChamber *dc){
+        if(neighborCellIdx == SIZE_T_INVALID) return false;
+        if(!viaIsEmpty[neighborCellIdx]) return false;
+
+        q.emplace(dc, color);
+        qdc.insert(dc);
+        prevMap[dc] = nullptr;
+
+        return true;
+    };
+
+    for(size_t i = 0; i < metalGrid.size(); ++i){
+        if(!metalIsEmpty[i]){
+            MetalCell &mc = metalGrid[i];
+            CellLabel mcCellLabel = metalGridLabel[i];
+            if(!allLabels.count(mcCellLabel)) continue;
+            
+            // check if any of it's neighbor is in the labels set
+            int color = CellLabelToColor[mcCellLabel];
+    
+            if(pushSeedMetal(color, mc.northCellIdx, mc.northCell)) continue;
+            if(pushSeedMetal(color, mc.southCellIdx, mc.southCell)) continue;
+            if(pushSeedMetal(color, mc.eastCellIdx, mc.eastCell)) continue;
+            if(pushSeedMetal(color, mc.westCellIdx, mc.westCell)) continue;
+    
+            if(pushSeedVia(color, mc.upCellIdx, mc.upCell)) continue;
+            if(pushSeedVia(color, mc.downCellIdx, mc.downCell)) continue;
+        }
+    }
+
+    for(size_t i = 0; i < viaGrid.size(); ++i){
+        if(!viaIsEmpty[i]){
+            ViaCell &vc = viaGrid[i];
+            CellLabel vcCellLabel = viaGridLabel[i];
+            if(!allLabels.count(vcCellLabel)) continue;
+
+            // check if any of it's neighbor is in the labels set
+            int color = CellLabelToColor[vcCellLabel];
+
+            if(pushSeedMetal(color, vc.upLLCellIdx, vc.upLLCell)) continue;
+            if(pushSeedMetal(color, vc.upULCellIdx, vc.upULCell)) continue;
+            if(pushSeedMetal(color, vc.upLRCellIdx, vc.upLRCell)) continue;
+            if(pushSeedMetal(color, vc.upURCellIdx, vc.upURCell)) continue;
+
+            if(pushSeedMetal(color, vc.downLLCellIdx, vc.downLLCell)) continue;
+            if(pushSeedMetal(color, vc.downULCellIdx, vc.downULCell)) continue;
+            if(pushSeedMetal(color, vc.downLRCellIdx, vc.downLRCell)) continue;
+            if(pushSeedMetal(color, vc.downURCellIdx, vc.downURCell)) continue;
+        }
+    }
+
+
+    auto bfsPushNeighbor = [&](DiffusionChamber *centreCell, DiffusionChamber *neighborCell, int ru , std::vector<bool> &metalOrViaIsEmpty){
+        if((neighborCell != nullptr) && (metalOrViaIsEmpty[neighborCell->index]) && (!qdc.count(neighborCell))){
+            prevMap[neighborCell] = centreCell;
+            q.emplace(neighborCell, ru);
+            qdc.insert(neighborCell);
+
+        }
+    };
+
+    auto markBridgePath = [&](DiffusionChamber *start, int repSide, std::vector<DiffusionChamber *> &freshBridges){
+        if(start == nullptr) return;
+
+        const CellLabel paintLabel = colorToCellLabel[repSide];
+        DiffusionChamber *cur = start;
+        while(cur != nullptr){
+            size_t cellIndex = cur->index;
+
+            if(cur->metalViaType == DiffusionChamberType::METAL){
+                if(metalGridLabel[cellIndex] != 0) break;
+                MetalCell &mc = metalGrid[cellIndex];
+                mc.type = CellType::MARKED;
+                mc.signal = repairSt;
+
+                metalGridLabel[cellIndex] = paintLabel;
+                metalOwner[cellIndex] = repSide;
+                metalIsEmpty[cellIndex] = false;
+                freshBridges.push_back(cur);
+                cur = metalParent[cellIndex];
+                
+            }else{ // DiffusionChamberType::VIA
+                if(viaGridLabel[cellIndex] != 0) break;
+                ViaCell &vc = viaGrid[cellIndex];
+                vc.type = CellType::MARKED;
+                vc.signal = repairSt;
+                viaGridLabel[cellIndex] = paintLabel;
+                viaOwner[cellIndex] = repSide;
+                viaIsEmpty[cellIndex] = false;
+                freshBridges.push_back(cur);
+                cur = viaParent[cellIndex];
+            }
+        }
+    };
+
+    auto seedNeighborsOfMakredCells = [&](int colorId, std::vector<DiffusionChamber *> &freshBridges){
+        
+        auto seedMetalCell = [&](MetalCell *mc){
+            if(mc == nullptr) return;
+            int mcIdx = mc->index;
+            if(metalIsEmpty[mcIdx] && (metalOwner[mcIdx] == -1) && (!qdc.count(mc))){
+                prevMap[mc] = nullptr;
+                metalOwner[mcIdx] = colorId;
+                q.emplace(mc, colorId);
+                qdc.insert(mc);
+            }
+        };
+
+        auto seedViaCell = [&](ViaCell *vc){
+            if(vc == nullptr) return;
+            int vcIdx = vc->index;
+            if(viaIsEmpty[vcIdx] && (viaOwner[vcIdx] == -1) && (!qdc.count(vc))){
+                prevMap[vc] = nullptr;
+                viaOwner[vcIdx] = colorId;
+                q.emplace(vc, colorId);
+                qdc.insert(vc);
+            }
+        };
+
+        for(DiffusionChamber *dc : freshBridges){
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+                seedMetalCell(mc->northCell);
+                seedMetalCell(mc->southCell);
+                seedMetalCell(mc->eastCell);
+                seedMetalCell(mc->westCell);
+
+                seedViaCell(mc->upCell);
+                seedViaCell(mc->downCell);
+            }else{ // DiffusionChamberType::VIA
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+                seedMetalCell(vc->upLLCell);
+                seedMetalCell(vc->upULCell);
+                seedMetalCell(vc->upLRCell);
+                seedMetalCell(vc->upURCell);
+
+                seedMetalCell(vc->downLLCell);
+                seedMetalCell(vc->downULCell);
+                seedMetalCell(vc->downLRCell);
+                seedMetalCell(vc->downURCell);
+            }
+        }
+    };
+
+    while(!q.empty()){
+        auto [dc, color] = q.front();
+        q.pop();
+        qdc.erase(dc);
+
+        int ru = dsu.find(color);
+        
+        if(dc->metalViaType == DiffusionChamberType::METAL){
+            MetalCell *mc = static_cast<MetalCell *>(dc);
+            size_t metalIdx = dc->index;
+            
+            if(metalOwner[metalIdx] == -1){
+                metalOwner[metalIdx] = ru;
+                
+                metalParent[metalIdx] = prevMap[dc];
+
+                bfsPushNeighbor(mc, mc->northCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->southCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->eastCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->westCell, ru, metalIsEmpty);
+                
+                bfsPushNeighbor(mc, mc->upCell, ru, viaIsEmpty);
+                bfsPushNeighbor(mc, mc->downCell, ru, viaIsEmpty);
+
+            }else{
+                // This cell `u` is already owned by another BFS wave.
+                // That means the current wave (rep=ru) has met an existing claimed cell.
+                int rv = dsu.find(metalOwner[metalIdx]);
+                if(ru == rv) continue;
+
+                // process meet event shortest bridge between ru and rv
+                std::vector<DiffusionChamber *> freshBridges;
+                markBridgePath(dc, rv, freshBridges);
+                markBridgePath(prevMap[dc], ru, freshBridges);
+                dsu.unite(ru, rv);
+
+                int newRep = dsu.find(ru);
+                int super  = dsu.find(0);
+                
+                int seedColor;
+                if (newRep == super) {
+                    if (ru == super) {
+                        seedColor = rv;  // choose the non-super side we just merged
+                    } else {
+                        seedColor = ru;
+                    }
+                } else {
+                    seedColor = newRep;
+                }
+
+                seedNeighborsOfMakredCells(seedColor, freshBridges);
+                
+            }
+
+        }else{ // DiffusionChamberType::VIA
+            ViaCell *vc = static_cast<ViaCell *>(dc);
+            size_t viaIdx = dc->index;
+
+            if(viaOwner[viaIdx] == -1){
+                viaOwner[viaIdx] = ru;
+                viaParent[viaIdx] = prevMap[dc];
+
+                bfsPushNeighbor(vc, vc->upLLCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upULCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upLRCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upURCell, ru, metalIsEmpty);
+                
+                bfsPushNeighbor(vc, vc->downLLCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downULCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downLRCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downURCell, ru, metalIsEmpty);
+
+            }else{
+                int rv = dsu.find(viaOwner[viaIdx]);
+                if(ru == rv) continue;
+
+                std::vector<DiffusionChamber *> freshBridges;
+                markBridgePath(dc, rv, freshBridges);
+                markBridgePath(prevMap[dc], ru, freshBridges);
+                dsu.unite(ru, rv);
+
+                int newRep = dsu.find(ru);
+                
+                if(newRep == dsu.find(0)) seedNeighborsOfMakredCells(0, freshBridges);
+                else seedNeighborsOfMakredCells(newRep, freshBridges);
+            }
+        }
+    }
 }
 
 void DiffusionEngine::initialiseFiller(){
@@ -3545,23 +3954,23 @@ void DiffusionEngine::runInitialEvaluation(){
             PetscPrintf(PETSC_COMM_WORLD, "\n");
         }
 
-        // for (PetscInt k = 0; k < expSize; ++k) {
-        //     PetscInt src = 0;
-        //     PetscInt sink = k+1;
+        for (PetscInt k = 0; k < expSize; ++k) {
+            PetscInt src = 0;
+            PetscInt sink = k+1;
 
-        //     Vec Vk;
-        //     VecCreateSeq(PETSC_COMM_SELF, nSize, &Vk);
-        //     MatGetColumnVector(V_n, Vk, k);
+            Vec Vk;
+            VecCreateSeq(PETSC_COMM_SELF, nSize, &Vk);
+            MatGetColumnVector(V_n, Vk, k);
 
-        //     PetscScalar v_src, v_sink;
-        //     VecGetValues(Vk, 1, &src, &v_src);
-        //     VecGetValues(Vk, 1, &sink, &v_sink);
+            PetscScalar v_src, v_sink;
+            VecGetValues(Vk, 1, &src, &v_src);
+            VecGetValues(Vk, 1, &sink, &v_sink);
 
-        //     double R_k = PetscRealPart(v_src - v_sink);
-        //     std::cout << st << " ";
-        //     PetscPrintf(PETSC_COMM_WORLD, "R_0_%d = %.6f ohms\n", (int)sink, R_k);
-        //     VecDestroy(&Vk);
-        // }
+            double R_k = PetscRealPart(v_src - v_sink);
+            std::cout << st << " ";
+            PetscPrintf(PETSC_COMM_WORLD, "R_0_%d = %.6f ohms\n", (int)sink, R_k);
+            VecDestroy(&Vk);
+        }
     }
 }
 
