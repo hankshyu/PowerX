@@ -26,6 +26,7 @@ void printWelcomeBanner();
 void printExitBanner();
 
 int main(int argc, char **argv){
+
     // PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
@@ -36,7 +37,8 @@ int main(int argc, char **argv){
         
         "Init MCF Solver",
         "Run MCF Solver",
-        "Post MCF Local Repair",
+        "Post-MCF Repair Check",
+        "Post-MCF Repair",
         
 
         "Init Filler",
@@ -80,11 +82,20 @@ int main(int argc, char **argv){
     timeProfiler.pauseTimer(timeSpan[6]);
     
     timeProfiler.startTimer(timeSpan[7]);
-    dse.postMCFLocalRepair(true);
+    dse.findPostMCFLocalFlaws(true);
     timeProfiler.pauseTimer(timeSpan[7]);
 
-    dse.exportResultsToFile("outputs/result.txt");
+    timeProfiler.startTimer(timeSpan[8]);
+    dse.postMCFLocalRepairTop(true);
+    timeProfiler.pauseTimer(timeSpan[8]);
+    std::cout << "complete fixing!!" << std::endl;
+    timeProfiler.startTimer(timeSpan[7]);
+    dse.findPostMCFLocalFlaws(true);
+    timeProfiler.pauseTimer(timeSpan[7]);
 
+    dse.updateLabelSkeleton(2);
+
+    // dse.exportResultsToFile("outputs/result.txt");
     // dse.importResultsFromFile("outputs/result.txt");
 
 
@@ -111,7 +122,6 @@ int main(int argc, char **argv){
     visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
     visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
     visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
-
 
 
     // VoronoiPDNGen vpg(FILEPATH_BUMPS);

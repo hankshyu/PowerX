@@ -118,6 +118,8 @@ public:
     std::unordered_map<SignalType, std::vector<FlowNode *>> mustTouchNodes;
 
     std::vector<FlowEdge *> flowEdgeOwnership;
+    
+    std::vector<SignalType> repairLocalDisconnectSignals;
 
     /* Filler related attributes */
     std::unordered_set<DiffusionChamber *> allPreplacedNodes;
@@ -187,7 +189,10 @@ public:
     /* These are functions for MCF (Multi-commodity Flow), outputLevel = 0(silent) 1(verbose) */
     void initialiseMCFSolver();
     void runMCFSolver(std::string logFile, int outputLevel);
-    void postMCFLocalRepair(bool verbose = false);
+    void findPostMCFLocalFlaws(bool verbose = false);
+    void postMCFLocalRepairTop(bool verbose = false);
+    void postMCFLocalRepairSignal(SignalType repairSt, bool verbose = false);
+    void postMCFForceRepairSignal(SignalType repairSt, bool verbose = false);
 
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();

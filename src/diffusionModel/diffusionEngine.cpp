@@ -832,6 +832,10 @@ void DiffusionEngine::linkNeighbors(){
 
 void DiffusionEngine::updateAllSkeletons(){
     int totalIndexes = initialiseIndexing();
+
+    this->metalIsSkeleton = std::vector<bool>(metalGrid.size(), false);
+    this->viaIsSkeleton = std::vector<bool>(viaGrid.size(), false);
+
     std::vector<bool>indexUpdated(totalIndexes, false);
     indexUpdated[0] = true;
 
@@ -881,9 +885,67 @@ void DiffusionEngine::updateLabelSkeleton(CellLabel label){
 }
 
 void DiffusionEngine::updateLabelSkeletonWithSeed(DiffusionChamber *seed){
+    
+    if(seed == nullptr) return;
 
-    // assert(seed->type == CellType::MARKED || seed->type == CellType::PREPLACED);
+    CellLabel seedCellLabel;
+    if(seed->metalViaType == DiffusionChamberType::METAL){
+        seedCellLabel = metalGridLabel[seed->index];
+    }else{ // DiffusionChamberType::VIA
+        seedCellLabel = viaGridLabel[seed->index];
+    }
+    if(seedCellLabel == 0) return; // empty
 
+    std::vector<DiffusionChamber *> idxToDC;
+    std::unordered_map<DiffusionChamber *, int> dcToIdx;
+
+    std::queue<DiffusionChamber *> bfsq;
+    std::unordered_set<DiffusionChamber *>bfsqVisisted;
+
+    auto bfsInsert = [&](DiffusionChamber *dc, const std::vector<CellLabel> &metalOrViaGridlabel){
+        if(dc == nullptr) return;
+        if(bfsqVisisted.count(dc)) return;
+        if(seedCellLabel != metalOrViaGridlabel[dc->index]) return;
+
+        bfsq.push(dc);
+        bfsqVisisted.insert(dc);
+    };
+
+    bfsq.push(seed);
+    bfsqVisisted.insert(seed);
+
+    while(!bfsq.empty()){
+        DiffusionChamber *dc = bfsq.front(); bfsq.pop();
+        
+        dcToIdx[dc] = idxToDC.size();
+        idxToDC.push_back(dc);
+
+        // push in neighbors
+        if(dc->metalViaType == DiffusionChamberType::METAL){
+            MetalCell *mc = static_cast<MetalCell *>(dc);
+
+            bfsInsert(static_cast<DiffusionChamber *>(mc->northCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(mc->southCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(mc->eastCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(mc->westCell), metalGridLabel);
+            
+            bfsInsert(static_cast<DiffusionChamber *>(mc->upCell), viaGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(mc->downCell), viaGridLabel);
+        }else{ // DiffusionChamberType::VIA
+            ViaCell *vc = static_cast<ViaCell *>(dc);
+
+            bfsInsert(static_cast<DiffusionChamber *>(vc->upLLCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->upULCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->upLRCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->upURCell), metalGridLabel);
+            
+            bfsInsert(static_cast<DiffusionChamber *>(vc->downLLCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->downULCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->downLRCell), metalGridLabel);
+            bfsInsert(static_cast<DiffusionChamber *>(vc->downURCell), metalGridLabel);
+        }
+    }
+    
     // Unweighted original graph
     typedef boost::adjacency_list<boost::vecS, boost::vecS, boost::undirectedS> G;
     typedef boost::graph_traits<G>::vertex_descriptor V;
@@ -906,13 +968,75 @@ void DiffusionEngine::updateLabelSkeletonWithSeed(DiffusionChamber *seed){
         V v;
     }; 
 
-    G g(8);
-    auto add = [&](int u,int v){ boost::add_edge(u,v,g); };
-    add(0,1); add(1,2); add(2,3); add(3,4);
-    add(1,5); add(5,6); add(6,4); add(2,7); add(1, 4);
+    // G g(8);
+    // add(0,1); add(1,2); add(2,3); add(3,4);
+    // add(1,5); add(5,6); add(6,4); add(2,7); add(1, 4);
+    
+    // // Terminals that must be connected
+    // std::vector<int> T = {0,4,7};
+    
+    G g(idxToDC.size());
+    std::vector<int> T;
+    
+    auto add = [&](int u,int v){ 
+        boost::add_edge(u,v,g); 
+    };
 
-    // Terminals that must be connected
-    std::vector<int> T = {0,4,7};
+    for(int i = 0; i < idxToDC.size(); ++i){
+        DiffusionChamber *dc = idxToDC[i];
+        if(dc->type == CellType::PREPLACED) T.push_back(i);
+        
+        if(dc->metalViaType == DiffusionChamberType::METAL){
+            MetalCell *mc = static_cast<MetalCell *>(dc);
+            
+            std::unordered_map<DiffusionChamber *, int>::const_iterator cit = dcToIdx.find(mc->northCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+    
+            cit = dcToIdx.find(mc->southCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(mc->eastCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(mc->westCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(mc->upCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+
+            cit = dcToIdx.find(mc->downCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+
+        }else{ // DiffusionChamberType::VIA
+            ViaCell *vc = static_cast<ViaCell *>(dc);
+
+            std::unordered_map<DiffusionChamber *, int>::const_iterator cit = dcToIdx.find(vc->upLLCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(vc->upULCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(vc->upLRCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(vc->upURCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+
+
+            cit = dcToIdx.find(vc->downLLCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+
+            cit = dcToIdx.find(vc->downULCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(vc->downLRCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+            
+            cit = dcToIdx.find(vc->downURCell);
+            if((cit != dcToIdx.end()) && (cit->second > i)) add(i, cit->second);
+
+        }
+    }
 
     const int n  = static_cast<int>(boost::num_vertices(g));
     const int tN = static_cast<int>(T.size());
@@ -1042,9 +1166,24 @@ void DiffusionEngine::updateLabelSkeletonWithSeed(DiffusionChamber *seed){
     }
 
     // ----- Output the Steiner skeleton -----
-    std::cout << "Steiner skeleton edges (u - v):\n";
+    // std::cout << "Steiner skeleton edges (u - v):\n";
     for (auto [a,b] : steiner_edges) {
-        std::cout << a << " - " << b << "\n";
+        // std::cout << a << " - " << b << "\n";
+        DiffusionChamber *adc = idxToDC[a];
+        DiffusionChamber *bdc = idxToDC[b];
+
+        if(adc->metalViaType == DiffusionChamberType::METAL){
+            metalIsSkeleton[adc->index] = true; 
+        }else{
+            viaIsSkeleton[adc->index] = true;
+        }
+
+        if(bdc->metalViaType == DiffusionChamberType::METAL){
+            metalIsSkeleton[bdc->index] = true; 
+        }else{
+            viaIsSkeleton[bdc->index] = true;
+        }
+
     }
 }
 
@@ -2374,13 +2513,12 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
     }
 }
 
-void DiffusionEngine::postMCFLocalRepair(bool verbose){
+void DiffusionEngine::findPostMCFLocalFlaws(bool verbose){
     int totalIndexes = initialiseIndexing();
     if(verbose) std::cout << "Multi-Commodity Flow Result Report: " << std::endl;
 
     std::unordered_map<SignalType, std::unordered_set<CellLabel>> allLabels;
     std::vector<std::vector<DiffusionChamber *>> labelsToChambers(totalIndexes);
-
 
     for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){ 
         MetalCell &mc = metalGrid[mcIdx];
@@ -2401,12 +2539,12 @@ void DiffusionEngine::postMCFLocalRepair(bool verbose){
         CellLabel vcLabel = viaGridLabel[vcIdx];
         allLabels[vcSigType].insert(vcLabel);
         labelsToChambers[vcLabel].push_back(&vc);
+        
     }
 
     std::unordered_map<SignalType, std::unordered_set<CellLabel>> disconnLabels(allLabels);
     
     for(const auto &[st, clusters] : c4.signalTypeToAllClusters){
-
         for(C4PinCluster *c4pc : clusters){
             Cord &rep = c4pc->representation;
             size_t cellIdx = calMetalIdx(m_c4ConnectedMetalLayerIdx, rep.y(), rep.x());
@@ -2425,9 +2563,17 @@ void DiffusionEngine::postMCFLocalRepair(bool verbose){
         }
     }
 
+    for(const auto[st, us] : disconnLabels){
+        if(!us.empty()) repairLocalDisconnectSignals.push_back(st);
+    }
+    std::sort(repairLocalDisconnectSignals.begin(), repairLocalDisconnectSignals.end(), [&](SignalType &st1, SignalType &st2){
+        return disconnLabels[st1].size() > disconnLabels[st2].size();
+    });
+
 
     if(verbose){
         for(const auto&[st, us] : allLabels){
+            if(disconnLabels[st].empty()) continue;
 
             std::cout << st << " has labels: " << std::endl;
             std::cout << "Total Lables(" << us.size() << "): ";
@@ -2460,144 +2606,358 @@ void DiffusionEngine::postMCFLocalRepair(bool verbose){
                 for(int l : viaLayers) std::cout << l << "->" << l+1 << ", ";
                 std::cout << std::endl;
             }
-
             std::cout << std::endl << std::endl;
         }
     }
 
-    std::vector<SignalType> repairOrder;
-    for(const auto[st, us] : disconnLabels){
-        if(!us.empty()) repairOrder.push_back(st);
+}
+
+void DiffusionEngine::postMCFLocalRepairTop(bool verbose){
+    for(size_t repairIdx = 0; repairIdx < repairLocalDisconnectSignals.size(); ++repairIdx){
+        postMCFLocalRepairSignal(repairLocalDisconnectSignals[repairIdx], verbose);
     }
-    std::sort(repairOrder.begin(), repairOrder.end(), [&](SignalType &st1, SignalType &st2){
-        return disconnLabels[st1].size() > disconnLabels[st2].size();
-    });
+}
 
-    for(int repairSignalIdx = 0; repairSignalIdx < repairOrder.size(); ++repairSignalIdx){
-        SignalType repairSt = repairOrder[repairSignalIdx];
-        std::cout << "Repairing " << repairSt << std::endl;
+void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt, bool verbose){
 
-        std::unordered_set<CellLabel> &rpAllLabels = allLabels[repairSt];
-        std::unordered_set<CellLabel> &rpConnLabels = connLabels[repairSt];
-        std::unordered_set<CellLabel> &rpDisConnLabels = disconnLabels[repairSt];
+    if(verbose) std::cout << "Local Repairing " << repairSt << std::endl;
 
-        //: use OBSTACLES, PREPLACED, MARKED
-        std::vector<CellType> metalCellType(metalGrid.size(), CellType::EMPTY);
-        std::vector<DiffusionChamber *> metalParents(metalGrid.size(), nullptr);
-        std::vector<CellLabel> metalOwner(metalGrid.size(), 0);
+    int totalIndexes = initialiseIndexing();
+    std::unordered_set<CellLabel> allLabels;
+    std::unordered_set<CellLabel> connLabels;
+    std::unordered_set<CellLabel> disconnLabels;
 
-        std::vector<CellType> viaCellType(viaGrid.size(), CellType::EMPTY);
-        std::vector<DiffusionChamber *> viaParents(viaGrid.size(), nullptr);
-        std::vector<CellLabel> viaOwner(viaGrid.size(), 0);
+    std::vector<CellLabel> colorToCellLabel = {CELL_LABEL_EMPTY}; // 0 is for supernode
+    std::unordered_map<CellLabel, int> CellLabelToColor;
 
-        DSU dsu(totalIndexes);
-        std::vector<bool> CellLabelActive(true, totalIndexes);
-        std::queue<DiffusionChamber *> q;
+    std::vector<bool> metalIsEmpty(metalGrid.size(), true);
+    std::vector<bool> viaIsEmpty(viaGrid.size(), true);
 
-        // unite all connectedLabels;
-        std::vector<CellLabel> connLabelsInVector(rpConnLabels.begin(), rpConnLabels.end());
-        if(connLabelsInVector.size() > 2){
-            CellLabel labelSeed = connLabelsInVector[0];
-            for(int j = 1; j < connLabelsInVector.size(); ++j){
-                dsu.unite(labelSeed, connLabelsInVector[j]);
+    std::vector<int> metalOwner(metalGrid.size(), -1); // first-claimant color id (0..K)
+    std::vector<int> viaOwner(viaGrid.size(), -1); // first-claimant color id (0..K)
+
+    std::vector<DiffusionChamber *> metalParent(metalGrid.size(), nullptr);
+    std::vector<DiffusionChamber *> viaParent(viaGrid.size(), nullptr);
+
+    // std::queue<DiffusionChamber *> q;
+    std::queue<std::pair<DiffusionChamber *, int>> q;
+    std::unordered_set<DiffusionChamber *> qdc;
+
+    std::unordered_map<DiffusionChamber *, DiffusionChamber*> prevMap;
+
+
+
+    for(size_t mcIdx = 0; mcIdx < metalGrid.size(); ++mcIdx){ 
+        MetalCell &mc = metalGrid[mcIdx];
+        CellType mcCellType = mc.type;
+
+        if(mcCellType == CellType::OBSTACLES){
+            metalIsEmpty[mcIdx] = false;
+        }else if((mcCellType == CellType::MARKED) || (mcCellType == CellType::PREPLACED)){
+            metalIsEmpty[mcIdx] = false;
+            if(mc.signal == repairSt){
+                CellLabel mcLabel = metalGridLabel[mcIdx];
+                allLabels.insert(mcLabel);
             }
         }
+    }
 
-        // initialise labels for metal and via data structure
-        for(int i = 0; i < metalGrid.size(); ++i){
+    for(size_t vcIdx = 0; vcIdx < viaGrid.size(); ++ vcIdx){
+        ViaCell &vc = viaGrid[vcIdx];
+        CellType vcCellType = vc.type;
+
+        if(vcCellType == CellType::OBSTACLES){
+            viaIsEmpty[vcIdx] = false;  
+        }else if((vcCellType == CellType::MARKED) || (vcCellType == CellType::PREPLACED)){
+            viaIsEmpty[vcIdx] = false;  
+            if(vc.signal == repairSt){
+                CellLabel vcLabel = viaGridLabel[vcIdx];
+                allLabels.insert(vcLabel);
+            }
+        }
+    }
+
+    disconnLabels = allLabels;
+    assert(c4.signalTypeToAllClusters.count(repairSt));
+    for(C4PinCluster *c4pc : c4.signalTypeToAllClusters[repairSt]){
+            Cord &rep = c4pc->representation;
+            size_t cellIdx = calMetalIdx(m_c4ConnectedMetalLayerIdx, rep.y(), rep.x());
+            CellLabel cl = metalGridLabel[cellIdx];
+
+            disconnLabels.erase(cl);
+    }
+    
+    connLabels = allLabels;
+    for(auto it = connLabels.begin(); it != connLabels.end();){
+        if (disconnLabels.count(*it)) it = connLabels.erase(it);
+        else ++it;
+    }
+
+    int totalLabelCount = allLabels.size();
+
+    for(const CellLabel &cl : connLabels){
+        CellLabelToColor[cl] = colorToCellLabel.size();
+        colorToCellLabel.push_back(cl);
+    }
+    for(const CellLabel &cl : disconnLabels){
+        CellLabelToColor[cl] = colorToCellLabel.size();
+        colorToCellLabel.push_back(cl);
+    }
+
+
+    DSU dsu(colorToCellLabel.size());
+    for(const CellLabel &cl : connLabels){
+        dsu.unite(0, CellLabelToColor[cl]); // unite with super node;
+    }
+
+    // seeding process
+    auto pushSeedMetal = [&](int color, size_t neighborCellIdx, DiffusionChamber *dc){
+        if(neighborCellIdx == SIZE_T_INVALID) return false;
+        if(!metalIsEmpty[neighborCellIdx]) return false;
+
+        q.emplace(dc, color);
+        qdc.insert(dc);
+        prevMap[dc] = nullptr;
+
+        return true;
+    };
+
+    auto pushSeedVia = [&](int color, size_t neighborCellIdx, DiffusionChamber *dc){
+        if(neighborCellIdx == SIZE_T_INVALID) return false;
+        if(!viaIsEmpty[neighborCellIdx]) return false;
+
+        q.emplace(dc, color);
+        qdc.insert(dc);
+        prevMap[dc] = nullptr;
+
+        return true;
+    };
+
+    for(size_t i = 0; i < metalGrid.size(); ++i){
+        if(!metalIsEmpty[i]){
             MetalCell &mc = metalGrid[i];
             CellLabel mcCellLabel = metalGridLabel[i];
-            if(mcCellLabel == 0) continue; // empty cell
-
-            if(rpAllLabels.count(mcCellLabel)){
-                metalOwner[i] = mcCellLabel;
-                if(rpConnLabels.count(mcCellLabel)) metalCellType[i] = CellType::PREPLACED;
-                else metalCellType[i] = CellType::MARKED;
-            }else{ // is obstacles or other signals
-                metalCellType[i] = CellType::OBSTACLES;
-                metalOwner[i] = CELL_LABEL_EMPTY;
-            }
+            if(!allLabels.count(mcCellLabel)) continue;
+            
+            // check if any of it's neighbor is in the labels set
+            int color = CellLabelToColor[mcCellLabel];
+    
+            if(pushSeedMetal(color, mc.northCellIdx, mc.northCell)) continue;
+            if(pushSeedMetal(color, mc.southCellIdx, mc.southCell)) continue;
+            if(pushSeedMetal(color, mc.eastCellIdx, mc.eastCell)) continue;
+            if(pushSeedMetal(color, mc.westCellIdx, mc.westCell)) continue;
+    
+            if(pushSeedVia(color, mc.upCellIdx, mc.upCell)) continue;
+            if(pushSeedVia(color, mc.downCellIdx, mc.downCell)) continue;
         }
+    }
 
-        for(int i = 0; i < viaGrid.size(); ++i){
+    for(size_t i = 0; i < viaGrid.size(); ++i){
+        if(!viaIsEmpty[i]){
             ViaCell &vc = viaGrid[i];
             CellLabel vcCellLabel = viaGridLabel[i];
-            if(vcCellLabel == 0) continue; // empty cell
+            if(!allLabels.count(vcCellLabel)) continue;
 
-            if(rpAllLabels.count(vcCellLabel)){
-                viaOwner[i] = vcCellLabel;
-                if(rpConnLabels.count(vcCellLabel)) viaCellType[i] = CellType::PREPLACED;
-                else viaCellType[i] = CellType::MARKED;
+            // check if any of it's neighbor is in the labels set
+            int color = CellLabelToColor[vcCellLabel];
+
+            if(pushSeedMetal(color, vc.upLLCellIdx, vc.upLLCell)) continue;
+            if(pushSeedMetal(color, vc.upULCellIdx, vc.upULCell)) continue;
+            if(pushSeedMetal(color, vc.upLRCellIdx, vc.upLRCell)) continue;
+            if(pushSeedMetal(color, vc.upURCellIdx, vc.upURCell)) continue;
+
+            if(pushSeedMetal(color, vc.downLLCellIdx, vc.downLLCell)) continue;
+            if(pushSeedMetal(color, vc.downULCellIdx, vc.downULCell)) continue;
+            if(pushSeedMetal(color, vc.downLRCellIdx, vc.downLRCell)) continue;
+            if(pushSeedMetal(color, vc.downURCellIdx, vc.downURCell)) continue;
+        }
+    }
+
+
+    auto bfsPushNeighbor = [&](DiffusionChamber *centreCell, DiffusionChamber *neighborCell, int ru , std::vector<bool> &metalOrViaIsEmpty){
+        if((neighborCell != nullptr) && (metalOrViaIsEmpty[neighborCell->index]) && (!qdc.count(neighborCell))){
+            prevMap[neighborCell] = centreCell;
+            q.emplace(neighborCell, ru);
+            qdc.insert(neighborCell);
+
+        }
+    };
+
+    auto markBridgePath = [&](DiffusionChamber *start, int repSide, std::vector<DiffusionChamber *> &freshBridges){
+        if(start == nullptr) return;
+
+        const CellLabel paintLabel = colorToCellLabel[repSide];
+        DiffusionChamber *cur = start;
+        while(cur != nullptr){
+            size_t cellIndex = cur->index;
+
+            if(cur->metalViaType == DiffusionChamberType::METAL){
+                if(metalGridLabel[cellIndex] != 0) break;
+                MetalCell &mc = metalGrid[cellIndex];
+                mc.type = CellType::MARKED;
+                mc.signal = repairSt;
+
+                metalGridLabel[cellIndex] = paintLabel;
+                metalOwner[cellIndex] = repSide;
+                metalIsEmpty[cellIndex] = false;
+                freshBridges.push_back(cur);
+                cur = metalParent[cellIndex];
+                
+            }else{ // DiffusionChamberType::VIA
+                if(viaGridLabel[cellIndex] != 0) break;
+                ViaCell &vc = viaGrid[cellIndex];
+                vc.type = CellType::MARKED;
+                vc.signal = repairSt;
+                viaGridLabel[cellIndex] = paintLabel;
+                viaOwner[cellIndex] = repSide;
+                viaIsEmpty[cellIndex] = false;
+                freshBridges.push_back(cur);
+                cur = viaParent[cellIndex];
+            }
+        }
+    };
+
+    auto seedNeighborsOfMakredCells = [&](int colorId, std::vector<DiffusionChamber *> &freshBridges){
+        
+        auto seedMetalCell = [&](MetalCell *mc){
+            if(mc == nullptr) return;
+            int mcIdx = mc->index;
+            if(metalIsEmpty[mcIdx] && (metalOwner[mcIdx] == -1) && (!qdc.count(mc))){
+                prevMap[mc] = nullptr;
+                metalOwner[mcIdx] = colorId;
+                q.emplace(mc, colorId);
+                qdc.insert(mc);
+            }
+        };
+
+        auto seedViaCell = [&](ViaCell *vc){
+            if(vc == nullptr) return;
+            int vcIdx = vc->index;
+            if(viaIsEmpty[vcIdx] && (viaOwner[vcIdx] == -1) && (!qdc.count(vc))){
+                prevMap[vc] = nullptr;
+                viaOwner[vcIdx] = colorId;
+                q.emplace(vc, colorId);
+                qdc.insert(vc);
+            }
+        };
+
+        for(DiffusionChamber *dc : freshBridges){
+            if(dc->metalViaType == DiffusionChamberType::METAL){
+                MetalCell *mc = static_cast<MetalCell *>(dc);
+                seedMetalCell(mc->northCell);
+                seedMetalCell(mc->southCell);
+                seedMetalCell(mc->eastCell);
+                seedMetalCell(mc->westCell);
+
+                seedViaCell(mc->upCell);
+                seedViaCell(mc->downCell);
+            }else{ // DiffusionChamberType::VIA
+                ViaCell *vc = static_cast<ViaCell *>(dc);
+                seedMetalCell(vc->upLLCell);
+                seedMetalCell(vc->upULCell);
+                seedMetalCell(vc->upLRCell);
+                seedMetalCell(vc->upURCell);
+
+                seedMetalCell(vc->downLLCell);
+                seedMetalCell(vc->downULCell);
+                seedMetalCell(vc->downLRCell);
+                seedMetalCell(vc->downURCell);
+            }
+        }
+    };
+
+    while(!q.empty()){
+        auto [dc, color] = q.front();
+        q.pop();
+        qdc.erase(dc);
+
+        int ru = dsu.find(color);
+        
+        if(dc->metalViaType == DiffusionChamberType::METAL){
+            MetalCell *mc = static_cast<MetalCell *>(dc);
+            size_t metalIdx = dc->index;
+            
+            if(metalOwner[metalIdx] == -1){
+                metalOwner[metalIdx] = ru;
+                
+                metalParent[metalIdx] = prevMap[dc];
+
+                bfsPushNeighbor(mc, mc->northCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->southCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->eastCell, ru, metalIsEmpty);
+                bfsPushNeighbor(mc, mc->westCell, ru, metalIsEmpty);
+                
+                bfsPushNeighbor(mc, mc->upCell, ru, viaIsEmpty);
+                bfsPushNeighbor(mc, mc->downCell, ru, viaIsEmpty);
+
             }else{
-                viaCellType[i] = CellType::OBSTACLES;
-                viaOwner[i] = CELL_LABEL_EMPTY;
+                // This cell `u` is already owned by another BFS wave.
+                // That means the current wave (rep=ru) has met an existing claimed cell.
+                int rv = dsu.find(metalOwner[metalIdx]);
+                if(ru == rv) continue;
+
+                // process meet event shortest bridge between ru and rv
+                std::vector<DiffusionChamber *> freshBridges;
+                markBridgePath(dc, rv, freshBridges);
+                markBridgePath(prevMap[dc], ru, freshBridges);
+                dsu.unite(ru, rv);
+
+                int newRep = dsu.find(ru);
+                int super  = dsu.find(0);
+                
+                int seedColor;
+                if (newRep == super) {
+                    if (ru == super) {
+                        seedColor = rv;  // choose the non-super side we just merged
+                    } else {
+                        seedColor = ru;
+                    }
+                } else {
+                    seedColor = newRep;
+                }
+
+                seedNeighborsOfMakredCells(seedColor, freshBridges);
+                
+            }
+
+        }else{ // DiffusionChamberType::VIA
+            ViaCell *vc = static_cast<ViaCell *>(dc);
+            size_t viaIdx = dc->index;
+
+            if(viaOwner[viaIdx] == -1){
+                viaOwner[viaIdx] = ru;
+                viaParent[viaIdx] = prevMap[dc];
+
+                bfsPushNeighbor(vc, vc->upLLCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upULCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upLRCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->upURCell, ru, metalIsEmpty);
+                
+                bfsPushNeighbor(vc, vc->downLLCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downULCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downLRCell, ru, metalIsEmpty);
+                bfsPushNeighbor(vc, vc->downURCell, ru, metalIsEmpty);
+
+            }else{
+                int rv = dsu.find(viaOwner[viaIdx]);
+                if(ru == rv) continue;
+
+                std::vector<DiffusionChamber *> freshBridges;
+                markBridgePath(dc, rv, freshBridges);
+                markBridgePath(prevMap[dc], ru, freshBridges);
+                dsu.unite(ru, rv);
+
+                int newRep = dsu.find(ru);
+                
+                if(newRep == dsu.find(0)) seedNeighborsOfMakredCells(0, freshBridges);
+                else seedNeighborsOfMakredCells(newRep, freshBridges);
             }
         }
-
-        auto pushSeedMetal = [&](CellLabel cetreCellLabel, size_t neighborCellIdx, DiffusionChamber *dc){
-            if(neighborCellIdx == SIZE_T_INVALID) return false;
-            CellType ct = metalCellType[neighborCellIdx];
-            if((ct != CellType::PREPLACED) && (ct != CellType::MARKED)) return false;
-            metalCellType[neighborCellIdx] = CellType::CANDIDATE;
-            metalOwner[neighborCellIdx] = cetreCellLabel;
-            q.emplace(dc);
-
-            return true;
-        };
-
-        auto pushSeedVia = [&](CellLabel cetreCellLabel, size_t neighborCellIdx, DiffusionChamber *dc){
-            if(neighborCellIdx == SIZE_T_INVALID) return false;
-            CellType ct = viaCellType[neighborCellIdx];
-            if((ct != CellType::PREPLACED) && (ct != CellType::MARKED)) return false;
-            viaCellType[neighborCellIdx] = CellType::CANDIDATE;
-            viaOwner[neighborCellIdx] = cetreCellLabel;
-            q.emplace(dc);
-
-            return true;
-        };
-
-        // push seeds (which is the neighbor of the border)
-        for(int i = 0; i < metalGrid.size(); ++i){
-            if(metalCellType[i] != CellType::EMPTY) continue;
-            // check if any of it's neighbor is in the labels set
-            MetalCell &mc = metalGrid[i];
-            CellLabel mcCellLabel = metalGridLabel[i];
-
-            if(pushSeedMetal(mcCellLabel, mc.northCellIdx, mc.northCell)) continue;
-            if(pushSeedMetal(mcCellLabel, mc.southCellIdx, mc.southCell)) continue;
-            if(pushSeedMetal(mcCellLabel, mc.eastCellIdx, mc.eastCell)) continue;
-            if(pushSeedMetal(mcCellLabel, mc.westCellIdx, mc.westCell)) continue;
-
-            if(pushSeedVia(mcCellLabel, mc.upCellIdx, mc.upCell)) continue;
-            if(pushSeedVia(mcCellLabel, mc.downCellIdx, mc.downCell)) continue;
-        }
-
-        for(int i = 0; i < viaGrid.size(); ++i){
-            if(viaCellType[i] != CellType::EMPTY) continue;
-            // check if any of it's neighbor is in the labels set
-            ViaCell &vc = viaGrid[i];
-            CellLabel vcCellLabel = viaGridLabel[i];
-
-            if(pushSeedVia(vcCellLabel, vc.upLLCellIdx, vc.upLLCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.upULCellIdx, vc.upULCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.upLRCellIdx, vc.upLRCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.upURCellIdx, vc.upURCell)) continue;
-
-            if(pushSeedVia(vcCellLabel, vc.downLLCellIdx, vc.downLLCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.downULCellIdx, vc.downULCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.downLRCellIdx, vc.downLRCell)) continue;
-            if(pushSeedVia(vcCellLabel, vc.downURCellIdx, vc.downURCell)) continue;
-        }
-
-        std::cout << "checking pusing seeds: " << std::endl;
-
-        std::cout << q.size() << std::endl;
-        DiffusionChamber *fdc = q.front();
-        std::cout << fdc->metalViaType << " " << fdc->canvasLayer << " " << fdc->canvasX << " " << fdc->canvasY << std::endl;
-        
-
-        
     }
+  
+}
+
+void DiffusionEngine::postMCFForceRepairSignal(SignalType repairSt, bool berbose){
     
 }
 
