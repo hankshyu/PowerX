@@ -91,6 +91,7 @@ public:
     void floatingPlaneReconnection(int layerIdx);
     
     void enhanceCrossLayerPI();
+    void enhanceCrossLayerPINew();
 
     void handCraft();
 

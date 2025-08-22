@@ -72,8 +72,6 @@ public:
     Mat V_n;
     Mat I_n;
 
-
-    
     SignalTree();
     SignalTree(SignalType signal, int chipletCount, double budget);
 

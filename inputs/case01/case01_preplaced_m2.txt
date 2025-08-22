@@ -1,0 +1,58 @@
+BEGIN_PREPLACE
+SIGNAL: SIGNALTYPE::POWER_1
+
+Cord(25, 118) to Cord(29, 118)
+Cord(25, 117) to Cord(29, 117)
+Cord(25, 116) to Cord(29, 116)
+Cord(25, 115) to Cord(29, 115)
+Cord(25, 114) to Cord(29, 114)
+Cord(25, 113) to Cord(29, 113)
+Cord(25, 112) to Cord(29, 112)
+Cord(25, 111) to Cord(29, 111)
+Cord(25, 110) to Cord(29, 110)
+
+
+SIGNAL: SIGNALTYPE::POWER_2
+
+Cord(92, 21) to Cord(110, 21)
+Cord(92, 20) to Cord(110, 20)
+Cord(92, 19) to Cord(110, 19)
+
+Cord(101, 30) to Cord(102, 30)
+Cord(101, 29) to Cord(103, 29)
+Cord(101, 28) to Cord(103, 28)
+Cord(101, 27) to Cord(103, 27)
+Cord(101, 26) to Cord(103, 26)
+Cord(101, 25) to Cord(102, 25)
+
+
+SIGNAL: SIGNALTYPE::POWER_3
+
+Cord(25, 31) to Cord(28, 31)
+Cord(25, 30) to Cord(28, 30)
+Cord(25, 29) to Cord(28, 29)
+Cord(25, 28) to Cord(28, 28)
+Cord(25, 27) to Cord(28, 27)
+Cord(25, 26) to Cord(28, 26)
+
+Cord(61, 55) to Cord(74, 55)
+Cord(61, 54) to Cord(74, 54)
+Cord(61, 53) to Cord(70, 53)
+Cord(61, 52) to Cord(70, 52)
+Cord(61, 51) to Cord(72, 51)
+Cord(61, 50) to Cord(72, 50)
+
+Cord(72, 68) to Cord(77, 68)
+Cord(72, 67) to Cord(77, 67)
+Cord(72, 66) to Cord(77, 66)
+Cord(72, 65) to Cord(77, 65)
+Cord(72, 64) to Cord(77, 64)
+Cord(72, 63) to Cord(77, 63)
+
+
+Cord(87, 92) to Cord(92, 92)
+Cord(87, 91) to Cord(92, 91)
+Cord(87, 90) to Cord(92, 90)
+
+
+END_PREPLACE

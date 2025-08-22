@@ -130,7 +130,6 @@ public:
     std::unordered_map<SignalType, SignalTree> signalTrees;
 
 
-
     DiffusionEngine(const std::string &fileName);
 
     size_t calMetalIdx(size_t layer, size_t height, size_t width) const;

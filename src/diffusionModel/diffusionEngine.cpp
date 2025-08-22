@@ -2401,8 +2401,8 @@ void DiffusionEngine::runMCFSolver(std::string logFile, int outputLevel){
             
             switch (status) {
                 case GRB_OPTIMAL:
-                    std::cout << "Optimal solution found." << std::endl;
-                    std::cout << "Objective value: " << GRBmodel.get(GRB_DoubleAttr_ObjVal) << std::endl;
+                    std::cout << "Optimal solution found with objective value: " << GRBmodel.get(GRB_DoubleAttr_ObjVal) << std::endl;
+                    std::cout << std::endl;
                     break;
 
                 case GRB_INFEASIBLE:
@@ -2663,6 +2663,7 @@ void DiffusionEngine::reportPostMCFLocalFlaws(){
 }
 
 void DiffusionEngine::postMCFLocalRepairTop(bool verbose){
+
     if(verbose) std::cout << "Post MCF Local Repair" << std::endl;
     
     std::vector<SignalType> repairLocalDisconnectSignals;
@@ -2688,8 +2689,12 @@ void DiffusionEngine::postMCFLocalRepairTop(bool verbose){
         findPostMCFLocalFlaws(repairLocalDisconnectSignals);
         // if(verbose) reportPostMCFLocalFlaws();
     }
-    if(verbose) std::cout << "Fixing Complete! " << std::endl;
-    if(verbose) reportPostMCFLocalFlaws();
+    if(verbose){
+        std::cout << "Fixing Complete! " << std::endl;
+        reportPostMCFLocalFlaws();
+        std::cout << std::endl;
+    } 
+    
 }
 
 void DiffusionEngine::postMCFLocalRepairSignal(SignalType repairSt){
@@ -3916,6 +3921,7 @@ void DiffusionEngine::initialiseSignalTrees(){
 }
 
 void DiffusionEngine::runInitialEvaluation(){
+    
     for(auto &[st, sigTree] : this->signalTrees){
         PetscInt expSize = sigTree.exp_size;
         PetscInt nSize = sigTree.n_size;

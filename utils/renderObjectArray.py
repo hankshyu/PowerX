@@ -51,6 +51,7 @@ if __name__ == '__main__':
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
     parser.add_argument("--noLegend", action="store_true", help="Legend is omitted.")
     parser.add_argument("--noTitle", action="store_true", help="Title is omitted.")
+    parser.add_argument("-g", "--highlightPin", action="store_true", help="Highlight empty pins.")
     args = parser.parse_args()
 
 
@@ -152,6 +153,9 @@ if __name__ == '__main__':
                             continue
                         
                         color = SIGNAL_COLORS[LineBuffer[2]]
+
+                        if args.highlightPin and (LineBuffer[2] == "EMPTY"):
+                            color = "#ed9fd6"
                         # Draw the box
                         circle = patches.Circle((GRID_MUL*(i+1), GRID_MUL*(j+1)), PIN_RAD, edgecolor=(0, 0, 0, 0.2), facecolor=color)
                         ax.add_patch(circle)
@@ -164,6 +168,8 @@ if __name__ == '__main__':
                         if(LineBuffer[2] == "OBSTACLE"):
                             continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
+                        if args.highlightPin and (LineBuffer[2] == "EMPTY"):
+                            color = "#ed9fd6"
                         upper_circle = patches.Wedge(
                             center=(GRID_MUL*(i+1), GRID_MUL*(j+1)), 
                             r=PIN_RAD, 
@@ -180,6 +186,9 @@ if __name__ == '__main__':
                         if(LineBuffer[2] == "OBSTACLE"):
                             continue
                         color = SIGNAL_COLORS[LineBuffer[2]]
+                        if args.highlightPin and (LineBuffer[2] == "EMPTY"):
+                            color = "#ed9fd6"
+
                         upper_circle = patches.Wedge(
                             center=(GRID_MUL*(i+1), GRID_MUL*(j+1)), 
                             r=PIN_RAD, 

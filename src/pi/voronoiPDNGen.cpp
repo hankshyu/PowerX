@@ -1399,7 +1399,186 @@ void VoronoiPDNGen::enhanceCrossLayerPI(){
         }
     }
 }
-    // metallayers[1].canvas[]
+
+
+// metallayers[1].canvas[]
+
+void VoronoiPDNGen::enhanceCrossLayerPINew() {
+
+    enum class PowerPlaneType { PREPLACED, STACKED, HARD, SOFT };
+
+    // ---- helper: 4-neighbour articulation test on the GRID ----
+    auto isRemovalSafe = [&](int layer, int y, int x, SignalType s) -> bool {
+        // Collect 4-neighbour same-signal cells around (x,y)
+        static const int DX[4] = {1,-1,0,0};
+        static const int DY[4] = {0,0,1,-1};
+
+        std::vector<std::pair<int,int>> nbrs;
+        nbrs.reserve(4);
+        for (int k = 0; k < 4; ++k) {
+            int nx = x + DX[k], ny = y + DY[k];
+            if (0 <= nx && nx < m_gridWidth &&
+                0 <= ny && ny < m_gridHeight &&
+                metalLayers[layer].canvas[ny][nx] == s) {
+                nbrs.emplace_back(nx, ny);
+            }
+        }
+        // 0 or 1 neighbour cannot split anything
+        if (nbrs.size() <= 1) return true;
+
+        // BFS from the first neighbour, treating (x,y) as already removed
+        std::deque<std::pair<int,int>> q;
+        std::vector<char> vis(static_cast<size_t>(m_gridWidth) * m_gridHeight, 0);
+        auto idx = [&](int cx, int cy) { return static_cast<size_t>(cy) * m_gridWidth + cx; };
+
+        auto push = [&](int cx, int cy){
+            size_t id = idx(cx,cy);
+            if (!vis[id]) { vis[id] = 1; q.emplace_back(cx,cy); }
+        };
+        push(nbrs[0].first, nbrs[0].second);
+
+        // Set of “other” neighbours we must be able to reach
+        std::unordered_set<long long> targets;
+        auto key = [&](int cx, int cy){ return (long long)cy << 32 | (unsigned)cx; };
+        for (size_t k = 1; k < nbrs.size(); ++k) targets.insert(key(nbrs[k].first, nbrs[k].second));
+
+        while (!q.empty() && !targets.empty()) {
+            auto [cx, cy] = q.front(); q.pop_front();
+            for (int k = 0; k < 4; ++k) {
+                int nx = cx + DX[k], ny = cy + DY[k];
+                if (nx == x && ny == y) continue; // (x,y) is removed
+                if (0 <= nx && nx < m_gridWidth && 0 <= ny && ny < m_gridHeight &&
+                    !vis[idx(nx,ny)] &&
+                    metalLayers[layer].canvas[ny][nx] == s) {
+                    push(nx, ny);
+                    targets.erase(key(nx,ny));
+                }
+            }
+        }
+        return targets.empty(); // all adjacent same-signal neighbours remain connected
+    };
+
+    // ---- initial marking ----
+    std::vector<std::vector<std::vector<PowerPlaneType>>> marking(
+        m_metalLayerCount,
+        std::vector<std::vector<PowerPlaneType>>(m_gridHeight,
+            std::vector<PowerPlaneType>(m_gridWidth, PowerPlaneType::SOFT)));
+
+    for (int L = 0; L < m_metalLayerCount; ++L) {
+        for (int y = 0; y < m_gridHeight; ++y) {
+            for (int x = 0; x < m_gridWidth; ++x) {
+
+                if (marking[L][y][x] != PowerPlaneType::SOFT) continue;
+
+                if (this->preplaceOfLayers[L][y][x] != SignalType::EMPTY) {
+                    marking[L][y][x] = PowerPlaneType::PREPLACED;
+                    continue;
+                }
+
+                SignalType st = metalLayers[L].canvas[y][x];
+
+                int upSearch = L, downSearch = L;
+                // climb up while same signal
+                while (upSearch > 0 && metalLayers[upSearch-1].canvas[y][x] == st) --upSearch;
+                // climb down while same signal
+                while (downSearch < m_metalLayerCount-1 &&
+                       metalLayers[downSearch+1].canvas[y][x] == st) ++downSearch;
+
+                int overlap = downSearch - upSearch + 1;
+                if      (overlap == 1) marking[L][y][x] = PowerPlaneType::SOFT;
+                else if (overlap == 2) marking[L][y][x] = PowerPlaneType::HARD;
+                else                   marking[L][y][x] = PowerPlaneType::STACKED;
+            }
+        }
+    }
+
+    // ---- global counts (will be UPDATED during trades) ----
+    std::unordered_map<SignalType, size_t> totalGridCount;
+    for (int L = 0; L < m_metalLayerCount; ++L)
+        for (int y = 0; y < m_gridHeight; ++y)
+            for (int x = 0; x < m_gridWidth; ++x)
+                ++totalGridCount[metalLayers[L].canvas[y][x]];
+
+    using namespace boost::polygon::operators;
+
+    // ---- pairwise trading between adjacent layers ----
+    for (int upLayerIdx = 0; upLayerIdx < (m_metalLayerCount - 1); ++upLayerIdx) {
+        int downLayerIdx = upLayerIdx + 1;
+        std::cout << "Trading Layer = " << upLayerIdx << " & " << downLayerIdx << std::endl;
+
+        // current per-layer occurrences (we’ll update these locally too)
+        std::unordered_map<SignalType, int> upOcc = countSignalTypeOccurrences(metalLayers[upLayerIdx].canvas);
+        std::unordered_map<SignalType, int> dnOcc = countSignalTypeOccurrences(metalLayers[downLayerIdx].canvas);
+
+        // polygon sets (kept in sync, but NOT used for connectivity decisions)
+        std::unordered_map<SignalType, DoughnutPolygonSet> upDPS = collectDoughnutPolygons(metalLayers[upLayerIdx].canvas);
+        std::unordered_map<SignalType, DoughnutPolygonSet> dnDPS = collectDoughnutPolygons(metalLayers[downLayerIdx].canvas);
+
+        for (int y = 0; y < m_gridHeight; ++y) {
+            for (int x = 0; x < m_gridWidth; ++x) {
+                SignalType sUp = metalLayers[upLayerIdx].canvas[y][x];
+                SignalType sDn = metalLayers[downLayerIdx].canvas[y][x];
+                if (sUp == sDn) continue;
+
+                PowerPlaneType tUp = marking[upLayerIdx][y][x];
+                PowerPlaneType tDn = marking[downLayerIdx][y][x];
+
+                bool upSoftDownTradable   = (tUp == PowerPlaneType::SOFT) &&
+                                            (tDn == PowerPlaneType::SOFT || tDn == PowerPlaneType::STACKED);
+                bool downSoftUpTradable   = (tDn == PowerPlaneType::SOFT) &&
+                                            (tUp == PowerPlaneType::SOFT || tUp == PowerPlaneType::STACKED);
+                if ((!upSoftDownTradable) && (!downSoftUpTradable)) continue;
+
+                // connectivity guard (4-neighbour)
+                bool canMakeUpDown = upSoftDownTradable && isRemovalSafe(upLayerIdx, y, x, sUp);
+                bool canMakeDownUp = downSoftUpTradable && isRemovalSafe(downLayerIdx, y, x, sDn);
+
+                if ((!canMakeUpDown) && (!canMakeDownUp)) continue;
+
+                // choose donor/receiver: prefer the layer whose signal currently has more total area
+                // (update counts immediately after the move)
+                Rectangle rect(x, y, x+1, y+1);
+
+                if ((totalGridCount[sUp] > totalGridCount[sDn] && canMakeUpDown) || !canMakeDownUp) {
+                    // move up -> down
+                    --totalGridCount[sUp]; ++totalGridCount[sDn];
+                    --upOcc[sUp];          ++upOcc[sDn];
+                    --dnOcc[sDn];          ++dnOcc[sUp];
+
+                    metalLayers[upLayerIdx].setCanvas(y, x, sDn);
+
+                    // keep polygon sets updated
+                    if (upDPS.count(sUp)) upDPS[sUp] -= rect;
+                    upDPS[sDn] += rect;
+                } else {
+                    // move down -> up
+                    --totalGridCount[sDn]; ++totalGridCount[sUp];
+                    --dnOcc[sDn];          ++dnOcc[sUp];
+                    --upOcc[sUp];          ++upOcc[sDn];
+
+                    metalLayers[downLayerIdx].setCanvas(y, x, sUp);
+
+                    if (dnDPS.count(sDn)) dnDPS[sDn] -= rect;
+                    dnDPS[sUp] += rect;
+                }
+
+                // refresh marking at (x,y) for both layers touched
+                for (int L : {upLayerIdx, downLayerIdx}) {
+                    SignalType st = metalLayers[L].canvas[y][x];
+                    int upSearch = L, downSearch = L;
+                    while (upSearch > 0 && metalLayers[upSearch-1].canvas[y][x] == st) --upSearch;
+                    while (downSearch < m_metalLayerCount-1 &&
+                           metalLayers[downSearch+1].canvas[y][x] == st) ++downSearch;
+                    int overlap = downSearch - upSearch + 1;
+                    if      (overlap == 1) marking[L][y][x] = PowerPlaneType::SOFT;
+                    else if (overlap == 2) marking[L][y][x] = PowerPlaneType::HARD;
+                    else                   marking[L][y][x] = PowerPlaneType::STACKED;
+                }
+            }
+        }
+    }
+}
+
 void VoronoiPDNGen::handCraft(){
     // fill enclosed region
     

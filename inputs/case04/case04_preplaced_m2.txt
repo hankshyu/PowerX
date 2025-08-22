@@ -1,0 +1,36 @@
+BEGIN_PREPLACE
+SIGNAL: SIGNALTYPE::SIGNAL
+# Line 1
+Cord(12, 51) to Cord(13, 51)
+Cord(12, 50) to Cord(13, 50)
+
+Cord(30, 63) to Cord(31, 63)
+Cord(30, 62) to Cord(31, 62)
+
+# Line 2
+Cord(48, 27) to Cord(49, 27)
+Cord(48, 26) to Cord(49, 26)
+
+# Line 3
+Cord(66, 87) to Cord(67, 87)
+Cord(66, 86) to Cord(67, 86)
+
+# Line 4
+Cord(112, 69) to Cord(113, 69)
+Cord(112, 68) to Cord(113, 68)
+
+# Line 5
+Cord(112, 21) to Cord(113, 21)
+Cord(112, 20) to Cord(113, 20)
+
+SIGNAL: SIGNALTYPE::OBSTACLE
+Cord(18, 18)
+Cord(18, 16) to Cord(18, 17)
+Cord(18, 19) to Cord(18, 20)
+Cord(16, 18) to Cord(17, 18)
+Cord(19, 18) to Cord(20, 18)
+
+Cord(102, 58) to Cord(102, 66)
+Cord(103, 66) to Cord(107, 66)
+
+END_PREPLACE
