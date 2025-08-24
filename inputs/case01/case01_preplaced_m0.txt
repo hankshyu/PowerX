@@ -1,3 +1,105 @@
 BEGIN_PREPLACE
 
+SIGNAL: SIGNALTYPE::SIGNAL
+# Line 1
+Cord(3, 99) to Cord(4, 99)
+Cord(3, 98) to Cord(4, 98)
+Cord(3, 97) to Cord(3, 90)
+Cord(2, 90) to Cord(2, 84)
+Cord(3, 84) to Cord(3, 80)
+Cord(2, 79) to Cord(6, 79)
+Cord(2, 78) to Cord(6, 78)
+Cord(2, 77) to Cord(6, 77)
+Cord(2, 76) to Cord(6, 76)
+Cord(2, 75) to Cord(6, 75)
+Cord(2, 74) to Cord(6, 74)
+Cord(2, 73) to Cord(6, 73)
+Cord(4, 72) to Cord(6, 72)
+Cord(4, 71) to Cord(6, 71)
+
+# Line 2
+Cord(14, 67) to Cord(15, 67)
+Cord(14, 66) to Cord(21, 66)
+Cord(14, 65) to Cord(21, 65)
+Cord(14, 64) to Cord(21, 64)
+Cord(22, 64) to Cord(25, 64)
+Cord(25, 63) to Cord(25, 58)
+Cord(24, 57) to Cord(25, 57)
+Cord(24, 58) to Cord(25, 58)
+
+# Line 3
+Cord(78, 57) to Cord(79, 57)
+Cord(78, 56) to Cord(79, 56)
+Cord(78, 58) to Cord(83, 58)
+Cord(82, 59) to Cord(85, 59)
+Cord(82, 60) to Cord(85, 60)
+
+
+# Line 4
+Cord(93, 39) to Cord(94, 39)
+Cord(93, 38) to Cord(94, 38)
+Cord(93, 40) to Cord(96, 40)
+Cord(93, 41) to Cord(105, 41)
+Cord(106, 41) to Cord(106, 49)
+Cord(105, 49)
+Cord(103, 48) to Cord(108, 48)
+Cord(103, 47) to Cord(108, 47)
+
+
+# Line 5
+Cord(81, 27) to Cord(82, 27)
+Cord(81, 26) to Cord(82, 26)
+Cord(82, 25)
+Cord(83, 26)
+Cord(83, 26) to Cord(83, 17)
+Cord(84, 17) to Cord(90, 17)
+Cord(90, 16) to Cord(90, 12)
+Cord(91, 12) to Cord(97, 12)
+Cord(96, 13) to Cord(98, 13)
+Cord(98, 12)
+Cord(96, 11) to Cord(99, 11)
+
+
+SIGNAL: SIGNALTYPE::OBSTACLE
+# Obstacle 1
+Cord(17, 71) to Cord(20, 71)
+Cord(17, 72) to Cord(20, 72)
+Cord(17, 73) to Cord(30, 73)
+Cord(19, 74) to Cord(30, 74)
+Cord(21, 75) to Cord(30, 75)
+Cord(21, 76) to Cord(30, 76)
+Cord(21, 77) to Cord(30, 77)
+Cord(21, 78) to Cord(30, 78)
+
+
+# Obstacle 2
+Cord(76, 65) to Cord(95, 65)
+Cord(76, 66) to Cord(95, 66)
+Cord(76, 67) to Cord(95, 67)
+Cord(76, 68) to Cord(95, 68)
+Cord(76, 69) to Cord(95, 69)
+Cord(76, 70) to Cord(95, 70)
+
+Cord(96, 66) to Cord(96, 58)
+Cord(97, 66) to Cord(97, 58)
+Cord(98, 59) to Cord(103, 59)
+Cord(98, 58) to Cord(103, 58)
+
+
+# Obstacle 3
+Cord(101, 31) to Cord(102, 31)
+Cord(101, 30) to Cord(110, 30)
+Cord(101, 29) to Cord(110, 29)
+Cord(101, 28) to Cord(102, 28)
+Cord(101, 27) to Cord(102, 27)
+Cord(101, 26) to Cord(102, 26)
+Cord(101, 25) to Cord(102, 25)
+
+Cord(111, 30) to Cord(111, 18)
+Cord(112, 30) to Cord(112, 18)
+Cord(109, 24) to Cord(114, 24)
+Cord(109, 23) to Cord(114, 23)
+
+
+
 END_PREPLACE

@@ -1,5 +1,108 @@
 BEGIN_PREPLACE
 
+SIGNAL: SIGNALTYPE::SIGNAL
+
+### Line 1 ###
+# ^ top pad
+Cord(3, 99) to Cord(4, 99)
+Cord(3, 98) to Cord(4, 98)
+# v bottom pad
+Cord(4, 107) to Cord(5, 107)
+Cord(4, 108) to Cord(5, 108)
+# Lines
+Cord(4, 106) to Cord(4, 100)
+
+
+### Line 2 ###
+# ^ top pad
+Cord(24, 57) to Cord(25, 57)
+Cord(24, 56) to Cord(25, 56)
+# v bottom pad
+Cord(29, 48) to Cord(30, 48)
+Cord(29, 47) to Cord(30, 47)
+
+# Lines
+Cord(26, 57)
+Cord(25, 56) to Cord(25, 49)
+Cord(26, 56) to Cord(26, 49)
+Cord(25, 48) to Cord(28, 48)
+Cord(25, 47) to Cord(28, 47)
+
+### Line 3 ###
+# ^ top pad
+Cord(78, 56) to Cord(79, 56)
+Cord(78, 57) to Cord(79, 57)
+# v bottom pad
+Cord(70, 65) to Cord(71, 65)
+Cord(70, 66) to Cord(71, 66)
+
+
+# Lines
+Cord(79, 58) to Cord(73, 58)
+Cord(73, 59) to Cord(73, 63)
+Cord(71, 63) to Cord(72, 63)
+Cord(71, 64)
+
+
+
+# Line 4
+# ^ top pad
+Cord(93, 39) to Cord(94, 39)
+Cord(93, 38) to Cord(94, 38)
+# v bottom pad
+Cord(82, 36) to Cord(83, 36)
+Cord(82, 35) to Cord(83, 35)
+
+# Lines
+Cord(92, 38)
+Cord(93, 37)
+Cord(92, 37) to Cord(82, 37)
+
+# Line 5
+# ^ top pad
+Cord(81, 27) to Cord(82, 27)
+Cord(81, 26) to Cord(82, 26)
+# v bottom pad
+Cord(71, 29) to Cord(72, 29)
+Cord(71, 30) to Cord(72, 30)
+
+# Lines
+Cord(81, 28)
+Cord(80, 27)
+Cord(80, 28) to Cord(71, 28)
+
+SIGNAL: SIGNALTYPE::OBSTACLE
+
+Cord(68, 110)
+Cord(67, 109) to Cord(69, 109)
+Cord(67, 108) to Cord(69, 108)
+Cord(65, 107) to Cord(71, 107)
+Cord(65, 106) to Cord(71, 106)
+Cord(67, 105) to Cord(69, 105)
+Cord(67, 104) to Cord(69, 104)
+Cord(68, 103)
+
+
+Cord(85, 91) to Cord(93, 91)
+Cord(85, 90) to Cord(85, 85)
+
+Cord(109, 24) to Cord(110, 24)
+Cord(107, 23) to Cord(112, 23)
+Cord(109, 22) to Cord(110, 22)
+Cord(109, 21) to Cord(110, 21)
+Cord(107, 20) to Cord(112, 20)
+Cord(109, 19) to Cord(110, 19)
+
+
+Cord(15, 27) to Cord(23, 27)
+Cord(15, 26) to Cord(23, 26)
+Cord(15, 25) to Cord(23, 25)
+Cord(16, 24) to Cord(22, 24)
+Cord(16, 23) to Cord(22, 23)
+Cord(15, 22) to Cord(23, 22)
+Cord(15, 21) to Cord(23, 21)
+Cord(15, 20) to Cord(23, 20)
+
 SIGNAL: SIGNALTYPE::POWER_1
 
 Cord(10, 121) to Cord(22, 121)

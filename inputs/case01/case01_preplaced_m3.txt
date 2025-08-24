@@ -1,3 +1,42 @@
 BEGIN_PREPLACE
+SIGNAL: SIGNALTYPE::OBSTACLE
+
+SIGNAL: SIGNALTYPE::SIGNAL
+
+### Line 1 ###
+# ^ top pad
+Cord(6, 117) to Cord(7, 117)
+Cord(6, 116) to Cord(7, 116)
+# Line 
+Cord(7, 118)
+
+### Line 2 ###
+# ^ top pad
+Cord(42, 45) to Cord(43, 45)
+Cord(42, 44) to Cord(43, 44)
+# Lines
+Cord(43, 46)
+
+### Line 3 ###
+# ^ top pad
+Cord(63, 63) to Cord(64, 63)
+Cord(63, 62) to Cord(64, 62)
+# Lines
+Cord(63, 64)
+
+### Line 4 ###
+# ^ top pad
+Cord(81, 27) to Cord(82, 27)
+Cord(81, 26) to Cord(82, 26)
+# Lines
+Cord(81, 28)
+
+
+### Line 5 ###
+# ^ top pad
+Cord(57, 38) to Cord(58, 38)
+Cord(57, 39) to Cord(58, 39)
+# Lines
+Cord(57, 40)
 
 END_PREPLACE
