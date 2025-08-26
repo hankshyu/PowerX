@@ -1,3 +1,114 @@
 BEGIN_PREPLACE
 
+SIGNAL: SIGNALTYPE::SIGNAL
+### Line 1 ###
+# v lower pad
+Cord(21, 87) to Cord(22, 87)
+Cord(21, 86) to Cord(22, 86)
+# Lines
+Cord(21, 85) to Cord(21, 76)
+Cord(22, 76) to Cord(24, 76)
+Cord(25, 78) to Cord(25, 71)
+Cord(26, 77) to Cord(26, 72)
+Cord(27, 77) to Cord(27, 72)
+Cord(28, 78) to Cord(28, 71)
+
+### Line 2 ###
+# v lower pad
+Cord(42, 81) to Cord(43, 81)
+Cord(42, 80) to Cord(43, 80)
+# Lines
+Cord(42, 82) to Cord(42, 84)
+Cord(41, 84) to Cord(37, 84)
+Cord(36, 85) to Cord(36, 83)
+Cord(35, 85) to Cord(35, 83)
+Cord(34, 85) to Cord(34, 83)
+
+
+### Line 3 ###
+# v lower pad
+Cord(66, 69) to Cord(67, 69)
+Cord(66, 68) to Cord(67, 68)
+# Lines
+Cord(67, 67) to Cord(61, 67)
+Cord(61, 66) to Cord(61, 60)
+Cord(50, 60) to Cord(60, 60)
+Cord(49, 63) to Cord(49, 55)
+Cord(48, 63) to Cord(48, 55)
+Cord(47, 63) to Cord(47, 55)
+Cord(46, 63) to Cord(46, 55)
+Cord(45, 63) to Cord(45, 55)
+Cord(44, 63) to Cord(44, 55)
+Cord(43, 63) to Cord(43, 55)
+Cord(42, 63) to Cord(42, 55)
+
+### Line 4 ###
+# v lower pad
+Cord(54, 57) to Cord(55, 57)
+Cord(54, 56) to Cord(55, 56)
+# Lines
+Cord(55, 55) to Cord(55, 41)
+Cord(56, 41) to Cord(64, 41)
+Cord(65, 35) to Cord(65, 50)
+Cord(66, 35) to Cord(66, 50)
+Cord(67, 35) to Cord(67, 50)
+Cord(68, 35) to Cord(68, 50)
+Cord(69, 35) to Cord(69, 50)
+
+### Line 5 ###
+# v lower pad
+Cord(108, 45) to Cord(109, 45)
+Cord(108, 44) to Cord(109, 44)
+# Lines
+Cord(115, 47) to Cord(118, 47)
+Cord(115, 46) to Cord(118, 46)
+Cord(110, 45) to Cord(118, 45)
+Cord(114, 44) to Cord(118, 44)
+Cord(115, 43) to Cord(118, 43)
+Cord(116, 42) to Cord(120, 42)
+Cord(116, 41) to Cord(120, 41)
+
+
+SIGNAL: SIGNALTYPE::OBSTACLE
+
+Cord(33, 110) to Cord(39, 110)
+Cord(33, 109) to Cord(39, 109)
+Cord(35, 108) to Cord(37, 108)
+Cord(35, 107) to Cord(37, 107)
+Cord(33, 106) to Cord(39, 106)
+Cord(33, 105) to Cord(39, 105)
+
+
+
+
+Cord(11, 61) to Cord(18, 61)
+Cord(12, 60) to Cord(17, 60)
+Cord(11, 59) to Cord(18, 59)
+Cord(12, 58) to Cord(17, 58)
+Cord(11, 57) to Cord(18, 57)
+Cord(12, 56) to Cord(17, 56)
+Cord(11, 55) to Cord(18, 55)
+
+
+Cord(15, 47) to Cord(17, 47)
+Cord(15, 46) to Cord(17, 46)
+Cord(15, 45) to Cord(17, 45)
+Cord(15, 44) to Cord(17, 44)
+Cord(15, 43) to Cord(17, 43)
+Cord(15, 42) to Cord(17, 42)
+Cord(15, 41) to Cord(17, 41)
+
+Cord(91, 55) to Cord(94, 55)
+Cord(90, 54) to Cord(95, 54)
+Cord(90, 53) to Cord(95, 53)
+Cord(91, 52) to Cord(94, 52)
+
+Cord(104, 35) to Cord(109, 35)
+Cord(104, 34) to Cord(109, 34)
+Cord(104, 33) to Cord(109, 33)
+Cord(104, 32) to Cord(109, 32)
+Cord(104, 31) to Cord(109, 31)
+Cord(104, 30) to Cord(109, 30)
+
+
 END_PREPLACE

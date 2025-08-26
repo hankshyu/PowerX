@@ -3,16 +3,18 @@ GRID_WIDTH = 125
 GRID_HEIGHT = 125
 PIN_WIDTH = 126
 PIN_HEIGHT = 126
-LAYERS = 3
+LAYERS = 4
 TECHNOLOGY_END
 
 PDN_PREPLACE_START
 METAL_LAYER 0 "inputs/case02/case02_preplaced_m0.txt"
 METAL_LAYER 1 "inputs/case02/case02_preplaced_m1.txt"
 METAL_LAYER 2 "inputs/case02/case02_preplaced_m2.txt"
+METAL_LAYER 3 "inputs/case02/case02_preplaced_m3.txt"
 
 VIA_LAYER 0 "inputs/case02/case02_preplaced_v0.txt"
 VIA_LAYER 1 "inputs/case02/case02_preplaced_v1.txt"
+VIA_LAYER 2 "inputs/case02/case02_preplaced_v2.txt"
 PDN_PREPLACE_END
 
 MICROBUMP_START

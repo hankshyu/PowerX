@@ -15,7 +15,7 @@
 #include "circuitSolver.hpp"
 
 #include "gurobi_c++.h"
-std::string CASE_NAME = "case01";
+std::string CASE_NAME = "case02";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
 
@@ -31,7 +31,7 @@ int main(int argc, char **argv){
 
     // return 0;
 
-    PetscInitialize(&argc, &argv, NULL, NULL);
+    // PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
         "Mark PP Pads Canvas",
