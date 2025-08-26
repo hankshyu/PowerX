@@ -15,7 +15,7 @@
 #include "circuitSolver.hpp"
 
 #include "gurobi_c++.h"
-std::string CASE_NAME = "case02";
+std::string CASE_NAME = "case03";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
 
