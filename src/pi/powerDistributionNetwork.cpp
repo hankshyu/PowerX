@@ -186,6 +186,87 @@ bool PowerDistributionNetwork::checkOnePiece(int metalLayerIdx){
     return true;
 }
 
+void PowerDistributionNetwork::checkVias(){
+
+    for(int layer = 0; layer < m_viaLayerCount; ++layer){
+        int upLayer = layer;
+        int downLayer = layer + 1;
+        for(int j = 1; j < m_pinHeight-1; ++j){
+            for(int i = 1; i < m_pinHeight-1; ++i){
+                switch (viaLayers[layer].canvas[j][i]){
+                    case SignalType::OBSTACLE:{
+                        continue;
+                        break;
+                    }
+                    case SignalType::SIGNAL:{
+
+                            if(metalLayers[upLayer].canvas[j-1][i-1] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Up LL: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j-1][i-1]));
+                            }
+                            if(metalLayers[upLayer].canvas[j-1][i] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Up LR: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j-1][i]));
+                            }
+                            if(metalLayers[upLayer].canvas[j][i-1] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Up UL: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j][i-1]));
+                            }
+                            if(metalLayers[upLayer].canvas[j][i] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Up UR: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j][i]));
+                            }
+
+
+                            if(metalLayers[downLayer].canvas[j-1][i-1] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Down LL: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j-1][i-1]));
+                            }
+                            if(metalLayers[downLayer].canvas[j-1][i] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Down LR: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j-1][i]));
+                            }
+                            if(metalLayers[downLayer].canvas[j][i-1] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Down UL: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j][i-1]));
+                            }
+                            if(metalLayers[downLayer].canvas[j][i] != SignalType::SIGNAL){
+                                printf("[Error CheckVias] Signal(layer, j, i) = (%d, %d, %d) has nonSignal Down UR: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j][i]));
+                            }
+                            break;
+                    }
+                    case SignalType::EMPTY:{
+
+                        bool upLLClear = (metalLayers[upLayer].canvas[j-1][i-1] != SignalType::SIGNAL) && (metalLayers[upLayer].canvas[j-1][i-1] != SignalType::OBSTACLE);
+                        bool upLRClear = (metalLayers[upLayer].canvas[j-1][i] != SignalType::SIGNAL) && (metalLayers[upLayer].canvas[j-1][i] != SignalType::OBSTACLE);
+                        bool upULClear = (metalLayers[upLayer].canvas[j][i-1] != SignalType::SIGNAL) && (metalLayers[upLayer].canvas[j][i-1] != SignalType::OBSTACLE);
+                        bool upURClear = (metalLayers[upLayer].canvas[j][i] != SignalType::SIGNAL) && (metalLayers[upLayer].canvas[j][i] != SignalType::OBSTACLE);
+
+                        bool downLLClear = (metalLayers[downLayer].canvas[j-1][i-1] != SignalType::SIGNAL) && (metalLayers[downLayer].canvas[j-1][i-1] != SignalType::OBSTACLE);
+                        bool downLRClear = (metalLayers[downLayer].canvas[j-1][i] != SignalType::SIGNAL) && (metalLayers[downLayer].canvas[j-1][i] != SignalType::OBSTACLE);
+                        bool downULClear = (metalLayers[downLayer].canvas[j][i-1] != SignalType::SIGNAL) && (metalLayers[downLayer].canvas[j][i-1] != SignalType::OBSTACLE);
+                        bool downURClear = (metalLayers[downLayer].canvas[j][i] != SignalType::SIGNAL) && (metalLayers[downLayer].canvas[j][i] != SignalType::OBSTACLE);
+
+                        if(upLLClear && upLRClear && upULClear && upURClear && downLLClear && downLRClear && downULClear && downURClear) continue;
+                        else{
+                            if(!upLLClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j-1][i-1]));
+                            if(!upLRClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j-1][i]));
+                            if(!upULClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j][i-1]));
+                            if(!upURClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[upLayer].canvas[j][i]));
+                            
+                            if(!downLLClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j-1][i-1]));
+                            if(!downLLClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j-1][i]));
+                            if(!downLLClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j][i-1]));
+                            if(!downLLClear) printf("[Error CheckVias] Empty(layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(metalLayers[downLayer].canvas[j][i]));
+                        }
+                        break;
+                    }
+                    default:{
+                        printf("[Error CheckVias] (layer, j, i) = (%d, %d, %d) has signal: %s\n", layer, j, i, to_string(viaLayers[layer].canvas[j][i]));
+                        break;
+                    }
+                }
+
+
+            }
+        }
+
+    }
+}
+
 void PowerDistributionNetwork::fillEnclosedRegionsonCanvas(){
     std::vector<std::vector<bool>> visited;
     const std::vector<Cord> directions = {Cord(-1, 0), Cord(1, 0), Cord(0, -1), Cord(0, 1)};

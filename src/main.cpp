@@ -15,22 +15,18 @@
 #include "circuitSolver.hpp"
 
 #include "gurobi_c++.h"
-std::string CASE_NAME = "case03";
+
+std::string CASE_NAME = "case04";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
 
 void printWelcomeBanner();
 void printExitBanner();
 
+
+
 int main(int argc, char **argv){
-
-    BallOut b1("inputs/case05/case05_IO.csv");
-    Technology tk("inputs/case05/case05.tch");
-    visualiseBallOut(b1, tk, "outputs/case05_IO.txt");
     
-
-    return 0;
-
     // PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {
         "Initialize",
@@ -57,30 +53,36 @@ int main(int argc, char **argv){
     timeProfiler.startTimer(timeSpan[0]);
     DiffusionEngine dse(FILEPATH_BUMPS);
     timeProfiler.pauseTimer(timeSpan[0]);
-    
+
+
     timeProfiler.startTimer(timeSpan[1]);
     dse.markPreplacedAndInsertPadsOnCanvas();
     timeProfiler.pauseTimer(timeSpan[1]);
     
+    dse.checkVias();
+    std::cout << colours::MAGENTA <<   "Pass Via validity test of " << CASE_NAME  << colours::COLORRST << std::endl;
+
+    
+
     // timeProfiler.startTimer(timeSpan[2]);
     // dse.markObstaclesOnCanvas();
     // timeProfiler.pauseTimer(timeSpan[2]);
     
-    visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
-
-    visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, technology, "outputs/m1_up.txt");
-    visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1_down.txt");
-    visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
-
-    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2_up.txt");
-    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2_down.txt");
-    visualiseGridArrayWithPins(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2.txt");
-
-    visualiseGridArrayWithPin(dse.metalLayers[3].canvas, dse.viaLayers[2].canvas, technology, "outputs/m3.txt");
-
     // visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
+
+    // visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, technology, "outputs/m1_up.txt");
+    // visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1_down.txt");
     // visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
+
+    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2_up.txt");
+    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2_down.txt");
+    // visualiseGridArrayWithPins(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2.txt");
+
+    // visualiseGridArrayWithPin(dse.metalLayers[3].canvas, dse.viaLayers[2].canvas, technology, "outputs/m3.txt");
+
+    visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
+    visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
+    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
     // return 0;
 
@@ -219,7 +221,7 @@ int main(int argc, char **argv){
 }
 
 void printWelcomeBanner(){
-    std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool" << colours::COLORRST << std::endl;
+    std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool, running " << CASE_NAME << colours::COLORRST << std::endl;
 
 }
 
