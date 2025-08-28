@@ -24,12 +24,12 @@ void printExitBanner();
 
 int main(int argc, char **argv){
 
-    // BallOut b1("inputs/case03/case03_VIRTUVIAN.csv");
-    // Technology tk("inputs/case03/case03_tech.tch");
-    // visualiseBallOut(b1, tk, "outputs/case03_VIRTUVIAN.txt");
+    BallOut b1("inputs/case05/case05_IO.csv");
+    Technology tk("inputs/case05/case05.tch");
+    visualiseBallOut(b1, tk, "outputs/case05_IO.txt");
     
 
-    // return 0;
+    return 0;
 
     // PetscInitialize(&argc, &argv, NULL, NULL);
     std::vector<std::string> timeSpan = {

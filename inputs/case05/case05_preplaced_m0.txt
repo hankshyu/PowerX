@@ -1,0 +1,161 @@
+BEGIN_PREPLACE
+SIGNAL: SIGNALTYPE::SIGNAL
+### Line 1 ###
+# v lower pad
+Cord(18, 105) to Cord(19, 105)
+Cord(18, 104) to Cord(19, 104)
+# Lines
+Cord(17, 105)
+Cord(18, 106)
+Cord(17, 106) to Cord(15, 106)
+Cord(15, 107) to Cord(15, 110)
+Cord(15, 111) to Cord(9, 111)
+Cord(9, 112) to Cord(9, 117)
+Cord(6, 118) to Cord(12, 118)
+Cord(5, 119) to Cord(13, 119)
+Cord(5, 120) to Cord(13, 120)
+Cord(6, 121) to Cord(12, 121)
+
+### Line 2 ###
+# v lower pad
+Cord(69, 111) to Cord(70, 111)
+Cord(69, 110) to Cord(70, 110)
+# Lines
+Cord(69, 112) to Cord(69, 117)
+Cord(70, 112) to Cord(70, 117)
+Cord(68, 117) to Cord(60, 117)
+Cord(68, 116) to Cord(60, 116)
+Cord(59, 120) to Cord(59, 112)
+Cord(58, 120) to Cord(58, 112)
+Cord(57, 120) to Cord(57, 112)
+Cord(56, 120) to Cord(56, 112)
+Cord(55, 120) to Cord(55, 112)
+
+
+### Line 3 ###
+# v lower pad
+Cord(105, 111) to Cord(106, 111)
+Cord(105, 110) to Cord(106, 110)
+# Lines
+Cord(107, 112)
+Cord(106, 111)
+Cord(107, 112) to Cord(110, 112)
+Cord(110, 113) to Cord(110, 115)
+Cord(110, 116) to Cord(113, 116)
+Cord(114, 120) to Cord(114, 112)
+Cord(115, 118) to Cord(115, 114)
+Cord(116, 116)
+Cord(117, 116)
+Cord(118, 118) to Cord(118, 114)
+Cord(119, 120) to Cord(119, 112)
+
+
+### Line 4 ###
+# v lower pad
+Cord(120, 69) to Cord(121, 69)
+Cord(120, 68) to Cord(121, 68)
+# Lines
+Cord(120, 69) to Cord(120, 75)
+Cord(121, 69) to Cord(121, 79)
+Cord(120, 67) to Cord(120, 57)
+Cord(121, 67) to Cord(121, 61)
+
+
+### Line 5 ###
+# v lower pad
+Cord(36, 21) to Cord(37, 21)
+Cord(36, 20) to Cord(37, 20)
+# Lines
+Cord(37, 20) to Cord(40, 20)
+Cord(40, 19) to Cord(40, 16)
+Cord(40, 15) to Cord(45, 15)
+Cord(46, 16) to Cord(46, 14)
+Cord(47, 17) to Cord(47, 13)
+Cord(48, 18) to Cord(48, 12)
+Cord(49, 17) to Cord(49, 13)
+Cord(50, 16) to Cord(50, 14)
+
+### Line 6 ###
+# v lower pad
+Cord(93, 27) to Cord(94, 27)
+Cord(93, 26) to Cord(94, 26)
+# Lines
+Cord(91, 29) to Cord(96, 29)
+Cord(91, 28) to Cord(96, 28)
+Cord(91, 25) to Cord(96, 25)
+Cord(91, 24) to Cord(96, 24)
+
+### Line 7 ###
+# v lower pad
+Cord(120, 9) to Cord(121, 9)
+Cord(120, 8) to Cord(121, 8)
+# Lines
+Cord(120, 10) to Cord(120, 17)
+Cord(118, 18) to Cord(122, 18)
+Cord(117, 19) to Cord(123, 19)
+Cord(117, 20) to Cord(123, 20)
+
+SIGNAL: SIGNALTYPE::OBSTACLE
+
+Cord(18, 116)
+Cord(20, 116)
+Cord(17, 115) to Cord(21, 115)
+Cord(18, 114) to Cord(20, 114)
+Cord(18, 113) to Cord(20, 113)
+Cord(18, 112) to Cord(20, 112)
+Cord(18, 111) to Cord(20, 111)
+Cord(17, 110) to Cord(21, 110)
+Cord(18, 109)
+Cord(20, 109)
+
+Cord(33, 110) to Cord(39, 110)
+Cord(33, 109) to Cord(39, 109)
+Cord(35, 108) to Cord(37, 108)
+Cord(35, 107) to Cord(37, 107)
+Cord(33, 106) to Cord(39, 106)
+Cord(33, 105) to Cord(39, 105)
+
+
+
+Cord(104, 35) to Cord(109, 35)
+Cord(104, 34) to Cord(109, 34)
+Cord(104, 33) to Cord(109, 33)
+Cord(104, 32) to Cord(109, 32)
+Cord(104, 31) to Cord(109, 31)
+Cord(104, 30) to Cord(109, 30)
+
+Cord(16, 25)
+Cord(16, 24)
+Cord(15, 23) to Cord(17, 23)
+Cord(14, 22) to Cord(18, 22)
+Cord(14, 21) to Cord(18, 21)
+Cord(15, 20) to Cord(17, 20)
+Cord(16, 19)
+Cord(16, 19)
+
+Cord(73, 11) to Cord(79, 11)
+Cord(73, 10) to Cord(79, 10)
+Cord(73, 9) to Cord(79, 9)
+Cord(73, 8) to Cord(79, 8)
+
+Cord(94, 20) to Cord(95, 20)
+Cord(94, 19) to Cord(95, 19)
+Cord(94, 18) to Cord(95, 18)
+Cord(94, 17) to Cord(95, 17)
+Cord(94, 16) to Cord(95, 16)
+Cord(94, 15) to Cord(95, 15)
+Cord(94, 14) to Cord(95, 14)
+
+Cord(92, 92) to Cord(95, 92)
+Cord(92, 91) to Cord(95, 91)
+Cord(92, 90) to Cord(95, 90)
+
+Cord(107, 105) to Cord(110, 105)
+Cord(108, 104) to Cord(109, 104)
+Cord(108, 103) to Cord(109, 103)
+Cord(107, 102) to Cord(110, 102)
+Cord(105, 101) to Cord(112, 101)
+Cord(103, 100) to Cord(114, 100)
+
+
+END_PREPLACE
