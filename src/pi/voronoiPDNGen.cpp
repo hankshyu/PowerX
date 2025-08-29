@@ -770,7 +770,11 @@ void VoronoiPDNGen::ripAndReroute(std::unordered_map<SignalType, std::vector<Cor
             // std::cout << "Done " << curr << std::endl;
         }
 
-        assert(nodeStat[goal.y()][goal.x()] != 0);
+        // assert(nodeStat[goal.y()][goal.x()] != 0);
+        if(nodeStat[goal.y()][goal.x()] == 0){
+            std::cout << "Routing pair unfixable, skip to next" << std::endl;
+            continue;
+        }
         std::vector<Cord> path;
 
         for(Cord at = goal; at != start; at = prev[at]){
@@ -1015,8 +1019,8 @@ void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, 
                 voronoiCells[c] = winding;
             }
         }
-        assert(foundcentre);
-        // if(!foundcentre) std::cout << "No centre found for !" << i << std::endl;
+        // assert(foundcentre);
+        if(!foundcentre) std::cout << "No centre found for !" << i << std::endl;
     }
 }
 

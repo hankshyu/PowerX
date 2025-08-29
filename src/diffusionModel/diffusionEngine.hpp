@@ -47,6 +47,7 @@
 #include "gurobi_c++.h"
 
 class DiffusionEngine : public PowerDistributionNetwork{
+protected:
     size_t m_metalGridLayers;
     size_t m_metalGridWidth;
     size_t m_metalGridHeight;
@@ -57,6 +58,8 @@ class DiffusionEngine : public PowerDistributionNetwork{
 
     std::vector<size_t> m_viaGrid2DCount;
     std::vector<size_t> m_viaGrid2DAccumlateCount; // [2] = count[0] +..+count[2]
+    
+    void readConfigurations(const std::string &configFileName);
 
 public:
     std::unordered_map<SignalType, double> currentBudget; // normalized to sum = 1
@@ -86,7 +89,8 @@ public:
     
     double ViaEdgeLB = 0.0;
     double ViaEdgeUB = 1.75;
-    double subViaEdgeUB = ViaEdgeUB / 2.5;
+    double subViaEdgeUBDivisor = 2.5;
+    double subViaEdgeUB = 0;
     double viaEdgeWeight = 0.1;
 
     double ViaBudgetAvgQuota = 0.2;
@@ -130,7 +134,7 @@ public:
     std::unordered_map<SignalType, SignalTree> signalTrees;
 
 
-    DiffusionEngine(const std::string &fileName);
+    DiffusionEngine(const std::string &fileName, const std::string &configFileName);
 
     size_t calMetalIdx(size_t layer, size_t height, size_t width) const;
     size_t calMetalIdx(const MetalCord &cc) const;

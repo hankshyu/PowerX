@@ -37,9 +37,129 @@
 #include "timeProfiler.hpp"
 #include "dsu.hpp"
 
+void DiffusionEngine::readConfigurations(const std::string &configFileName){
+    if(subViaEdgeUBDivisor != 0) subViaEdgeUB = ViaEdgeUB / subViaEdgeUBDivisor;
+
+    if (configFileName.empty()) return;
+
+    std::ifstream inFile(configFileName);
+    if (!inFile) {
+        std::cout << "[DiffusionEngine] Warning: Could not open config file: " << configFileName << "\n";
+        return;
+    }
+
+    auto trim = [](std::string s) {
+        auto l = s.find_first_not_of(" \t\r\n");
+        auto r = s.find_last_not_of(" \t\r\n");
+        if (l == std::string::npos) return std::string{};
+        return s.substr(l, r - l + 1);
+    };
+    auto isCommentOrEmpty = [&](const std::string& s) {
+        if (s.empty()) return true;
+        size_t i = 0; 
+        while (i < s.size() && std::isspace(static_cast<unsigned char>(s[i]))) ++i;
+        return (i < s.size() && s[i] == '#');
+    };
+    auto parseDouble = [&](const std::string& v, double& out) -> bool {
+        std::istringstream iss(v);
+        double tmp;
+        iss >> tmp;
+        if (!iss.fail() && iss.eof()) { out = tmp; return true; }
+        return false;
+    };
+
+    std::unordered_map<std::string, double*> paramTable = {
+        {"normalMetalEdgeLB", &normalMetalEdgeLB},
+        {"normalMetalEdgeUB", &normalMetalEdgeUB},
+        {"normalMetalEdgeWeight", &normalMetalEdgeWeight},
+
+        {"aggrMetalEdgeLB", &aggrMetalEdgeLB},
+        {"aggrMetalEdgeUB", &aggrMetalEdgeUB},
+        {"aggrMetalEdgeWeight", &aggrMetalEdgeWeight},
+        {"mustRouteAggrMEUBPctg", &mustRouteAggrMEUBPctg},
+        {"mustRouteTotalBudgetPctg", &mustRouteTotalBudgetPctg},
+        {"mustRouteBudgetMin", &mustRouteBudgetMin},
+
+        {"ViaEdgeLB", &ViaEdgeLB},
+        {"ViaEdgeUB", &ViaEdgeUB},
+        {"subViaEdgeUBDivisor", &subViaEdgeUBDivisor},
+        {"subViaEdgeUB", &subViaEdgeUB}, // allow explicit override
+        {"viaEdgeWeight", &viaEdgeWeight},
+
+        {"ViaBudgetAvgQuota", &ViaBudgetAvgQuota},
+        {"viaBudgetCurrentQuota", &viaBudgetCurrentQuota},
+
+        {"minChipletBudgetAvgPctg", &minChipletBudgetAvgPctg},
+    };
+
+    std::set<std::string> seenKeys;
+    std::string fileLine;
+    size_t lineNo = 0;
+
+    while (std::getline(inFile, fileLine)) {
+        ++lineNo;
+        std::string raw = trim(fileLine);
+        if (isCommentOrEmpty(raw)) continue;
+
+        auto pos = raw.find('=');
+        if (pos == std::string::npos) {
+            std::cout << "[DiffusionEngine] Warning: Line " << lineNo 
+                        << " missing '='; ignoring: " << raw << "\n";
+            continue;
+        }
+        std::string key = trim(raw.substr(0, pos));
+        std::string val = trim(raw.substr(pos + 1));
+
+        if (key.empty()) {
+            std::cout << "[DiffusionEngine] Warning: Line " << lineNo 
+                        << " empty key; ignoring.\n";
+            continue;
+        }
+        if (val.empty()) {
+            std::cout << "[DiffusionEngine] Warning: Line " << lineNo 
+                        << " empty value for key '" << key << "'; ignoring.\n";
+            continue;
+        }
+
+        auto it = paramTable.find(key);
+        if (it == paramTable.end()) {
+            std::cout << "[DiffusionEngine] Warning: Line " << lineNo 
+                        << " unknown config key '" << key
+                        << "'; value '" << val << "' ignored.\n";
+            continue;
+        }
+
+        double parsed{};
+        if (!parseDouble(val, parsed)) {
+            std::cout << "[DiffusionEngine] Warning: Line " << lineNo 
+                        << " value for key '" << key
+                        << "' is not a valid number: '" << val 
+                        << "'; keeping default (" << *(it->second) << ").\n";
+            continue;
+        }
+
+        *(it->second) = parsed;
+        seenKeys.insert(key);
+    }
+
+    if (!seenKeys.count("subViaEdgeUB")) {
+        subViaEdgeUB = ViaEdgeUB / subViaEdgeUBDivisor;
+    }
+
+    if (normalMetalEdgeLB > normalMetalEdgeUB) {
+        std::cout << "[DiffusionEngine] Warning: normalMetalEdgeLB > normalMetalEdgeUB; you may want to swap them.\n";
+    }
+    if (aggrMetalEdgeLB > aggrMetalEdgeUB) {
+        std::cout << "[DiffusionEngine] Warning: aggrMetalEdgeLB > aggrMetalEdgeUB; you may want to swap them.\n";
+    }
+    if (ViaEdgeLB > ViaEdgeUB) {
+        std::cout << "[DiffusionEngine] Warning: ViaEdgeLB > ViaEdgeUB; you may want to swap them.\n";
+    }
+
+}
 
 
-DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistributionNetwork(fileName) {
+DiffusionEngine::DiffusionEngine(const std::string &fileName, const std::string &configFileName): PowerDistributionNetwork(fileName) {
     this->m_metalGridLayers = m_metalLayerCount;
     this->m_metalGridWidth = m_gridWidth;
     this->m_metalGridHeight = m_gridHeight;
@@ -47,6 +167,8 @@ DiffusionEngine::DiffusionEngine(const std::string &fileName): PowerDistribution
     this->m_metalGrid3DCount = m_metalGrid2DCount * m_metalLayerCount;
 
     this->m_viaGridLayers = m_viaLayerCount;
+
+    readConfigurations(configFileName);
 
     // calculate current budget
     double totalCurrentBudget = 0;

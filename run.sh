@@ -1,14 +1,14 @@
 # 
 # Launch processes in the background and store their PIDs
 
-# python3 utils/renderVoronoiPointsSegments.py -i outputs/ps0.txt -o outputs/ps0.png --dpi 480 -v &
-# python3 utils/renderVoronoiPointsSegments.py -i outputs/ps1.txt -o outputs/ps1.png --dpi 480 -v &
-# python3 utils/renderVoronoiPointsSegments.py -i outputs/ps2.txt -o outputs/ps2.png --dpi 480 -v &
+python3 utils/renderVoronoiPointsSegments.py -i outputs/ps0.txt -o outputs/ps0.png --dpi 480 -v &
+python3 utils/renderVoronoiPointsSegments.py -i outputs/ps1.txt -o outputs/ps1.png --dpi 480 -v &
+python3 utils/renderVoronoiPointsSegments.py -i outputs/ps2.txt -o outputs/ps2.png --dpi 480 -v &
 
 python3 utils/renderObjectArray.py -g -i outputs/m0.txt -o outputs/m0.png --pinSize 3.5 --dpi 640 -v &
 
-# python3 utils/renderObjectArray.py -g -i outputs/m1_up.txt -o outputs/m1_up.png --pinSize 3.5 --dpi 640 -v &
-# python3 utils/renderObjectArray.py -g -i outputs/m1_down.txt -o outputs/m1_down.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/m1_up.txt -o outputs/m1_up.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/m1_down.txt -o outputs/m1_down.png --pinSize 3.5 --dpi 640 -v &
 python3 utils/renderObjectArray.py -g -i outputs/m1.txt -o outputs/m1.png --pinSize 3.5 --dpi 640 -v &
 
 # python3 utils/renderObjectArray.py -g -i outputs/m2_up.txt -o outputs/m2_up.png --pinSize 3.5 --dpi 640 -v & 

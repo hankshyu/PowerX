@@ -16,12 +16,14 @@
 
 #include "gurobi_c++.h"
 
-std::string CASE_NAME = "case04";
+std::string CASE_NAME = "case05";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
+std::string FILEPATH_CONFIG = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".config";
 
 void printWelcomeBanner();
 void printExitBanner();
+void displayGridArrayWithPin(PowerDistributionNetwork &pdn, Technology &tch, bool upDownDisplay = false);
 
 
 
@@ -50,45 +52,35 @@ int main(int argc, char **argv){
     Technology technology(FILEPATH_TCH);
     EqCktExtractor EqCktExtor(technology);
     
-    timeProfiler.startTimer(timeSpan[0]);
-    DiffusionEngine dse(FILEPATH_BUMPS);
-    timeProfiler.pauseTimer(timeSpan[0]);
+    // timeProfiler.startTimer(timeSpan[0]);
+    // DiffusionEngine dse(FILEPATH_BUMPS, FILEPATH_CONFIG);
+    // timeProfiler.pauseTimer(timeSpan[0]);
 
 
-    timeProfiler.startTimer(timeSpan[1]);
-    dse.markPreplacedAndInsertPadsOnCanvas();
-    timeProfiler.pauseTimer(timeSpan[1]);
-    
-    dse.checkVias();
-    std::cout << colours::MAGENTA <<   "Pass Via validity test of " << CASE_NAME  << colours::COLORRST << std::endl;
-
-    
+    // timeProfiler.startTimer(timeSpan[1]);
+    // dse.markPreplacedAndInsertPadsOnCanvas();
+    // timeProfiler.pauseTimer(timeSpan[1]);
 
     // timeProfiler.startTimer(timeSpan[2]);
     // dse.markObstaclesOnCanvas();
     // timeProfiler.pauseTimer(timeSpan[2]);
-    
-    // visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
-
-    // visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, technology, "outputs/m1_up.txt");
-    // visualiseGridArrayWithPin(dse.metalLayers[1].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1_down.txt");
-    // visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
-
-    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2_up.txt");
-    // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2_down.txt");
-    // visualiseGridArrayWithPins(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, dse.viaLayers[2].canvas, technology, "outputs/m2.txt");
-
-    // visualiseGridArrayWithPin(dse.metalLayers[3].canvas, dse.viaLayers[2].canvas, technology, "outputs/m3.txt");
-
-    visualiseGridArrayWithPin(dse.metalLayers[0].canvas, dse.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    visualiseGridArrayWithPins(dse.metalLayers[1].canvas, dse.viaLayers[0].canvas, dse.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
-
-    // return 0;
 
     // timeProfiler.startTimer(timeSpan[3]);
     // dse.initialiseGraphWithPreplaced();
     // timeProfiler.pauseTimer(timeSpan[3]);
+
+    // displayGridArrayWithPin(dse, technology, true);
+    
+    
+    // dse.checkVias();
+    // std::cout << colours::MAGENTA << "Pass Via validity test of " << CASE_NAME  << colours::COLORRST << std::endl;
+    // return 0;
+
+    
+
+
+    
+
     
     // timeProfiler.startTimer(timeSpan[4]);
     // dse.fillEnclosedRegions();
@@ -105,6 +97,15 @@ int main(int argc, char **argv){
     // timeProfiler.startTimer(timeSpan[7]);
     // dse.postMCFLocalRepairTop(true);
     // timeProfiler.pauseTimer(timeSpan[7]);
+
+    // dse.writeBackToPDN();
+
+
+
+
+    // displayGridArrayWithPin(dse, technology, false);
+
+
     
     // dse.exportResultsToFile("outputs/result.txt");
     // dse.importResultsFromFile("outputs/result.txt");
@@ -135,79 +136,77 @@ int main(int argc, char **argv){
     // visualiseGridArrayWithPin(dse.metalLayers[2].canvas, dse.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
 
-    // VoronoiPDNGen vpg(FILEPATH_BUMPS);
-    // vpg.markPreplacedAndInsertPads();
-    // vpg.initPointsAndSegments();
+    VoronoiPDNGen vpg(FILEPATH_BUMPS);
+    vpg.markPreplacedAndInsertPads();
+    vpg.initPointsAndSegments();
 
-    // for(int i = 0; i < (vpg.getMetalLayerCount() - 1); ++i){
-    //     vpg.connectLayers(i, i+1);
-    // }
+    for(int i = 0; i < (vpg.getMetalLayerCount() - 1); ++i){
+        vpg.connectLayers(i, i+1);
+    }
 
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.runMSTRouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
-    //     // vpg.runFLUTERouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
-    // }
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.ripAndReroute(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
-    // }
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.generateInitialPowerPlanePoints(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
-    // }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.runMSTRouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+        // vpg.runFLUTERouting(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+    }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.ripAndReroute(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+    }
+
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
     
-    // // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
-    // // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");
-    // // visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.generateInitialPowerPlanePoints(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+    }
     
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.generateVoronoiDiagram(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
-    // }
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");
+    // visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
+    
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.generateVoronoiDiagram(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
+    }
 
 
-    // // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[0], vpg.voronoiCellsOfLayers[0], "outputs/vd0.txt");
-    // // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[1], vpg.voronoiCellsOfLayers[1], "outputs/vd1.txt");
-    // // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[2], vpg.voronoiCellsOfLayers[2], "outputs/vd2.txt");
+    // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[0], vpg.voronoiCellsOfLayers[0], "outputs/vd0.txt");
+    // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[1], vpg.voronoiCellsOfLayers[1], "outputs/vd1.txt");
+    // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[2], vpg.voronoiCellsOfLayers[2], "outputs/vd2.txt");
 
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.mergeVoronoiCells(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i], vpg.multiPolygonsOfLayers[i]);
-    //     vpg.exportToCanvas(vpg.metalLayers[i].canvas, vpg.multiPolygonsOfLayers[i]);
-    // }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.mergeVoronoiCells(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i], vpg.multiPolygonsOfLayers[i]);
+        vpg.exportToCanvas(vpg.metalLayers[i].canvas, vpg.multiPolygonsOfLayers[i]);
+    }
 
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.obstacleAwareLegalisation(i);
-    //     vpg.floatingPlaneReconnection(i);
-    //     std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
-    // }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.obstacleAwareLegalisation(i);
+        vpg.floatingPlaneReconnection(i);
+        std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
+    }
 
-    // vpg.enhanceCrossLayerPINew();
+    vpg.enhanceCrossLayerPINew();
 
 
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.obstacleAwareLegalisation(i);
-    //     vpg.floatingPlaneReconnection(i);
-    //     std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
-    // }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.obstacleAwareLegalisation(i);
+        vpg.floatingPlaneReconnection(i);
+        std::cout << "Legalize Checking of layer " << i << ", result = " << vpg.checkOnePiece(i) << std::endl;
+    }
 
-    // vpg.assignVias();
+    vpg.assignVias();
 
-    // for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-    //     vpg.removeFloatingPlanes(i);
-    // }
+    for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
+        vpg.removeFloatingPlanes(i);
+    }
+
+    displayGridArrayWithPin(vpg, technology, true);
+
 
     
     // vpg.exportEquivalentCircuit(SignalType::POWER_1, technology, EqCktExtor, "outputs/POWER1.sp");
     // vpg.exportEquivalentCircuit(SignalType::POWER_2, technology, EqCktExtor, "outputs/POWER2.sp");
     // vpg.exportEquivalentCircuit(SignalType::POWER_3, technology, EqCktExtor, "outputs/POWER3.sp");
     // // vpg.exportEquivalentCircuit(SignalType::POWER_4, technology, EqCktExtor, "outputs/POWER4.sp");
-
-    // visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    // visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    // visualiseGridArrayWithPins(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, vpg.viaLayers[2].canvas, technology, "outputs/m2.txt");
-    // visualiseGridArrayWithPin(vpg.metalLayers[3].canvas, vpg.viaLayers[2].canvas, technology, "outputs/m3.txt");
-
-
-    // visualiseGridArrayWithPin(vpg.metalLayers[0].canvas, vpg.viaLayers[0].canvas, technology, "outputs/m0.txt");
-    // visualiseGridArrayWithPins(vpg.metalLayers[1].canvas, vpg.viaLayers[0].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m1.txt");
-    // visualiseGridArrayWithPin(vpg.metalLayers[2].canvas, vpg.viaLayers[1].canvas, technology, "outputs/m2.txt");
 
 
     // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[0], "outputs/mp0.txt");
@@ -222,10 +221,29 @@ int main(int argc, char **argv){
 
 void printWelcomeBanner(){
     std::cout << colours::CYAN << "PowerX: A Power Plane Evaluation and Optimization Tool, running " << CASE_NAME << colours::COLORRST << std::endl;
-
 }
 
 void printExitBanner(){
-    std::cout << colours::YELLOW << "PowerX Exists Successfully" << colours::COLORRST << std::endl;
-    
+    std::cout << colours::YELLOW << "PowerX Exists Successfully" << colours::COLORRST << std::endl; 
+}
+
+void displayGridArrayWithPin(PowerDistributionNetwork &pdn, Technology &tch, bool upDownDisplay){
+    for(size_t layer = 0; layer < pdn.getMetalLayerCount(); ++layer){
+
+        std::string fileName = "outputs/m";
+        if(layer == 0){
+            visualiseGridArrayWithPin(pdn.metalLayers[layer].canvas, pdn.viaLayers[layer].canvas, tch, fileName+std::to_string(layer)+".txt");
+
+        }else if(layer == (pdn.getMetalLayerCount() - 1)){
+            visualiseGridArrayWithPin(pdn.metalLayers[layer].canvas, pdn.viaLayers[layer-1].canvas, tch, fileName+std::to_string(layer)+".txt");
+
+        }else{
+            visualiseGridArrayWithPins(pdn.metalLayers[layer].canvas, pdn.viaLayers[layer-1].canvas, pdn.viaLayers[layer].canvas, tch, fileName+std::to_string(layer)+".txt");
+            if(upDownDisplay){
+                visualiseGridArrayWithPin(pdn.metalLayers[layer].canvas, pdn.viaLayers[layer-1].canvas, tch, fileName+std::to_string(layer)+"_up.txt");
+                visualiseGridArrayWithPin(pdn.metalLayers[layer].canvas, pdn.viaLayers[layer].canvas, tch, fileName+std::to_string(layer)+"_down.txt");
+            }
+        }
+
+    }
 }

@@ -1,3 +1,46 @@
 BEGIN_PREPLACE
 
+
+SIGNAL: SIGNALTYPE::SIGNAL
+### Line 1 ###
+# ^ upper pad
+Cord(27, 75) to Cord(28, 75)
+Cord(27, 74) to Cord(28, 74)
+
+### Line 2 ###
+# ^ upper pad
+Cord(114, 93) to Cord(115, 93)
+Cord(114, 92) to Cord(115, 92)
+
+
+### Line 3 ###
+# ^ upper pad
+Cord(90, 93) to Cord(91, 93)
+Cord(90, 92) to Cord(91, 92)
+
+
+### Line 4 ###
+# ^ upper pad
+Cord(120, 45) to Cord(121, 45)
+Cord(120, 44) to Cord(121, 44)
+
+### Line 5 ###
+# ^ upper pad
+Cord(33, 51) to Cord(34, 51)
+Cord(33, 50) to Cord(34, 50)
+
+
+### Line 6 ###
+# ^ upper pad
+Cord(90, 9) to Cord(91, 9)
+Cord(90, 8) to Cord(91, 8)
+
+
+### Line 7 ###
+# ^ upper pad
+Cord(93, 3) to Cord(94, 3)
+Cord(93, 2) to Cord(94, 2)
+
+
+
 END_PREPLACE
