@@ -1,0 +1,84 @@
+BEGIN_PREPLACE
+
+SIGNAL: SIGNALTYPE::SIGNAL
+
+### Line 1 ###
+# ^ upper pad
+Cord(16, 154) to Cord(17, 154)
+Cord(16, 153) to Cord(17, 153)
+# line
+Cord(17, 152)
+Cord(18, 153)
+
+
+### Line 2 ###
+# ^ upper pad
+Cord(46, 166) to Cord(47, 166)
+Cord(46, 165) to Cord(47, 165)
+# line
+Cord(47, 164)
+Cord(48, 165)
+
+
+
+### Line 3 ###
+# ^ upper pad
+Cord(14, 88) to Cord(15, 88)
+Cord(14, 87) to Cord(15, 87)
+# line
+
+
+
+### Line 4 ###
+# ^ upper pad
+Cord(134, 148) to Cord(135, 148)
+Cord(134, 147) to Cord(135, 147)
+# line
+
+
+
+### Line 5 ###
+# ^ upper pad
+Cord(158, 112) to Cord(159, 112)
+Cord(158, 111) to Cord(159, 111)
+# line
+
+
+
+### Line 6 ###
+# ^ upper pad
+Cord(160, 94) to Cord(161, 94)
+Cord(160, 93) to Cord(161, 93)
+# line
+Cord(161, 92)
+Cord(162, 93)
+
+
+
+### Line 7 ###
+# ^ upper pad
+Cord(122, 100) to Cord(123, 100)
+Cord(122, 99) to Cord(123, 99)
+# line
+
+### Line 8 ###
+# ^ upper pad
+Cord(124, 70) to Cord(125, 70)
+Cord(124, 69) to Cord(125, 69)
+# line
+Cord(125, 68)
+Cord(126, 69)
+
+
+### Line 9 ###
+# ^ upper pad
+Cord(146, 76) to Cord(147, 76)
+Cord(146, 75) to Cord(147, 75)
+# line
+
+
+
+
+
+
+END_PREPLACE
