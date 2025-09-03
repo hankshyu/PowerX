@@ -11,7 +11,7 @@ password = 'irislab123'
 
 
 
-SPICE_FILE_NAME = ["POWER1.sp", "POWER2.sp", "POWER3.sp", "POWER4.sp"]
+SPICE_FILE_NAME = ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"]
 spice_result_file = [s.replace('.sp', '.lis') for s in SPICE_FILE_NAME]
 
 local_file = ["outputs/" + s for s in SPICE_FILE_NAME]

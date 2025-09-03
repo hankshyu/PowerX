@@ -26,6 +26,7 @@ WHITE       = "\u001b[37m"
 SIGNAL_COLORS = {
     "CHIPLET": "#B8B8B8",
     "EMPTY": "none",
+    "UNKNOWN": "none",
     "SIGNAL": "#B0B0B0",
     "POWER_1": "#1e81b0",
     "POWER_2": "#e67e22",

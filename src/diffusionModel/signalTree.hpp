@@ -48,7 +48,7 @@ public:
     std::unordered_set<DiffusionChamber *> preplacedOrMarkedNodes;
     std::unordered_set<DiffusionChamber *> candidateNodes;
 
-    std::vector<CandVertex> candidates;
+    // std::vector<CandVertex> candidates;
     // node 0 = input node
     // node 1 ~ n is chiplet output Node
 
@@ -71,6 +71,9 @@ public:
 
     Mat V_n;
     Mat I_n;
+
+    size_t resultIdxBegin;
+    size_t resultIdxEnd;
 
     SignalTree();
     SignalTree(SignalType signal, int chipletCount, double budget);

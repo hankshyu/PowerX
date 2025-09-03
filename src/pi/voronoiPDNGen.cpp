@@ -32,7 +32,9 @@
 #include <stack>
 #include <memory>
 #include <assert.h>
+#include <optional>
 #include <omp.h> // parallel computing
+
 
 // 2. Boost Library:
 #include <boost/graph/adjacency_list.hpp>
@@ -912,7 +914,9 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
             FCord projection(osLow.x() + ab.x()*t, osLow.y() + ab.y()*t);
             
             Cord gridProj = findNearestAvailableGridPoint(projection);
-            assert(allPoints.count(gridProj) == 0);
+            // if(allPoints.count(gridProj) != 0) continue;
+            
+            // assert(allPoints.count(gridProj) == 0);
 
             layerPoints[fixst].push_back(gridProj);
             allPoints.insert(gridProj);
@@ -928,6 +932,201 @@ void VoronoiPDNGen::generateInitialPowerPlanePoints(std::unordered_map<SignalTyp
         }
     }
 
+    fixRepeatedPoints(layerPoints);
+    fixRepeatedSegments(layerSegments);
+}
+
+
+
+
+void VoronoiPDNGen::generateInitialPowerPlanePointsNew( std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments){
+    // 1) Build the occupied set from points AND segment endpoints
+    std::unordered_set<Cord> allPoints;
+    for (const auto &[st, vcord] : layerPoints) {
+        allPoints.insert(vcord.begin(), vcord.end());
+    }
+    for (const auto &[st, segs] : layerSegments) {
+        for (const auto &s : segs) {
+            allPoints.insert(s.getLow());
+            allPoints.insert(s.getHigh());
+        }
+    }
+
+    // 2) Collect segments that need splitting
+    std::stack<std::pair<OrderedSegment, SignalType>> toFix;
+    for (auto it = layerSegments.begin(); it != layerSegments.end(); ++it) {
+        SignalType st = it->first;
+        for (auto osit = it->second.begin(); osit != it->second.end();) {
+            const OrderedSegment os = *osit;
+            Cord osLow(os.getLow());
+            Cord osHigh(os.getHigh());
+
+            // Skip very short segments (<= sqrt(2) length)
+            if (calDistanceSquared(osLow, osHigh) <= 2) {
+                ++osit;
+                continue;
+            }
+
+            // Circle test for foreign-point intersection
+            FCord centre(double(osLow.x() + osHigh.x()) / 2.0, double(osLow.y() + osHigh.y()) / 2.0);
+            double radius = calEuclideanDistance(osLow, osHigh) / 2.0;
+
+            bool needsRemoval = false;
+            for (auto pcit = layerPoints.begin(); pcit != layerPoints.end() && !needsRemoval; ++pcit) {
+                if (pcit->first == st) continue;
+                for (const Cord &eCord : pcit->second) {
+                    if (calEuclideanDistance(centre, eCord) <= radius) {
+                        toFix.push({os, st});
+                        needsRemoval = true;
+                        break;
+                    }
+                }
+            }
+
+            osit = needsRemoval ? it->second.erase(osit) : (osit + 1);
+        }
+    }
+
+    // 3) Robust nearest-free-point finder: NEVER returns an occupied point
+    auto findNearestAvailableGridPoint = [&](const FCord &fproj) -> std::optional<Cord> {
+        // Round to nearest grid
+        int px = static_cast<int>(std::lround(fproj.x()));
+        int py = static_cast<int>(std::lround(fproj.y()));
+
+        // If the rounded center itself is free, take it immediately
+
+        Cord c(px, py);
+        if (!allPoints.count(c)) return c;
+
+
+        // Expand search ring by ring on a diamond/circle shell.
+        // If you have board/layout boundaries, enforce them here.
+        // The cap prevents infinite loops in pathological saturation.
+        const int MAX_R = (m_gridHeight + m_gridWidth)/2; // tune to your board size if desired
+        for (int r = 1; r <= MAX_R; ++r) {
+            // loop dx on the perimeter, compute dy so |dx|+|dy|=r (diamond)
+            for (int dx = -r; dx <= r; ++dx) {
+                int dy = r - std::abs(dx);
+
+                
+                Cord c(px + dx, py + dy);
+                if (!allPoints.count(c)) return c;
+                
+                if (dy != 0) {
+                    Cord cx(px + dx, py - dy);
+                    if (!allPoints.count(cx)) return cx;
+                }
+            }
+        }
+
+        // No space found in the configured search radius
+        return std::nullopt;
+    };
+
+    // 4) Process the segments that need fixing
+    bool debug = true;
+    while (!toFix.empty()) {
+        auto [fixos, fixst] = toFix.top();
+        toFix.pop();
+
+        Cord osLow(fixos.getLow());
+        Cord osHigh(fixos.getHigh());
+
+        if (debug) {
+            std::cout << "[toFix] Segment (" 
+                    << osLow.x() << "," << osLow.y() << ") -> ("
+                    << osHigh.x() << "," << osHigh.y() << ")"
+                    << "  SignalType=" << fixst << std::endl;
+        }
+
+        // skip degenerate segments
+        if (osLow.x() == osHigh.x() && osLow.y() == osHigh.y()) {
+            if (debug) {
+                std::cout << "  Degenerate segment; keeping as-is." << std::endl;
+            }
+            layerSegments[fixst].push_back(fixos);
+            continue;
+        }
+
+        // circle hit test
+        FCord centre(double(osLow.x() + osHigh.x()) / 2.0,
+                    double(osLow.y() + osHigh.y()) / 2.0);
+        double radius = calEuclideanDistance(osLow, osHigh) / 2.0;
+
+        bool hasIntersect = false;
+        Cord c3;
+        for (const auto &kv : layerPoints) {
+            if (kv.first == fixst) continue;
+            for (const Cord &eCord : kv.second) {
+                if (calEuclideanDistance(centre, eCord) <= radius) {
+                    hasIntersect = true;
+                    c3 = eCord;
+                    break;
+                }
+            }
+            if (hasIntersect) break;
+        }
+
+        if (hasIntersect) {
+            if (debug) {
+                std::cout << "  Found intersect with point ("
+                        << c3.x() << "," << c3.y() << ")" << std::endl;
+            }
+
+            // order endpoints
+            if (osLow.x() > osHigh.x() ||
+                (osLow.x() == osHigh.x() && osLow.y() > osHigh.y())) {
+                std::swap(osLow, osHigh);
+            }
+
+            // projection (clamped)
+            FCord ab(osHigh.x() - osLow.x(), osHigh.y() - osLow.y());
+            FCord ac(c3.x() - osLow.x(), c3.y() - osLow.y());
+            double denom = ab.x()*ab.x() + ab.y()*ab.y();
+            double t = denom == 0.0 ? 0.0
+                    : std::clamp((ac.x()*ab.x() + ac.y()*ab.y()) / denom, 0.0, 1.0);
+            FCord projection(osLow.x() + ab.x()*t,
+                            osLow.y() + ab.y()*t);
+
+            if (debug) {
+                std::cout << "  Projection at (" << projection.x()
+                        << "," << projection.y() << ")" << std::endl;
+            }
+
+            // find nearest free point
+            auto maybeGrid = findNearestAvailableGridPoint(projection);
+            if (!maybeGrid) {
+                if (debug) {
+                    std::cout << "  !! Saturated: no free grid near projection." << std::endl;
+                }
+                layerSegments[fixst].push_back(fixos);
+                continue;
+            }
+
+            Cord gridProj = *maybeGrid;
+            if (debug) {
+                std::cout << "  Insert new grid point (" << gridProj.x()
+                        << "," << gridProj.y() << ")" << std::endl;
+            }
+
+            assert(allPoints.count(gridProj) == 0);
+            layerPoints[fixst].push_back(gridProj);
+            allPoints.insert(gridProj);
+
+            // split and queue
+            OrderedSegment nos1(osLow, gridProj);
+            OrderedSegment nos2(gridProj, osHigh);
+            toFix.push({nos1, fixst});
+            toFix.push({nos2, fixst});
+        } else {
+            if (debug) {
+                std::cout << "  No intersection; keeping segment." << std::endl;
+            }
+            layerSegments[fixst].push_back(fixos);
+        }
+    }
+
+    // 5) Your existing de-dup passes
     fixRepeatedPoints(layerPoints);
     fixRepeatedSegments(layerSegments);
 }
@@ -1022,6 +1221,115 @@ void VoronoiPDNGen::generateVoronoiDiagram(const std::unordered_map<SignalType, 
         // assert(foundcentre);
         if(!foundcentre) std::cout << "No centre found for !" << i << std::endl;
     }
+    
+}
+
+void VoronoiPDNGen::generateVoronoiDiagramNew( const std::unordered_map<SignalType, std::vector<Cord>>& layerPoints, std::unordered_map<Cord, std::vector<FCord>>& voronoiCells){
+    using namespace geos::geom;
+    using geos::triangulate::VoronoiDiagramBuilder;
+
+    // 1) Gather input sites (centres)
+    std::vector<Cord> voronoiCentres;
+    voronoiCentres.reserve(256);
+    for (const auto& kv : layerPoints) {
+        for (const Cord& c : kv.second) voronoiCentres.push_back(c);
+    }
+
+    // 2) Build a MultiPoint from the sites
+    std::vector<Coordinate> inputSites;
+    inputSites.reserve(voronoiCentres.size());
+    for (const Cord& c : voronoiCentres) inputSites.emplace_back(c.x(), c.y());
+
+    const GeometryFactory* factory = GeometryFactory::getDefaultInstance();
+
+    auto coordSeq = std::make_unique<CoordinateSequence>();
+    coordSeq->reserve(inputSites.size());
+    for (const Coordinate& c : inputSites) coordSeq->add(c);
+
+    std::unique_ptr<Geometry> multipoint = factory->createMultiPoint(*coordSeq);
+
+    // 3) Clip envelope (canvas)
+    Envelope clipEnv(0.0, static_cast<double>(getPinWidth() - 1),
+                     0.0, static_cast<double>(getPinHeight() - 1));
+    std::unique_ptr<Geometry> canvas = factory->toGeometry(&clipEnv);
+
+    // 4) Build Voronoi
+    VoronoiDiagramBuilder builder;
+    builder.setSites(*multipoint);
+    builder.setClipEnvelope(&clipEnv);
+    std::unique_ptr<Geometry> diagram = builder.getDiagram(*factory);
+
+    // Helper to extract exterior ring into FCord vector
+    auto extractExteriorRing = [](const Polygon* p) -> std::vector<FCord> {
+        std::vector<FCord> winding;
+        std::unique_ptr<CoordinateSequence> ring = p->getExteriorRing()->getCoordinates();
+        winding.reserve(ring->size());
+        for (std::size_t j = 0; j < ring->size(); ++j) {
+            const Coordinate& t = ring->getAt(j);
+            winding.emplace_back(FCord(t.x, t.y));
+        }
+        return winding;
+    };
+
+    // 5) Collect cell windings and their site keys (direct mapping)
+    std::vector<std::vector<FCord>> allWindings;
+    std::vector<Cord> cellSiteKeys;
+    allWindings.reserve(diagram->getNumGeometries());
+    cellSiteKeys.reserve(diagram->getNumGeometries());
+
+    for (std::size_t i = 0; i < diagram->getNumGeometries(); ++i) {
+        const Geometry* rawCell = diagram->getGeometryN(i);
+
+        // Clip to canvas
+        std::unique_ptr<Geometry> clipped = rawCell->intersection(canvas.get());
+        if (clipped->isEmpty()) continue;
+
+        // The generating site for THIS cell (aligns with i)
+        const Geometry* siteGeom = multipoint->getGeometryN(i);
+        const CoordinateXY* siteCoord = siteGeom->getCoordinate();
+        if (!siteCoord) continue;
+
+        // Convert site to integer grid (Cord)
+        Cord siteKey(static_cast<int>(std::llround(siteCoord->x)),
+                     static_cast<int>(std::llround(siteCoord->y)));
+
+        // Accept Polygon or MultiPolygon (pick largest-area part)
+        if (const Polygon* poly = dynamic_cast<const Polygon*>(clipped.get())) {
+            allWindings.emplace_back(extractExteriorRing(poly));
+            cellSiteKeys.emplace_back(siteKey);
+        } else if (const MultiPolygon* mpoly = dynamic_cast<const MultiPolygon*>(clipped.get())) {
+            double bestArea = -1.0;
+            std::vector<FCord> bestWinding;
+            for (std::size_t k = 0; k < mpoly->getNumGeometries(); ++k) {
+                const Polygon* part = dynamic_cast<const Polygon*>(mpoly->getGeometryN(k));
+                if (!part) continue;
+                double area = part->getArea();
+                if (area > bestArea) {
+                    bestArea = area;
+                    bestWinding = extractExteriorRing(part);
+                }
+            }
+            if (bestArea > 0.0) {
+                allWindings.emplace_back(std::move(bestWinding));
+                cellSiteKeys.emplace_back(siteKey);
+            }
+        } else {
+            // Unexpected geometry type; skip
+            continue;
+        }
+    }
+
+    // 6) Populate output map (one cell per site). If duplicates occur, last one wins.
+    for (std::size_t i = 0; i < allWindings.size(); ++i) {
+        voronoiCells[cellSiteKeys[i]] = std::move(allWindings[i]);
+    }
+
+    // (Optional) Debug: warn if some input sites didn't get a cell
+    // for (const Cord& c : voronoiCentres) {
+    //     if (!voronoiCells.count(c)) {
+    //         std::cerr << "[Voronoi] No cell produced for site (" << c.x() << "," << c.y() << ")\n";
+    //     }
+    // }
 }
 
 void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap){
@@ -1097,6 +1405,7 @@ void VoronoiPDNGen::exportToCanvas(std::vector<std::vector<SignalType>> &canvas,
                     largestIdx = i;
                 }
             }
+            std::cout << "Completing canvas export:" << Cord(canvasI, canvasJ) << std::endl;
 
             canvas[canvasJ][canvasI] = allSigType[largestIdx];
         }
@@ -1403,7 +1712,6 @@ void VoronoiPDNGen::enhanceCrossLayerPI(){
         }
     }
 }
-
 
 // metallayers[1].canvas[]
 

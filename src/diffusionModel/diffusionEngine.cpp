@@ -3626,10 +3626,15 @@ void DiffusionEngine::initialiseFiller(){
 }
 
 void DiffusionEngine::initialiseSignalTrees(){
-
+    this->totalChipletCount = 0;
     for(auto &[st, sigTree] : this->signalTrees){
-
         int chipletCount = sigTree.chipletCount;
+
+        sigTree.resultIdxBegin = totalChipletCount;
+        sigTree.resultIdxEnd = totalChipletCount + chipletCount;
+        totalChipletCount += chipletCount;
+
+
         sigTree.GIdxToNode = std::vector<DiffusionChamber *>(chipletCount + 1, nullptr);
 
         // fill in pinIn (current in nodes) related logics
@@ -3677,8 +3682,9 @@ void DiffusionEngine::initialiseSignalTrees(){
             len_t recLLY = rec::getYL(rec);
 
             BallOut *bo = this->uBump.instanceToBallOutMap[instName];
+            currentDemands.push_back(bo->getMaxCurrent());
             for(const Cord &c : bo->SignalTypeToAllCords[st]){
-
+                
                 len_t pinCordX = c.x() + recLLX;
                 len_t pinCordY = c.y() + recLLY;
 
@@ -3884,7 +3890,7 @@ void DiffusionEngine::initialiseSignalTrees(){
         };
 
         // Set up G_n
-        MatCreate(PETSC_COMM_WORLD, &sigTree.G_n);
+        MatCreate(PETSC_COMM_SELF, &sigTree.G_n);
         Mat &G_n = sigTree.G_n;
         MatSetSizes(G_n, PETSC_DECIDE, PETSC_DECIDE, nSize, nSize);
         MatSetType(G_n, MATAIJ);
@@ -3892,8 +3898,7 @@ void DiffusionEngine::initialiseSignalTrees(){
 
         // Declare symmetry before inserting values
         MatSetOption(G_n, MAT_SYMMETRIC, PETSC_TRUE);
-        // Optional: Declare SPD if grounding a node later
-        MatSetOption(G_n, MAT_SPD, PETSC_TRUE);
+
 
         PetscInt pinInIdxBegin = sigTree.pinInIdxBegin;
         PetscInt pinInIdxEnd = sigTree.pinInIdxEnd;
@@ -3974,7 +3979,7 @@ void DiffusionEngine::initialiseSignalTrees(){
 
         };
 
-        for(PetscInt i = sigTree.pinInIdxBegin+1; i < sigTree.n_size; ++i){
+        for(PetscInt i = sigTree.pinInIdxBegin; i < sigTree.n_size; ++i){
             DiffusionChamber *dc = sigTree.GIdxToNode[i];
 
             PetscInt diagonalValue = (i < sigTree.pinOutIdxEnd)? 1 : 0;
@@ -4028,23 +4033,29 @@ void DiffusionEngine::initialiseSignalTrees(){
         // ground one node (idx = sigTree.pinInIdxBegin, clear row/column and  set diagonal = 1
         PetscInt groundIdx = sigTree.pinInIdxBegin;
         MatZeroRowsColumns(G_n, 1, &groundIdx, 1.0, NULL, NULL);
+
+        // Declare SPD after grounding a node
+        MatSetOption(G_n, MAT_SPD, PETSC_TRUE);
+
         // for (PetscInt i = 0; i < nSize; ++i) {
         //     MatSetValue(G_n, groundIdx, i, 0.0, INSERT_VALUES);
         //     MatSetValue(G_n, i, groundIdx, 0.0, INSERT_VALUES);
         // }
         // MatSetValue(G_n, groundIdx, groundIdx, 1.0, INSERT_VALUES);
         
-        std::cout << "Verifying St = " << st << "\'s G_n 3: " << groundIdx << std::endl;
-        CheckConductanceMatrix(G_n, true);
-        CheckAllRowsNonZero(G_n);
+        // std::cout << "Verifying St = " << st << "\'s G_n 3: " << groundIdx << std::endl;
+        // CheckConductanceMatrix(G_n, true);
+        // CheckAllRowsNonZero(G_n);
 
 
     }
 }
 
 void DiffusionEngine::runInitialEvaluation(){
-    
+    pairWiseResistance = std::vector<double>(totalChipletCount, -1);
+
     for(auto &[st, sigTree] : this->signalTrees){
+
         PetscInt expSize = sigTree.exp_size;
         PetscInt nSize = sigTree.n_size;
         Mat &G_n = sigTree.G_n;
@@ -4095,11 +4106,578 @@ void DiffusionEngine::runInitialEvaluation(){
             VecGetValues(Vk, 1, &sink, &v_sink);
 
             double R_k = PetscRealPart(v_src - v_sink);
+            pairWiseResistance[sigTree.resultIdxBegin + k] = R_k;
+
             std::cout << st << " ";
             PetscPrintf(PETSC_COMM_WORLD, "R_0_%d = %.6f ohms\n", (int)sink, R_k);
             VecDestroy(&Vk);
         }
     }
+    // use pairwise resistance to calculate the initial metrics
+
+    this->sumCurrent = 0.0;
+    this->initWorseVdrop = 0.0;
+    this->initWeightedAvgVdrop = 0.0;
+    this->initTotalPowerLoss = 0.0;
+
+    for (size_t k = 0; k < currentDemands.size(); ++k) {
+        double Ik = currentDemands[k];
+        double Rk = pairWiseResistance[k];
+        
+        // V-drop for this chiplet
+        double dv = Rk * Ik;
+        
+        if (dv > this->initWorseVdrop) this->initWorseVdrop = dv;
+
+        initWeightedAvgVdrop += Ik * dv;
+        sumCurrent += Ik;
+
+        // Rk * Ik^2
+        initTotalPowerLoss += Ik * dv; 
+    }
+
+    this->initWeightedAvgVdrop = (sumCurrent > 0.0) ? (this->initWeightedAvgVdrop / sumCurrent) : 0.0;
+}
+
+void DiffusionEngine::evaluateAndFill(){
+
+    struct CandChamber{
+
+        DiffusionChamber *dc;
+        double gainValue;
+        SignalType sig;
+        bool isOverlap;
+
+        CandChamber(DiffusionChamber *dc, double gain, SignalType st, bool isOverlap):
+            dc(dc), gainValue(gain), sig(st), isOverlap(isOverlap) {};
+    };
+    
+    int runIteration = 0;
+    while(!allCandidateNodes.empty()){
+        
+        runIteration++;
+        if(runIteration > 20) break;
+
+        std::vector<CandChamber> performanceVector;
+        std::unordered_map<DiffusionChamber *, double> overlapNodePerformance;
+        std::unordered_map<DiffusionChamber *, size_t> overlapNodeToPerformanceVectorIdx;
+
+        for(auto &[st, sigTree] : this->signalTrees){
+            // std::cout << st << std::endl;
+            // std::cout << "pp = " << sigTree.preplacedNodes.size() << std::endl;
+            // std::cout << "marked = " << sigTree.preplacedOrMarkedNodes.size() - sigTree.preplacedNodes.size() << std::endl;
+            // std::cout << "candidates = " << sigTree.candidateNodes.size() << std::endl;
+
+            // --- Hoisted once per SignalTree --- //
+            const PetscInt nSize   = sigTree.n_size;
+            const PetscInt expSize = sigTree.exp_size;
+            Mat &Vn  = sigTree.V_n;    // alpha = G^{-1} * I_n (nSize x expSize)
+            KSP &ksp = sigTree.ksp_n;  // cached Cholesky on grounded G_n
+
+            // Reusable PETSc vectors
+            Vec B, beta, c;
+            VecCreateSeq(PETSC_COMM_SELF, nSize,   &B);    // connection vector
+            VecCreateSeq(PETSC_COMM_SELF, nSize,   &beta); // beta = G^{-1} B
+            VecCreateSeq(PETSC_COMM_SELF, expSize, &c);    // c = Vn^T * B
+
+            // Reusable scratch (host) buffers
+            std::vector<PetscInt> idxs(expSize + 1);
+            idxs[0] = 0; 
+            for(PetscInt k = 1; k <= expSize; ++k){
+                idxs[k] = k;
+            } 
+            std::vector<PetscScalar> betaVals(expSize + 1);
+
+            // Helper to add a neighbor with unit conductance
+            auto addNeighbor = [&](DiffusionChamber *dc, PetscScalar &D)->void {
+                if (!dc) return;
+                if (dc->signal != st) return;
+                auto it = sigTree.nodeToGIdx.find(dc);
+                if (it == sigTree.nodeToGIdx.end()) return;
+                const PetscInt gi = (PetscInt)it->second;
+                VecSetValue(B, gi, 1.0, INSERT_VALUES); // +g
+                D += 1.0;
+            };
+
+            int dbgCounter = 0;
+            // --- Fast candidate loop (no per-iter allocations) --- //
+            for (DiffusionChamber *cand : sigTree.candidateNodes) {
+                // Reset reusable vectors
+                VecZeroEntries(B);
+                VecZeroEntries(beta);
+                VecZeroEntries(c);
+
+                // Build B and D (sum of conductances)
+                PetscScalar D = 0.0;
+                if (cand->metalViaType == DiffusionChamberType::METAL) {
+                    auto *mc = static_cast<MetalCell*>(cand);
+                    addNeighbor(mc->northCell, D);
+                    addNeighbor(mc->southCell, D);
+                    addNeighbor(mc->eastCell , D);
+                    addNeighbor(mc->westCell , D);
+                    addNeighbor(mc->upCell   , D);
+                    addNeighbor(mc->downCell , D);
+                } else {
+                    auto *vc = static_cast<ViaCell*>(cand);
+                    addNeighbor(vc->upLLCell  , D);
+                    addNeighbor(vc->upLRCell  , D);
+                    addNeighbor(vc->upULCell  , D);
+                    addNeighbor(vc->upURCell  , D);
+                    addNeighbor(vc->downLLCell, D);
+                    addNeighbor(vc->downLRCell, D);
+                    addNeighbor(vc->downULCell, D);
+                    addNeighbor(vc->downURCell, D);
+                }
+                if (D == (PetscScalar)0.0) continue; // isolated or wrong-net candidate
+
+                // Finalize B (required before use)
+                VecAssemblyBegin(B); VecAssemblyEnd(B);
+
+                // beta = G^{-1} B
+                KSPSolve(ksp, B, beta);
+
+                // den = D - B^T beta
+                PetscScalar Bt_beta; VecDot(B, beta, &Bt_beta);
+                const PetscScalar den = D - Bt_beta;
+                if (PetscAbsScalar(den) <= (PetscScalar)1e-14) {
+                    // ill-conditioned update, skip/penalize
+                    continue;
+                }
+
+                // c = Vn^T * B   (c[j] = B^T * alpha(:,j) for all columns)
+                MatMultTranspose(Vn, B, c);
+
+                // Fetch needed beta entries: indices [0,1,..,expSize]
+                VecGetValues(beta, (PetscInt)idxs.size(), idxs.data(), betaVals.data());
+                const PetscScalar beta0 = betaVals[0];
+
+                // Access c entries
+                const PetscScalar *cArr = nullptr;
+                VecGetArrayRead(c, &cArr);
+
+
+                const size_t base = sigTree.resultIdxBegin;
+
+                std::vector<double> newRVec(this->pairWiseResistance);
+
+                for (PetscInt j = 0; j < expSize; ++j) {
+                    const PetscInt  sinkIdx = j + 1;                 // supernode index
+                    const double    Rk_old  = pairWiseResistance[base + j];
+
+                    const PetscScalar coeff  = cArr[j] / den;        // (B^T alpha(:,j)) / den
+                    const PetscScalar beta_k = betaVals[sinkIdx];
+
+                    const double Rk_new = Rk_old + PetscRealPart(coeff * (beta0 - beta_k));
+                    newRVec[base + j] = Rk_new;
+                }
+
+                // check if the candidate is an overlapNode
+                double gain = calculateNewRGain(newRVec);
+
+                if(overlapNodes.count(cand) == 0){ // not an overlapNode
+                    performanceVector.emplace_back(cand, gain, st, false);
+                }else{
+                    if(overlapNodePerformance.count(cand) == 0){
+                        performanceVector.emplace_back(cand, gain, st, true);
+                        overlapNodePerformance[cand] = gain;
+                        overlapNodeToPerformanceVectorIdx[cand] = performanceVector.size() - 1;
+                    }else{
+                        if(overlapNodePerformance[cand] < gain){
+                            overlapNodePerformance[cand] = gain;
+
+                            
+                            CandChamber &candCB = performanceVector[overlapNodeToPerformanceVectorIdx[cand]];
+                            candCB.gainValue = gain;
+                            candCB.sig = st;
+                        }
+                    }
+                }
+                
+            }
+
+            // --- Cleanup once per SignalTree --- //
+            VecDestroy(&c);
+            VecDestroy(&beta);
+            VecDestroy(&B);
+        }
+
+        // decide which to commit
+
+        int commitCount = std::max(64, int(allCandidateNodes.size() * 0.75));
+        commitCount = std::min(commitCount, int(performanceVector.size()));
+        
+        std::cout << "Iteration " << runIteration << " cand = " << commitCount << "/" << performanceVector.size() << "/" << allCandidateNodes.size() << " ";
+
+        // Partition so that [0, k) are the k largest gainValues (order inside is unspecified)
+        if(commitCount < (int)performanceVector.size() && commitCount > 0) {
+            // Partition so [0, commitCount) are the highest gainValues (order inside is unspecified)
+            auto nth = performanceVector.begin() + commitCount;   // VALID now
+            std::nth_element(
+                performanceVector.begin(), nth, performanceVector.end(),
+                [](const auto& a, const auto& b) { return a.gainValue > b.gainValue; }
+            );
+            performanceVector.erase(nth, performanceVector.end()); // shrink; no default-ctor needed
+        }
+ 
+
+        // commit the ones left in performanceVector:
+        std::unordered_map<SignalType, std::vector<DiffusionChamber *>> updatedNodes;
+        for(const CandChamber &cc : performanceVector){
+            
+            DiffusionChamber *ccDc = cc.dc;
+            SignalType ccSig = cc.sig;
+            bool ccIsOverlap = cc.isOverlap;
+
+            updatedNodes[cc.sig].push_back(cc.dc);
+            
+            ccDc->signal = ccSig;
+            ccDc->type = CellType::MARKED;
+
+            if(!ccIsOverlap){
+                allCandidateNodes.erase(ccDc);
+                allPreplacedOrMarkedNodes.insert(ccDc);
+                
+                SignalTree &corrSignalTree = signalTrees[ccSig];
+                corrSignalTree.candidateNodes.erase(ccDc);
+                corrSignalTree.preplacedOrMarkedNodes.insert(ccDc);
+                
+            }else{
+                allCandidateNodes.erase(ccDc);
+                allPreplacedOrMarkedNodes.insert(ccDc);
+
+                for(SignalType sigType : overlapNodes[ccDc]){
+                    SignalTree &processSignalTree = signalTrees[sigType];
+
+                    if(sigType == ccSig){
+                        processSignalTree.candidateNodes.erase(ccDc);
+                        processSignalTree.preplacedOrMarkedNodes.insert(ccDc);
+                    }else{
+                        processSignalTree.candidateNodes.erase(ccDc);
+                    }
+                }
+            }
+        }
+
+        pairWiseResistance = std::vector<double>(totalChipletCount, -1);
+        for(std::unordered_map<SignalType, std::vector<DiffusionChamber *>>::iterator it = updatedNodes.begin(); it != updatedNodes.end(); ++it){
+                
+            if(it->second.empty()) continue;
+            int newNodesCount = it->second.size();
+
+            SignalType st = it->first;
+            SignalTree &sigTree = this->signalTrees[st];
+
+            auto pullInNewCandidates = [&](DiffusionChamber *dc){
+                if(dc == nullptr) return;
+                if(dc->type == CellType::EMPTY){
+                    // turn it into a candidate for st
+                    allCandidateNodes.insert(dc);
+                    sigTree.candidateNodes.insert(dc);
+                    dc->type = CellType::CANDIDATE;
+                    dc->signal = st;
+
+                }else if(dc->type == CellType::CANDIDATE){
+                    std::unordered_map<DiffusionChamber *, std::vector<SignalType>>::iterator canit = overlapNodes.find(dc);
+                    if(canit == overlapNodes.end()){ // is candidate but not overlap
+                        if(st != dc->signal){ 
+                            // promote to overlap
+                            dc->signal = SignalType::UNKNOWN;
+                            overlapNodes[dc] = {st};
+                            sigTree.candidateNodes.insert(dc);
+                        }
+                    }else{ // already a candidate, add to it
+                        if(std::find(canit->second.begin(), canit->second.end(), st) == canit->second.end()){
+                            canit->second.push_back(st);
+                            sigTree.candidateNodes.insert(dc);
+                        }
+                    }
+                }
+            };
+
+            int newDCIdx = 0;
+            for(DiffusionChamber *dc : it->second){
+                sigTree.GIdxToNode.push_back(dc);
+                sigTree.nodeToGIdx[dc] = sigTree.GIdxToNode.size() - 1;
+
+                // pull in potential candidates for next iteration evaluaton
+                if(dc->metalViaType == DiffusionChamberType::METAL){
+                    MetalCell *mc = static_cast<MetalCell *>(dc);
+                    pullInNewCandidates(mc->northCell);
+                    pullInNewCandidates(mc->southCell);
+                    pullInNewCandidates(mc->eastCell);
+                    pullInNewCandidates(mc->westCell);
+
+                    pullInNewCandidates(mc->upCell);
+                    pullInNewCandidates(mc->downCell);
+
+                }else{
+                    ViaCell *vc = static_cast<ViaCell *>(dc);
+                    pullInNewCandidates(vc->upLLCell);
+                    pullInNewCandidates(vc->upLRCell);
+                    pullInNewCandidates(vc->upULCell);
+                    pullInNewCandidates(vc->upURCell);
+
+                    pullInNewCandidates(vc->downLLCell);
+                    pullInNewCandidates(vc->downLRCell);
+                    pullInNewCandidates(vc->downULCell);
+                    pullInNewCandidates(vc->downURCell);
+                }
+                newDCIdx++;
+            }
+                
+            // Update G_n: 
+            auto resizeMat = [&] (Mat &G_old, PetscInt newsize) {
+                PetscInt n_old, m_old;
+                MatGetSize(G_old, &m_old, &n_old);
+                if (n_old == newsize) return; // nothing to do
+
+                // Create the new matrix with generous preallocation
+                Mat G_new;
+                MatCreateSeqAIJ(PETSC_COMM_SELF, newsize, newsize, /*nnz guess*/ 64, NULL, &G_new);
+                MatSetOption(G_new, MAT_NEW_NONZERO_ALLOCATION_ERR, PETSC_FALSE);
+                MatSetOption(G_new, MAT_SYMMETRIC, PETSC_TRUE);
+
+                // Copy old block [0..n_old-1, 0..n_old-1]
+                for (PetscInt i = 0; i < n_old; ++i) {
+                    const PetscInt    *cols;
+                    const PetscScalar *vals;
+                    PetscInt ncols;
+                    MatGetRow(G_old, i, &ncols, &cols, &vals);
+                    MatSetValues(G_new, 1, &i, ncols, cols, vals, INSERT_VALUES);
+                    MatRestoreRow(G_old, i, &ncols, &cols, &vals);
+                }
+
+                // Finalize the copied block
+                MatAssemblyBegin(G_new, MAT_FINAL_ASSEMBLY);
+                MatAssemblyEnd(G_new,   MAT_FINAL_ASSEMBLY);
+
+                // Swap in the new matrix (NO extra MatCreate!)
+                MatDestroy(&G_old);
+                G_old = G_new;
+            };
+            resizeMat(sigTree.G_n, sigTree.n_size + newNodesCount);
+
+            // update G_n
+            // ---- fill rows for the committed batch ----
+            
+            PetscInt old_n = sigTree.n_size;
+            PetscInt groundIdx = sigTree.pinInIdxBegin;
+
+            // Resize matrix to accommodate new rows/cols
+            resizeMat(sigTree.G_n, old_n + (PetscInt)newNodesCount);
+
+            // ---- fill rows for the committed batch ----
+            auto addGnRowForNode = [&](SignalTree& sigTree, DiffusionChamber* dc, PetscInt i){
+                auto addEdge = [&](DiffusionChamber* nb, PetscInt i, PetscInt &deg){
+                    if (!nb) return;
+                    auto it = sigTree.nodeToGIdx.find(nb);
+                    if (it == sigTree.nodeToGIdx.end()) return;
+
+                    PetscInt j = (PetscInt)it->second;
+
+                    // Skip coupling to grounded row in off-diags (optional; we zero later anyway)
+                    if (j == groundIdx) {
+                        // Do not create (i, ground) off-diagonals; they’ll be cleared by grounding.
+                        // Also don’t count it in degree to keep KCL consistent post-grounding.
+                        return;
+                    }
+
+                    // Insert off-diagonals depending on neighbor category
+                    if (j < i) {
+                        // Case A: lower triangle — add now
+                        MatSetValue(sigTree.G_n, i, j, -1.0, ADD_VALUES);
+                        MatSetValue(sigTree.G_n, j, i, -1.0, ADD_VALUES);
+                    } else if (j > i && j < old_n) {
+                        // Case B: existing neighbor with larger index — must add now
+                        MatSetValue(sigTree.G_n, i, j, -1.0, ADD_VALUES);
+                        MatSetValue(sigTree.G_n, j, i, -1.0, ADD_VALUES);
+                    }
+
+                    // If neighbor was an existing row, bump its diagonal
+                    if (j < old_n) {
+                        MatSetValue(sigTree.G_n, j, j, +1.0, ADD_VALUES);
+                    }
+
+                    // Count degree for the new node (only for non-ground neighbors)
+                    ++deg;
+                };
+
+                PetscInt deg = 0;
+
+                if (dc->metalViaType == DiffusionChamberType::METAL){
+                    auto* mc = static_cast<MetalCell*>(dc);
+                    addEdge(mc->northCell, i, deg);
+                    addEdge(mc->southCell, i, deg);
+                    addEdge(mc->eastCell , i, deg);
+                    addEdge(mc->westCell , i, deg);
+                    addEdge(mc->upCell   , i, deg);
+                    addEdge(mc->downCell , i, deg);
+                } else {
+                    auto* vc = static_cast<ViaCell*>(dc);
+                    addEdge(vc->upLLCell  , i, deg);
+                    addEdge(vc->upLRCell  , i, deg);
+                    addEdge(vc->upULCell  , i, deg);
+                    addEdge(vc->upURCell  , i, deg);
+                    addEdge(vc->downLLCell, i, deg);
+                    addEdge(vc->downLRCell, i, deg);
+                    addEdge(vc->downULCell, i, deg);
+                    addEdge(vc->downURCell, i, deg);
+                }
+
+                if (deg == 0) {
+                    // Don’t insert isolated nodes; they create zero rows → indefinite
+                    return;
+                }
+
+                // Set diagonal of the new row to its degree
+                MatSetValue(sigTree.G_n, i, i, (PetscScalar)deg, ADD_VALUES);
+            };
+
+            // Fill rows for the committed batch for this signal
+            for (DiffusionChamber* dc : it->second) {
+                PetscInt gi = (PetscInt)sigTree.nodeToGIdx[dc];
+                addGnRowForNode(sigTree, dc, gi);
+            }
+
+            // Re-assert symmetry & SPD and assemble
+            MatSetOption(sigTree.G_n, MAT_SYMMETRIC, PETSC_TRUE);
+            MatAssemblyBegin(sigTree.G_n, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd  (sigTree.G_n, MAT_FINAL_ASSEMBLY);
+
+            // Ground stays the same index (pinInIdxBegin). You do NOT zero again;
+            // the existing grounded row/col remains grounded because we didn’t touch it.
+            MatZeroRowsColumns(sigTree.G_n, 1, &groundIdx, 1.0, NULL, NULL);
+            MatSetOption(sigTree.G_n, MAT_SPD, PETSC_TRUE);
+
+            // deploy checker
+            // DEBUG: full matrix check once per signal
+            // CheckGnStructure(sigTree.G_n, /*groundIdx=*/sigTree.pinInIdxBegin, /*expSize=*/sigTree.exp_size,
+            //     "init", /*startRow=*/-1, /*maxReport=*/30,  1e-12);
+
+
+
+            sigTree.n_size += newNodesCount;
+
+            // rebuild V_n and I_n
+
+            const PetscInt nSize   = sigTree.n_size;   // grows (n_old + Δn)
+            const PetscInt expSize = sigTree.exp_size; // # chiplets (usually fixed)
+
+            // ---- Rebuild I_n (nSize x expSize) ----
+            if (sigTree.I_n) MatDestroy(&sigTree.I_n);
+            MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nSize, expSize, NULL, &sigTree.I_n);
+
+            Mat &I_n = sigTree.I_n;
+            for (PetscInt k = 0; k < expSize; ++k) {
+                const PetscInt src  = 0;      // source supernode
+                const PetscInt sink = k + 1;  // chiplet supernode
+                MatSetValue(I_n, src,  k, +1.0, INSERT_VALUES);
+                MatSetValue(I_n, sink, k, -1.0, INSERT_VALUES);
+            }
+            MatAssemblyBegin(I_n, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(I_n,   MAT_FINAL_ASSEMBLY);
+
+            // ---- Rebuild V_n (nSize x expSize) ----
+            if (sigTree.V_n) MatDestroy(&sigTree.V_n);
+            MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE,
+                        nSize, expSize, NULL, &sigTree.V_n);
+
+            Mat &V_n = sigTree.V_n;
+            MatAssemblyBegin(V_n, MAT_FINAL_ASSEMBLY);
+            MatAssemblyEnd(V_n,   MAT_FINAL_ASSEMBLY);
+            
+            // (Re)factor & recompute V_n for this SignalTree
+            KSPDestroy(&sigTree.ksp_n);       // safe even if nullptr
+            KSPCreate(PETSC_COMM_SELF, &sigTree.ksp_n);
+            KSPSetOperators(sigTree.ksp_n, sigTree.G_n, sigTree.G_n);
+            KSPSetType(sigTree.ksp_n, KSPPREONLY);
+            PC pc; 
+            KSPGetPC(sigTree.ksp_n, &pc);
+            PCSetType(pc, PCCHOLESKY);
+            PCFactorSetMatSolverType(pc, MATSOLVERCHOLMOD);
+            KSPSetUp(sigTree.ksp_n);
+            Mat F; 
+            PCFactorGetMatrix(pc, &F);
+
+            // V_n = G^{-1} * I_n
+            MatMatSolve(F, sigTree.I_n, sigTree.V_n);
+
+            for (PetscInt k = 0; k < expSize; ++k) {
+                PetscInt src = 0;
+                PetscInt sink = k+1;
+
+                Vec Vk;
+                VecCreateSeq(PETSC_COMM_SELF, nSize, &Vk);
+                MatGetColumnVector(V_n, Vk, k);
+
+                PetscScalar v_src, v_sink;
+                VecGetValues(Vk, 1, &src, &v_src);
+                VecGetValues(Vk, 1, &sink, &v_sink);
+
+                double R_k = PetscRealPart(v_src - v_sink);
+                pairWiseResistance[sigTree.resultIdxBegin + k] = R_k;
+
+                VecDestroy(&Vk);
+            }
+            
+
+
+        }
+    
+        this->initWorseVdrop = 0.0;
+        this->initWeightedAvgVdrop = 0.0;
+        this->initTotalPowerLoss = 0.0;
+
+        for (size_t k = 0; k < currentDemands.size(); ++k) {
+            double Ik = currentDemands[k];
+            double Rk = pairWiseResistance[k];
+            
+            // V-drop for this chiplet
+            double dv = Rk * Ik;
+            
+            if (dv > this->initWorseVdrop) this->initWorseVdrop = dv;
+
+            initWeightedAvgVdrop += Ik * dv;
+
+            // Rk * Ik^2
+            initTotalPowerLoss += Ik * dv; 
+        }
+
+        this->initWeightedAvgVdrop /= sumCurrent;
+        std::cout << "loss = " << initWorseVdrop << ", " << initWeightedAvgVdrop << ", " << initTotalPowerLoss << std::endl;
+    
+    }
+}
+
+double DiffusionEngine::calculateNewRGain(const std::vector<double> &newR) const{
+    assert(newR.size() == this->currentDemands.size());
+    
+    double WorseVdrop = initWorseVdrop;
+    double WeightedAvgVdrop = 0;
+    double TotalPowerLoss = 0;
+
+    for (size_t k = 0; k < newR.size(); ++k) {
+        double Ik = currentDemands[k];
+        double Rk = newR[k];
+        double dv = Rk * Ik;
+        
+        if (dv > WorseVdrop) WorseVdrop = dv;
+        WeightedAvgVdrop += Ik * dv;
+
+        // Rk * Ik^2
+        TotalPowerLoss += Ik * dv; 
+    }
+
+    WeightedAvgVdrop = (this->sumCurrent > 0.0) ? (WeightedAvgVdrop / this->sumCurrent) : 0.0;
+
+
+    double newGain = (initWorseVdrop - WorseVdrop) / initWorseVdrop;
+    newGain += (initWeightedAvgVdrop - WeightedAvgVdrop) / initWeightedAvgVdrop;
+    newGain += (initTotalPowerLoss - TotalPowerLoss) / initTotalPowerLoss;
+
+    newGain /= 3;
+
+    return newGain;
 }
 
 void DiffusionEngine::checkConnections(){
@@ -4413,4 +4991,156 @@ void DiffusionEngine::checkFillerInitialisation(){
         }
     }
     std::cout << "Pass checkFillerInitialisation test!" << std::endl;
+}
+
+void DiffusionEngine::DumpRow(const Mat &A, PetscInt i) {
+    const PetscInt *cols; const PetscScalar *vals; PetscInt ncols;
+    MatGetRow(A, i, &ncols, &cols, &vals);
+    std::ostringstream oss;
+    oss << "Row " << i << " [";
+    for (PetscInt k = 0; k < ncols; ++k) {
+        oss << "(" << cols[k] << ":" << (double)vals[k] << ") ";
+    }
+    oss << "]";
+    std::cout << oss.str() << "\n";
+    MatRestoreRow(A, i, &ncols, &cols, &vals);
+}
+
+void DiffusionEngine::CheckGnStructure( Mat A, PetscInt groundIdx, PetscInt expSize, const char* label, PetscInt startRow, PetscInt maxReport, double tol){
+    // Ensure assembled
+    MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(A,   MAT_FINAL_ASSEMBLY);
+
+    PetscInt nrows, ncols;
+    MatGetSize(A, &nrows, &ncols);
+
+    auto isSuper = [&](PetscInt r) -> bool { return (0 <= r && r <= expSize); };
+
+    // PETSc's quick symmetry test (numeric)
+    PetscBool isSym = PETSC_FALSE;
+    MatIsSymmetric(A, tol, &isSym);
+    if (!isSym) {
+        std::cout << "[G_n chk][" << label << "] MatIsSymmetric=false (tol=" << tol << ")\n";
+    }
+
+    // 0) Grounded row/col must be clean: row=unit, col=unit
+    {
+        // Row check
+        const PetscInt *cols; const PetscScalar *vals; PetscInt ncols_row;
+        MatGetRow(A, groundIdx, &ncols_row, &cols, &vals);
+        int nzOff = 0;
+        double diag = 0.0;
+        for (PetscInt k = 0; k < ncols_row; ++k) {
+            if (cols[k] == groundIdx) diag = (double)vals[k];
+            else if (std::abs((double)vals[k]) > tol) ++nzOff;
+        }
+        MatRestoreRow(A, groundIdx, &ncols_row, &cols, &vals);
+        if (std::abs(diag - 1.0) > 1e-14 || nzOff != 0) {
+            std::cout << "[G_n chk][" << label << "] Ground row not clean: diag=" << diag
+                      << " off-nz=" << nzOff << "\n";
+            DumpRow(A, groundIdx);
+        }
+
+        // Column check (scan all rows)
+        int colHits = 0;
+        for (PetscInt i = 0; i < nrows; ++i) {
+            if (i == groundIdx) continue;
+            PetscScalar v = 0.0;
+            MatGetValues(A, 1, &i, 1, &groundIdx, &v);
+            if (std::abs((double)v) > tol) {
+                if (colHits++ < maxReport) {
+                    std::cout << "[G_n chk][" << label << "] Nonzero at (" << i
+                              << "," << groundIdx << ") = " << (double)v << "\n";
+                    DumpRow(A, i);
+                }
+            }
+        }
+    }
+
+    // 1) Row-wise structural checks
+    PetscInt i0 = (startRow >= 0 ? startRow : 0);
+    PetscInt issues = 0;
+
+    for (PetscInt i = i0; i < nrows; ++i) {
+        const PetscInt *cols; const PetscScalar *vals; PetscInt ncols_row;
+        MatGetRow(A, i, &ncols_row, &cols, &vals);
+
+        if (ncols_row == 0) {
+            if (issues++ < maxReport) {
+                std::cout << "[G_n chk][" << label << "] Row " << i << " empty (zero row)\n";
+            }
+            MatRestoreRow(A, i, &ncols_row, &cols, &vals);
+            continue;
+        }
+
+        double diag = 0.0, sumAbs = 0.0;
+        bool hasDiag = false;
+
+        for (PetscInt k = 0; k < ncols_row; ++k) {
+            PetscInt j = cols[k];
+            double   aij = (double)vals[k];
+
+            if (j == i) {
+                hasDiag = true;
+                diag = aij;
+                if (aij < -tol && issues++ < maxReport) {
+                    std::cout << "[G_n chk][" << label << "] Row " << i
+                              << " negative diagonal " << aij << "\n";
+                    DumpRow(A, i);
+                }
+                continue;
+            }
+
+            // (a) sign check: off-diagonals should be <= 0
+            if (aij > tol && issues++ < maxReport) {
+                std::cout << "[G_n chk][" << label << "] Row " << i
+                          << " positive off-diagonal A(" << i << "," << j << ")=" << aij << "\n";
+                DumpRow(A, i);
+            }
+
+            sumAbs += std::abs(aij);
+
+            // (b) symmetry numeric check for this entry
+            PetscScalar aji = 0.0;
+            MatGetValues(A, 1, &j, 1, &i, &aji);
+            if (std::abs((double)aji - aij) > 1e-10 && issues++ < maxReport) {
+                std::cout << "[G_n chk][" << label << "] Asymmetry between ("
+                          << i << "," << j << ")=" << aij << " and ("
+                          << j << "," << i << ")=" << (double)aji << "\n";
+                DumpRow(A, i);
+                DumpRow(A, j);
+            }
+
+            // (c) illegal coupling to supernodes from non-super rows
+            if (!isSuper(i) && isSuper(j) && issues++ < maxReport) {
+                std::cout << "[G_n chk][" << label << "] Row " << i
+                          << " has illegal edge to supernode " << j << "\n";
+                DumpRow(A, i);
+            }
+        }
+
+        if (!hasDiag && issues++ < maxReport) {
+            std::cout << "[G_n chk][" << label << "] Row " << i
+                      << " missing diagonal entry\n";
+            DumpRow(A, i);
+        }
+
+        // (d) Laplacian dominance: diag ~= sum(|off|) unless grounded row
+        if (i != groundIdx) {
+            if (std::abs(diag - sumAbs) > 1e-8 && issues++ < maxReport) {
+                std::cout << "[G_n chk][" << label << "] Row " << i
+                          << " diag " << diag << " != sum|off| " << sumAbs << "\n";
+                DumpRow(A, i);
+            }
+        }
+
+        MatRestoreRow(A, i, &ncols_row, &cols, &vals);
+        if (issues >= maxReport) break;
+    }
+
+    if (issues == 0)
+        std::cout << "[G_n chk][" << label << "] OK: structure looks Laplacian/SPD-compatible.\n";
+    else
+        std::cout << "[G_n chk][" << label << "] Reported " << issues
+                  << " potential issues (max " << maxReport << ").\n";
 }

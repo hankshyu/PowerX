@@ -133,6 +133,16 @@ public:
     std::unordered_map<DiffusionChamber *, std::vector<SignalType>> overlapNodes;
     std::unordered_map<SignalType, SignalTree> signalTrees;
 
+    size_t totalChipletCount;
+    double sumCurrent;
+
+    double initWorseVdrop;
+    double initWeightedAvgVdrop;
+    double initTotalPowerLoss;
+
+    std::vector<double> currentDemands;
+    std::vector<double> pairWiseResistance;
+
 
     DiffusionEngine(const std::string &fileName, const std::string &configFileName);
 
@@ -206,12 +216,26 @@ public:
     void initialiseFiller();
     void initialiseSignalTrees();
     void runInitialEvaluation();
+    void evaluateAndFill();
+
+    double calculateNewRGain(const std::vector<double> &newR) const;
 
 
     // make sure the connections are correct, only for verification
     void checkConnections();
     void checkNeighbors();
     void checkFillerInitialisation();
+    
+    void DumpRow(const Mat &A, PetscInt i);
+    void CheckGnStructure(
+        Mat A,
+        PetscInt groundIdx,
+        PetscInt expSize,               // #chiplets (supernodes are 0..expSize)
+        const char* label,
+        PetscInt startRow = -1,         // set to old_n to focus on newly added rows; -1 = all
+        PetscInt maxReport = 50,
+        double tol = 1e-12
+    );
 
     friend bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
     friend bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
