@@ -16,7 +16,7 @@
 
 #include "gurobi_c++.h"
 
-std::string CASE_NAME = "case05";
+std::string CASE_NAME = "case01";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
 std::string FILEPATH_CONFIG = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".config";
@@ -35,8 +35,9 @@ int main(int argc, char **argv){
     printWelcomeBanner();
     
     // checkSetUp();
-    // runVoronoiDiagramBasedAlgorithm(false, true, true, true);
-    runMyAlgorithm(&argc, &argv, true, true, false);
+    runVoronoiDiagramBasedAlgorithm(false, false, true, true);
+
+    // runMyAlgorithm(&argc, &argv, true, true, false);
     
     printExitBanner();
     return 0;
@@ -115,10 +116,22 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
         // visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
     };
 
+    auto displayFPointsSegments = [&](std::string fileNamePrefix){
+        for(int layer = 0; layer < vpg.getMetalLayerCount(); ++layer){
+            std::string displayFileName = fileNamePrefix + std::to_string(layer) + ".txt";
+            visualisePointsSegments(vpg, vpg.fPointsOfLayers[layer], vpg.fSegmentsOfLayers[layer], displayFileName);
+        }
+
+        // visualisePointsSegments(vpg, vpg.pointsOfLayers[0], vpg.segmentsOfLayers[0], "outputs/ps0.txt");
+        // visualisePointsSegments(vpg, vpg.pointsOfLayers[1], vpg.segmentsOfLayers[1], "outputs/ps1.txt");
+        // visualisePointsSegments(vpg, vpg.pointsOfLayers[2], vpg.segmentsOfLayers[2], "outputs/ps2.txt");
+    };
+
     auto displayVoronoiGraphs = [&](std::string fileNamePrefix){
         for(int layer = 0; layer < vpg.getMetalLayerCount(); ++layer){
             std::string displayFileName = fileNamePrefix + std::to_string(layer) + ".txt";
-            visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[layer], vpg.voronoiCellsOfLayers[layer], displayFileName);
+            // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[layer], vpg.voronoiCellsOfLayers[layer], displayFileName);
+            visualiseVoronoiGraph(vpg, vpg.fPointsOfLayers[layer], vpg.fVoronoiCellsOfLayers[layer], displayFileName);
         }
 
         // visualiseVoronoiGraph(vpg, vpg.pointsOfLayers[0], vpg.voronoiCellsOfLayers[0], "outputs/vd0.txt");
@@ -136,6 +149,13 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
         // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[0], "outputs/mp0.txt");
         // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[1], "outputs/mp1.txt");
         // visualiseMultiPolygons(vpg, vpg.multiPolygonsOfLayers[2], "outputs/mp2.txt");
+    };
+
+    auto displayPhysicalImplementation = [&](std::string fileNamePrefix){
+        for(int layer = 0; layer < vpg.getMetalLayerCount(); ++layer){
+            std::string displayFileName = fileNamePrefix + std::to_string(layer) + ".txt";
+            visualisePhysicalImplementation(vpg, layer, displayFileName);
+        }
     };
 
         /* Start Execution */
@@ -174,22 +194,28 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
     timeProfiler.startTimer("Gen Voronoi Diagram");
         for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
             // vpg.generateInitialPowerPlanePoints(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
-            vpg.generateInitialPowerPlanePointsNew(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+            // vpg.generateInitialPowerPlanePointsNew(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i]);
+            vpg.generateInitialPowerPlanePointsX2(vpg.pointsOfLayers[i], vpg.segmentsOfLayers[i], vpg.fPointsOfLayers[i], vpg.fSegmentsOfLayers[i]);
         }
-        if(displayIntermediateResults) displayPointsSegments("outputs/addvdpoints_ps_m");
+
+        std::cout << "Complete Generating Power plane points new" << std::endl;
+        
+        if(displayIntermediateResults) displayFPointsSegments("outputs/addvdpoints_ps_m");
 
         for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-            vpg.generateVoronoiDiagram(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
+            // vpg.generateVoronoiDiagram(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
+            // vpg.generateVoronoiDiagramNew(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i]);
+            vpg.generateVoronoiDiagramX(vpg.fPointsOfLayers[i], vpg.fVoronoiCellsOfLayers[i]);
+            std::cout << "Completed Generating voronoi for metal layer " << i << std::endl;
         }
 
         if(displayIntermediateResults) displayVoronoiGraphs("outputs/genvd_vg_m");
 
         for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
-            vpg.mergeVoronoiCells(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i], vpg.multiPolygonsOfLayers[i]);
-            std::cout << "Completed merging layer " << i << "translation to grid" << std::endl;
+            // vpg.mergeVoronoiCells(vpg.pointsOfLayers[i], vpg.voronoiCellsOfLayers[i], vpg.multiPolygonsOfLayers[i]);
+            vpg.mergeVoronoiCellsX(vpg.fPointsOfLayers[i], vpg.fVoronoiCellsOfLayers[i], vpg.multiPolygonsOfLayers[i]);
 
             vpg.exportToCanvas(vpg.metalLayers[i].canvas, vpg.multiPolygonsOfLayers[i]);
-            std::cout << "Completed MM layer " << i << "translation to grid" << std::endl;
         }
 
         if(displayIntermediateResults) displayVoronoiPolygons("outputs/mergevp_vp_m");
@@ -231,11 +257,21 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
         for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
             vpg.removeFloatingPlanes(i);
         }
-        if(displayIntermediateResults) displayGridArrayWithPin(vpg, technology, false, "outputs/postp_gawp_m");
+        if(displayIntermediateResults) displayGridArrayWithPin(vpg, technology, false, "outputs/postp_gawp_m");    
     timeProfiler.pauseTimer("Post-porcessing");
 
-    if(displayFinalResult) displayGridArrayWithPin(vpg, technology, false, "outputs/final_m");
-    if(exportCircuit) exportEquivalentCircuits(vpg, technology, EqCktExtor, "outputs/");
+    timeProfiler.startTimer("Physcial Realisation");
+        vpg.buildPhysicalImplementation();
+        displayPhysicalImplementation("outputs/phyrlz_pi_m");
+        
+        vpg.connectivityAwareAssignment();
+        
+    timeProfiler.pauseTimer("Physcial Realisation");
+
+
+    if(displayFinalResult) displayPhysicalImplementation("outputs/fnl_fnl_m");
+    if(exportCircuit) vpg.exportPhysicalToCircuit(technology, EqCktExtor, "outputs/");
+    // if(exportCircuit) exportEquivalentCircuits(vpg, technology, EqCktExtor, "outputs/");
 
     timeProfiler.printTimingReport();
 

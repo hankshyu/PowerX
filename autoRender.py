@@ -26,7 +26,8 @@ PATTERN_TO_LABEL: List[Tuple[str, str]] = [
     ("enhance_gawp_m*",    "11_ExchageOptimisation_m"),
     ("releg_gawp_m*",      "12_ReLegalisation_m"),
     ("postvd_gawp_m*",     "13_PostProcessing_m"),
-    ("final_m*",           "14_FinalResults_m"),
+    ("phyrlz_pi_m*",       "14_PhysicalImplementation_m"),
+    ("fnl_fnl_m*",         "15_FinalImplementation_m")
 ]
 
 _M_SUFFIX_RE = re.compile(r"_m(\d+)$")
@@ -47,6 +48,10 @@ def classify_kind(p: Path) -> Optional[str]:
         return "vg"
     if "_vp_" in name:
         return "vp"
+    if "_pi_" in name:
+        return "pi"
+    if "_fnl_" in name:
+        return "fnl"
     if name.startswith("final_m"):         # treat final_m* as gawp
         return "gawp"
     return None
@@ -64,6 +69,10 @@ def render_command(kind: str, infile: Path, outfile: Path, dpi: int, pin_size: f
         cmd = f"python3 utils/renderVoronoiGraph.py -i {shlex.quote(str(infile))} -o {shlex.quote(str(outfile))} --dpi {dpi}"
     elif kind == "vp":
         cmd = f"python3 utils/renderVoronoiPolygon.py -i {shlex.quote(str(infile))} -o {shlex.quote(str(outfile))} --dpi {dpi}"
+    elif kind == "pi":
+        cmd = f"python3 utils/renderPhysicalImplementation.py -i {shlex.quote(str(infile))} -o {shlex.quote(str(outfile))} --dpi {dpi} --pxPerCell 40 --lineScale 3 --noLegend --noTitle"
+    elif kind == "fnl":
+        cmd = f"python3 utils/renderFinalOutput.py -i {shlex.quote(str(infile))} -o {shlex.quote(str(outfile))} --dpi {dpi} --pxPerCell 40 --lineScale 3 --noLegend --noTitle -he"
     else:
         raise ValueError(f"Unknown kind: {kind}")
     return shlex.split(cmd)

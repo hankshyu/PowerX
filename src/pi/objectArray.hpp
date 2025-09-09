@@ -28,7 +28,6 @@
 #include <string>
 #include <vector>
 
-
 // 2. Boost Library:
 
 // 3. Texo Library:

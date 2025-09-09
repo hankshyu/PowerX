@@ -175,6 +175,22 @@ PowerDistributionNetwork::PowerDistributionNetwork(const std::string &fileName):
     assert(finishTechnologyParsing);
 }
 
+PowerDistributionNetwork::~PowerDistributionNetwork(){
+    
+    for(PDNEdge *eg : pdnEdgeOwner){
+        delete(eg);
+    }
+
+    for(size_t layer = 0; layer < physicalGridLayer; ++layer){
+        for(size_t y = 0; y < physicalGridHeight; ++y){
+            for(size_t x = 0; x < physicalGridHeight; ++x){
+                delete(physicalNodes[layer][y][x]);
+            }
+        }
+    }
+
+}
+
 bool PowerDistributionNetwork::checkOnePiece(int metalLayerIdx){
     std::unordered_map<SignalType, DoughnutPolygonSet> dpsMap = collectDoughnutPolygons(metalLayers[metalLayerIdx].canvas);
     for(std::unordered_map<SignalType, DoughnutPolygonSet>::const_iterator cit = dpsMap.begin(); cit != dpsMap.end(); ++cit){
@@ -687,6 +703,643 @@ void PowerDistributionNetwork::exportEquivalentCircuit(const SignalType st, cons
     // ofs << ".OPTION RELTOL=1e-4 ABSTOL=1e-8 VNTOL=1e-6" << std::endl;
     ofs << ".end" << std::endl;
     ofs.close();
+}
+
+void PowerDistributionNetwork::buildPhysicalImplementation(){
+    
+    physicalGridLayer = m_metalLayerCount;
+    physicalGridWidth = m_gridWidth + 1;
+    physicalGridHeight = m_gridHeight + 1;
+
+    auto inPhysicalGrid = [&](size_t y, size_t x){
+        return (y >= 0) && (y < physicalGridHeight) && (x >= 0) && (x < physicalGridWidth);
+    };
+
+    physicalNodes.assign(physicalGridLayer, std::vector<std::vector<PDNNode*>>(physicalGridHeight, std::vector<PDNNode*>(physicalGridWidth, nullptr)));
+
+    auto inCanvas = [&](int cy, int cx) -> bool {
+        return (0 <= cy && cy < static_cast<int>(m_gridHeight) && 0 <= cx && cx < static_cast<int>(m_gridWidth));
+    };
+
+    for (size_t layer = 0; layer < m_metalLayerCount; ++layer) {
+        for (size_t y = 0; y < physicalGridHeight; ++y) {
+            for (size_t x = 0; x < physicalGridWidth; ++x) {
+
+                PDNNode* newNode = new PDNNode(layer, x, y);
+
+                SignalType curSig = SignalType::EMPTY;
+                bool mixSignal = false;
+                bool isObstacle = false;
+
+                // examine up to four adjacent canvas cells:
+                auto checkCell = [&](int cy, int cx) {
+                    if (!inCanvas(cy, cx)) return;  // skip out-of-range cells
+                    SignalType gridSig = this->metalLayers[layer].canvas[cy][cx];
+
+                    if (gridSig == SignalType::SIGNAL ||
+                        gridSig == SignalType::OBSTACLE ||
+                        gridSig == SignalType::GROUND) {
+                        isObstacle = true;
+                    }
+
+                    if (POWER_SIGNAL_SET.count(gridSig) != 0) {
+                        if (curSig == SignalType::EMPTY || curSig == gridSig) {
+                            curSig = gridSig;
+                        } else {
+                            curSig = SignalType::EMPTY;
+                            mixSignal = true;
+                        }
+                    }
+                };
+
+                // Corners of the node within the canvas cell grid
+                checkCell(static_cast<int>(y) - 1, static_cast<int>(x) - 1);
+                checkCell(static_cast<int>(y) - 1, static_cast<int>(x));
+                checkCell(static_cast<int>(y),     static_cast<int>(x) - 1);
+                checkCell(static_cast<int>(y),     static_cast<int>(x));
+
+                if (isObstacle) {
+                    newNode->signal = SignalType::OBSTACLE;   // ensure enum name matches
+                } else if (!mixSignal) {
+                    newNode->signal = curSig;
+                } else {
+                    newNode->signal = SignalType::EMPTY;
+                }
+
+                physicalNodes[layer][y][x] = newNode;
+            }
+        }
+    }
+
+
+    // initialise the edges of the metal layers
+    size_t physicalGridWidthRightBorder = physicalGridWidth - 1;
+    size_t physicalGridHeightUpBorder = physicalGridHeight - 1;
+    for (size_t layer = 0; layer < m_metalLayerCount; ++layer){
+        for (size_t y = 0; y < physicalGridHeight; ++y){
+            for (size_t x = 0; x < physicalGridWidth; ++x){
+                PDNNode *centreNode = physicalNodes[layer][y][x];
+                SignalType centreNodeSignal = centreNode->signal;
+                if(centreNodeSignal == SignalType::OBSTACLE || centreNodeSignal == SignalType::SIGNAL) continue;
+
+                if(x != physicalGridWidthRightBorder){
+                    PDNNode *rightNode = physicalNodes[layer][y][x+1];
+                    SignalType rightNodeSig = rightNode->signal;
+                    if(rightNodeSig != SignalType::OBSTACLE && rightNodeSig != SignalType::SIGNAL){
+                        PDNEdge *newEdge = new PDNEdge(centreNode, rightNode);
+                        newEdge->isVia = false;
+                        centreNode->east = newEdge;
+                        rightNode->west = newEdge;
+                        this->pdnEdgeOwner.push_back(newEdge);
+                    }
+                }
+
+                if(y != physicalGridHeightUpBorder){
+                    PDNNode *upNode = physicalNodes[layer][y+1][x];
+                    SignalType upNodeSig = upNode->signal;
+                    if(upNodeSig != SignalType::OBSTACLE && upNodeSig != SignalType::SIGNAL){
+                        PDNEdge *newEdge = new PDNEdge(centreNode, upNode);
+                        newEdge->isVia = false;
+                        centreNode->north = newEdge;
+                        upNode->south = newEdge;
+                        this->pdnEdgeOwner.push_back(newEdge);
+                    }
+                }
+            }
+        }
+    }
+
+    for(size_t viaLayer = 0; viaLayer < m_viaLayerCount; ++viaLayer){
+        for(size_t y = 0; y < m_pinHeight; ++y){
+            for(size_t x = 0; x < m_pinWidth; ++x){
+                SignalType curSig = viaLayers[viaLayer].canvas[y][x];
+                if(POWER_SIGNAL_SET.count(curSig) == 0 && curSig != SignalType::EMPTY) continue;
+                
+                PDNNode *downNode = this->physicalNodes[viaLayer+1][y][x];
+                PDNNode *upNode = this->physicalNodes[viaLayer][y][x];
+
+                PDNEdge *newEdge = new PDNEdge(downNode, upNode);
+                newEdge->signal = curSig;
+                if(curSig != SignalType::EMPTY){
+                    upNode->signal = curSig;    
+                    downNode->signal = curSig;
+                }
+                newEdge->isVia = true;
+                downNode->up = newEdge;
+                upNode->down = newEdge;
+                this->pdnEdgeOwner.push_back(newEdge);
+            }
+        }
+    }
+
+    // grow the first time of the edges
+    growPDNNodeEdges();
+
+    for(const auto&[st, nameSet] : uBump.signalTypeToInstances){
+        if(POWER_SIGNAL_SET.count(st) == 0) continue;
+        phySOI.push_back(st);
+        for(const std::string &name : nameSet){
+            phyChipletNames[st].push_back(name);
+            Cord chipletLL = rec::getLL(uBump.instanceToRectangleMap[name]);
+            for(const Cord &c : uBump.instanceToBallOutMap[name]->SignalTypeToAllCords[st]){
+                len_t mx = chipletLL.x() + c.x();
+                len_t my = chipletLL.y() + c.y();
+                phyChipletNodes[name].push_back(physicalNodes[0][my][mx]);
+                assert(physicalNodes[0][my][mx]->signal == st);
+            }
+        }
+    }
+
+    for(SignalType st : phySOI){
+        for(const Cord &c : c4.signalTypeToAllCords[st]){
+            phySignalInNodes[st].push_back(physicalNodes[physicalGridLayer-1][c.y()][c.x()]);
+            assert(physicalNodes[physicalGridLayer-1][c.y()][c.x()]->signal == st);
+        }
+    }
+
+}
+
+void PowerDistributionNetwork::growPDNNodeEdges(){
+    for(PDNEdge *eg : pdnEdgeOwner){
+        SignalType n0Sig = eg->n0->signal;
+        SignalType n1Sig = eg->n1->signal;
+
+        if((n0Sig == n1Sig) && (n0Sig != SignalType::EMPTY && n0Sig != SignalType::OBSTACLE)){
+            eg->signal = n0Sig;
+        }
+    }
+}
+
+bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<SignalType> &priority){
+    
+    auto checkConnectivity = [&](SignalType st, const std::vector<PDNNode *> &destinations) -> bool {
+        
+        std::unordered_set<PDNNode *> destinationSet(destinations.begin(), destinations.end());
+        std::unordered_set<PDNNode *> visisted;
+        std::queue<PDNNode *> q;
+
+        for(PDNNode *node : phySignalInNodes[st]){
+            visisted.insert(node);
+            q.push(node);
+        }
+
+        auto pushNieghbors = [&](PDNNode *node, PDNEdge *neighborEdge){
+            if(neighborEdge == nullptr || neighborEdge->signal != st) return false;
+            
+            PDNNode *neighborNode = (neighborEdge->n0 == node)? neighborEdge->n1 : neighborEdge->n0;
+            if(destinationSet.count(neighborNode) != 0) return true;
+            if(visisted.count(neighborNode) == 0){
+                visisted.insert(neighborNode);
+                q.push(neighborNode);
+            }
+            return false;
+        };
+
+        while(!q.empty()){
+            PDNNode *node = q.front(); q.pop();
+
+            if(pushNieghbors(node, node->north)) return true;
+            if(pushNieghbors(node, node->south)) return true;
+            if(pushNieghbors(node, node->east)) return true;
+            if(pushNieghbors(node, node->west)) return true;
+
+            if(pushNieghbors(node, node->up)) return true;
+            if(pushNieghbors(node, node->down)) return true;
+        }
+
+        return false;
+    };
+
+    auto fixConnectivity = [&](SignalType st, const std::vector<PDNNode *> &destinations) -> bool {
+        std::unordered_set<PDNNode *> destinationSet(destinations.begin(), destinations.end());
+        std::unordered_set<PDNNode *> visisted;
+        std::queue<PDNNode *> q;
+
+        for(PDNNode *node : phySignalInNodes[st]){
+            visisted.insert(node);
+            q.push(node);
+        }
+
+        auto pushNieghbors = [&](PDNNode *node, PDNEdge *neighborEdge){
+            
+            if(neighborEdge == nullptr) return false;
+            if((neighborEdge->signal != st) && (neighborEdge->signal != SignalType::EMPTY)) return false;
+            
+            PDNNode *neighborNode = (neighborEdge->n0 == node)? neighborEdge->n1 : neighborEdge->n0;
+            if((neighborNode->signal != st) && (neighborNode->signal != SignalType::EMPTY)) return false;
+            
+            
+            if(destinationSet.count(neighborNode) != 0){
+                // commit all visited nodes
+                for(PDNNode *vnode : visisted){
+                    vnode->signal = st;
+                }
+                growPDNNodeEdges();
+
+                return true;
+            }
+            
+            if(visisted.count(neighborNode) == 0){
+                visisted.insert(neighborNode);
+                q.push(neighborNode);
+            }
+            return false;
+        };
+
+        bool haveFix = false;
+        while(!q.empty()){
+            PDNNode *node = q.front(); q.pop();
+
+            if(pushNieghbors(node, node->north)) return true;
+            if(pushNieghbors(node, node->south)) return true;
+            if(pushNieghbors(node, node->east)) return true;
+            if(pushNieghbors(node, node->west)) return true;
+
+            if(pushNieghbors(node, node->up)) return true;
+            if(pushNieghbors(node, node->down)) return true;
+        }
+
+        return false;
+
+    };
+
+    for(SignalType st : phySOI){
+        for(const std::string &chipletName : phyChipletNames[st]){
+            if(!checkConnectivity(st, phyChipletNodes[chipletName])){
+                if(!fixConnectivity(st, phyChipletNodes[chipletName])){
+                    std::cout << "[Physical Implementation] Chiplet " << chipletName << " of " << st << " connect connect to current source! " << std::endl;
+                    return false;
+                }
+            }
+        }
+    }
+
+    std::cout << "[Physical Implementation] All chiplet Passes connectivity test" << std::endl;
+
+    int allSigTypes = 0;
+    std::unordered_map<SignalType, int> sigPriority;
+    for(int i = 0; i < priority.size(); ++i){
+        SignalType st = priority[i];
+        if(std::find(phySOI.begin(), phySOI.end(), st) == phySOI.end()) continue;
+        if(sigPriority.count(st) != 0) continue;
+        allSigTypes++;
+        sigPriority[st] = allSigTypes;
+    }
+
+    if(sigPriority.size() != phySOI.size()){
+        std::unordered_map<SignalType, double> currentRequirement;
+        for(SignalType st : phySOI){
+            if(sigPriority.count(st) == 0){
+                double totalCurrentRequirement = 0;
+                for(const std::string &chipletName : uBump.signalTypeToInstances[st]){
+                    totalCurrentRequirement += uBump.instanceToBallOutMap[chipletName]->getMaxCurrent();
+                }
+                currentRequirement[st] = totalCurrentRequirement;
+            }
+        }
+        std::vector<SignalType> lostSigs;
+        for(const auto&[st, cr] : currentRequirement){
+            lostSigs.push_back(st);
+        }
+        std::sort(lostSigs.begin(),lostSigs.end(), [&](SignalType &st1, SignalType &st2){return currentRequirement[st1] > currentRequirement[st2]; });
+        for(int i = 0; i < lostSigs.size(); ++i){
+            allSigTypes++;
+            sigPriority[lostSigs[i]] = allSigTypes;
+        }
+    }
+
+    std::unordered_set<PDNNode *> allUsefulNodes;
+
+    auto markUsefulNodes = [&](SignalType st){
+        
+        std::unordered_set<PDNNode *> destinationSet;
+        for(const std::string &chipletName : phyChipletNames[st]){
+            destinationSet.insert(phyChipletNodes[chipletName].begin(), phyChipletNodes[chipletName].end());
+        }
+
+        std::unordered_set<PDNNode *> visisted;
+        std::queue<PDNNode *> q;
+
+        for(PDNNode *node : phySignalInNodes[st]){
+            visisted.insert(node);
+            q.push(node);
+        }
+
+        auto pushNieghbors = [&](PDNNode *node, PDNEdge *neighborEdge){
+            if(neighborEdge == nullptr || neighborEdge->signal != st) return;
+            
+            PDNNode *neighborNode = (neighborEdge->n0 == node)? neighborEdge->n1 : neighborEdge->n0;
+            if(destinationSet.count(neighborNode) != 0) return;
+            if(visisted.count(neighborNode) == 0){
+                visisted.insert(neighborNode);
+                q.push(neighborNode);
+            }
+        };
+
+        while(!q.empty()){
+            PDNNode *node = q.front(); q.pop();
+
+            pushNieghbors(node, node->north);
+            pushNieghbors(node, node->south);
+            pushNieghbors(node, node->east);
+            pushNieghbors(node, node->west);
+
+            pushNieghbors(node, node->up);
+            pushNieghbors(node, node->down);
+        }
+        allUsefulNodes.insert(visisted.begin(), visisted.end());
+    };
+
+    for(SignalType st : phySOI){
+        markUsefulNodes(st);
+    }
+
+    for(size_t layer = 0; layer < physicalGridLayer; ++layer){
+        for(size_t y = 0; y < physicalGridHeight; ++y){
+            for(size_t x = 0; x < physicalGridWidth; ++x){
+                PDNNode *node = physicalNodes[layer][y][x];
+                SignalType nodeSt = node->signal;
+
+                if(POWER_SIGNAL_SET.count(nodeSt) != 0 && allUsefulNodes.count(node) == 0){
+                    node->signal = SignalType::EMPTY;
+                    if(node->north != nullptr && POWER_SIGNAL_SET.count(node->north->signal)) node->north->signal = SignalType::EMPTY;
+                    if(node->south != nullptr && POWER_SIGNAL_SET.count(node->south->signal)) node->south->signal = SignalType::EMPTY;
+                    if(node->east != nullptr && POWER_SIGNAL_SET.count(node->east->signal)) node->east->signal = SignalType::EMPTY;
+                    if(node->west != nullptr && POWER_SIGNAL_SET.count(node->west->signal)) node->west->signal = SignalType::EMPTY;
+                    if(node->up != nullptr && POWER_SIGNAL_SET.count(node->up->signal)) node->up->signal = SignalType::EMPTY;
+                    if(node->down != nullptr && POWER_SIGNAL_SET.count(node->down->signal)) node->down->signal = SignalType::EMPTY;
+                }
+            }
+        }
+    }
+
+    // monitor empty nodes
+    std::unordered_set<PDNNode *> emptyNodes;
+    for(size_t layer = 0; layer < physicalGridLayer; ++layer){
+        for(size_t y = 0; y < physicalGridHeight; ++y){
+            for(size_t x = 0; x < physicalGridWidth; ++x){
+                PDNNode *node = physicalNodes[layer][y][x];
+                if(node->signal == SignalType::EMPTY) emptyNodes.insert(node);
+            }
+        }
+    }
+
+    const int maxIteration = std::max(physicalGridWidth, physicalGridHeight);
+    
+    int iterationCounter = 0;
+    while (!emptyNodes.empty() && (iterationCounter++ < maxIteration)) {
+        // std::cout << "empty node cout = " << emptyNodes.size() << std::endl;
+    
+        for (auto it = emptyNodes.begin(); it != emptyNodes.end(); ) {
+            PDNNode* node = *it;
+
+            // Count neighboring power signals
+            std::unordered_map<SignalType, int> edgeCount;
+            edgeCount.reserve(6); // up to 6 neighbors
+
+            auto bump = [&](PDNEdge* p) {
+                if(p == nullptr) return;
+                PDNNode *neighbor = (p->n0 == node)? p->n1 : p->n0;
+
+                if (POWER_SIGNAL_SET.count(neighbor->signal)) {
+                    ++edgeCount[neighbor->signal];
+                }
+            };
+
+            bump(node->north);
+            bump(node->south);
+            bump(node->east);
+            bump(node->west);
+            bump(node->up);
+            bump(node->down);
+
+            if (!edgeCount.empty()) {
+                // Pick the SignalType with the highest count
+                auto itMax = edgeCount.begin();
+                for (auto itEC = std::next(edgeCount.begin()); itEC != edgeCount.end(); ++itEC) {
+                    if (itEC->second > itMax->second) itMax = itEC;
+                }
+                node->signal = itMax->first;
+                // std::cout << "Assigned " << node->layer << " " << node->y << " " << node->x << " as signal " << node->signal << std::endl;
+
+                // Correct: erase by iterator; returns next iterator
+                it = emptyNodes.erase(it);
+            } else {
+                ++it; // nothing to do for this node
+            }
+        }
+        growPDNNodeEdges();
+    }
+    std::cout << "[Physical Implementation] Complete Physical Implementation Empty Assignments" << std::endl;
+
+    return true;
+    
+}
+
+void PowerDistributionNetwork::exportPhysicalToCircuitBySignal(SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+    assert(ofs.is_open());
+
+    auto pointToNode = [](int layer, const Cord &c) -> std::string {
+        return "n" + std::to_string(c.x()) + "_" + std::to_string(c.y()) + "_" + std::to_string(layer);
+    };
+
+    ofs << "****** Equivalent Circuit Components ******" << std::endl;
+    ofs << ".SUBCKT ubump in out" << std::endl;
+    ofs << "R1 in mid " << tch.getMicrobumpResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getMicrobumpInductance() << "p" << std::endl;
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << ".SUBCKT via in out" << std::endl;
+    ofs << "R1 in mid " << extor.getInterposerViaResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << extor.getInterposerViaInductance() << "p" << std::endl;
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << ".SUBCKT edge in out" << std::endl;
+    ofs << "R1 in mid " << 2*extor.getInterposerResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << 2*extor.getInterposerInductance() << "p" << std::endl;
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << ".SUBCKT tsv in out" << std::endl;
+    ofs << "R1 in mid " << tch.getTsvResistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getTsvInductance() << "p" << std::endl;
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << ".SUBCKT cfour in out" << std::endl;
+    ofs << "R1 in mid " << tch.getC4Resistance() << "m" << std::endl;
+    ofs << "L1 mid out " << tch.getC4Inductance() << "p" << std::endl;
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << "****** Equivalent Circuit ******" << std::endl;
+    int chipletcount = phyChipletNames[st].size();
+    assert(chipletcount > 0);
+    std::vector<std::string> &chipletTitles = phyChipletNames[st];
+
+    int uBumpCounter = 0;
+    int viaCounter = 0;
+    int edgeCounter = 0;
+    int tsvCounter = 0;
+    int c4Counter = 0;
+    int capCounter = 0;
+
+    ofs << ".SUBCKT eqckt in ";
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << chipletTitles[i] << "_o ";
+    }
+    ofs << "vss" << std::endl;
+
+    ofs << "*** MicroBumps ***" << std::endl;
+    for(int ubidx = 0; ubidx < chipletcount; ++ubidx){
+        std::string instanceName = chipletTitles[ubidx];
+        for(PDNNode *pnode : phyChipletNodes[instanceName]){
+            ofs << "Xubump" << uBumpCounter++ << "_" <<  to_string(pnode) << " " << chipletTitles[ubidx] << "_o " << to_string(pnode) << " ubump" << std::endl;
+        }
+    }
+
+    ofs << "*** C4 Bumps ***" << std::endl;
+    for(const C4PinCluster *cluster : c4.signalTypeToAllClusters[st]){
+        std::string c4Node = pointToNode(m_metalLayerCount, cluster->representation);
+        ofs << "Xcfour" << c4Counter++ << " in " << c4Node << " cfour" << std::endl;
+        for(const Cord &c : cluster->pins){
+            ofs << "Xtsv" << tsvCounter++ << "_" << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " ";
+            ofs << c4Node << " " << pointToNode(m_c4ConnectedMetalLayerIdx, c) << " tsv" << std::endl;
+        }
+    }
+
+    ofs << "*** Metal and Vias ***" << std::endl;
+    len_t pinXMin = 0;
+    len_t pinXMax = physicalGridWidth - 1;
+    len_t pinYMin = 0;
+    len_t pinYMax = physicalGridHeight - 1;
+    for(size_t layer = 0; layer < physicalGridLayer; ++layer){
+        for(size_t y = 0; y < physicalGridHeight; ++y){
+            for(size_t x = 0; x < physicalGridWidth; ++x){
+                bool xOnEdge = (x == pinXMin) || (x == pinXMax);
+                bool yOnEdge = (y == pinYMin) || (y == pinYMax);
+
+                if(xOnEdge && yOnEdge){
+                    ofs << "C" << capCounter++ << " " << pointToNode(layer, Cord(x, y)) << " vss " << extor.getInterposerCapacitanceCornerCell()/4.0 << "f" << std::endl;
+                }else if(xOnEdge || yOnEdge){
+                    ofs << "C" << capCounter++ << " " << pointToNode(layer, Cord(x, y)) << " vss " << extor.getInterposerCapacitanceEdgeCell()/4.0 << "f" << std::endl;
+                }else{
+                    ofs << "C" << capCounter++ << " " << pointToNode(layer, Cord(x, y)) << " vss " << extor.getInterposerCapacitanceCenterCell()/4.0 << "f" << std::endl;
+                }
+            }
+        }
+    }
+    
+    for(PDNEdge *edge : pdnEdgeOwner){
+        if(edge->signal != st) continue;
+        
+        if(edge->isVia){
+            ofs << "Xvia" << viaCounter++ << "_" << to_string(edge->n0) << "_" << to_string(edge->n1) << " ";
+            ofs << to_string(edge->n0) << " " << to_string(edge->n1) << " via" << std::endl;
+        }else{
+            ofs << "Xedge" << edgeCounter++ << "_" << to_string(edge->n0) << "_" << to_string(edge->n1) << " ";
+            ofs << to_string(edge->n0) << " " << to_string(edge->n1) << " edge" << std::endl;
+        }
+    }
+
+    ofs << ".ENDS" << std::endl;
+    ofs << std::endl;
+
+    ofs << "****** Chiplet Load Model ******" << std::endl;
+    ofs << ".SUBCKT chiplet in vss Rval=50m Lval=200n Cval=30p Iload=1.0" << std::endl;
+    ofs << "Rpath in n1 Rval" << std::endl;
+    ofs << "Lpath n1 n2 Lval" << std::endl;
+    ofs << "Cpath n2 vss Cval" << std::endl;
+    ofs << "ILOAD n2 vss DC Iload" << std::endl;
+    ofs << ".ENDS" << std::endl;
+
+    ofs << std::endl;
+
+    ofs << "****** Input PCB model Model ******" << std::endl;
+    ofs << ".SUBCKT pcb vrm_low vrm_high out vss" << std::endl;
+    ofs << "Lpcbh vrm_high n1 " << tch.getPCBInductance() << "p" << std::endl;
+    ofs << "Rpcbh n1 out " << tch.getPCBResistance() << "u" << std::endl;
+    ofs << "Ldecaph out n2 " << tch.getPCBDecapInductance() <<  "n" << std::endl;
+    ofs << "Cdecap n2 n3 " << tch.getPCBDecapCapacitance() << "u" << std::endl;
+    ofs << "Rdecapl n3 vss " << tch.getPCBDecapResistance() << "u" << std::endl;
+    ofs << "Rpcbl n4 vss " << tch.getPCBResistance() << "u" << std::endl;
+    ofs << "Lpcbl vrm_low n4 " << tch.getPCBInductance() << "p" << std::endl;
+    
+    ofs << "* --- Decap Bank for Broadband Z(f) Control ---" << std::endl;
+    ofs << "* 1 μF decap (low freq bulk, moderately damped)" << std::endl;
+    ofs << "Rdecap1u out n1u 0.05" << std::endl;
+    ofs << "Cdecap1u n1u vss 1u" << std::endl;
+    ofs << "* 100 nF decap (mid-low freq)" << std::endl;
+    ofs << "Rdecap100n out n100n 0.1" << std::endl;
+    ofs << "Cdecap100n n100n vss 100n" << std::endl;
+    ofs << "* 10 nF decap (mid freq)" << std::endl;
+    ofs << "Rdecap10n out n10n 0.2" << std::endl;
+    ofs << "Cdecap10n n10n vss 10n" << std::endl;
+    ofs << "* 1 nF decap (high freq)" << std::endl;
+    ofs << "Rdecap1n out n1n 0.3" << std::endl;
+    ofs << "Cdecap1n n1n vss 1n" << std::endl;
+    ofs << "* 100 pF decap (GHz damping)" << std::endl;
+    ofs << "Rdecap100p out n100p 0.5" << std::endl;
+    ofs << "Cdecap100p n100p vss 100p" << std::endl;
+    
+    ofs << ".ENDS" << std::endl;
+
+    ofs << std::endl << std::endl;
+    ofs << "****** Main ******" << std::endl;
+    ofs << ".param VDD=1.0" << std::endl;
+    ofs << "VVRM vrm_high vrm_low DC VDD" << std::endl;
+    ofs << "Xpcb vrm_low vrm_high pcb_out 0 pcb" << std::endl;
+    
+    ofs << "Xeqckt pcb_out ";
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << chipletTitles[i] << "_o ";
+    }
+    ofs << "0" << " " << "eqckt" << std::endl;
+    
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << "Xchiplet" << i << " " << chipletTitles[i] << "_o " << "0 chiplet ";
+        BallOut *bt = uBump.instanceToBallOutMap.at(chipletTitles[i]);
+        assert(bt != nullptr);
+        ofs << "Rval=" << bt->getSeriesResistance() << "m Lval=" << bt->getSeriesInductance() << "n Cval=" << bt->getShuntCapacitance() << "p ";
+        ofs << "Iload=" << bt->getMaxCurrent() << std::endl;
+    }
+
+    ofs << std::endl;
+    ofs << "****** DC IR-Drop test ******" << std::endl;
+    ofs << ".OPTION POST=2 INGOLD=2 RUNLVL=6" << std::endl;
+    ofs << std::endl << ".op" << std::endl;
+    ofs << ".DC VDD 1.5 1.5 0.5" << std::endl;
+    
+    ofs << ".print V(vrm_low) V(vrm_high) V(pcb_out) ";
+    for(int i = 0; i < chipletcount; ++i){
+        ofs << "V(" << chipletTitles[i] << "_o" << ") ";
+    }
+    ofs << std::endl;
+
+    ofs << ".measure DC irdroppcb param=\'V(vrm_high) - V(pcb_out)\'" << std::endl;
+    for(int i = 0; i < chipletcount; ++i){
+        Rectangle chpletPlacement = uBump.instanceToRectangleMap[chipletTitles[i]];
+        Cord chipletLL = rec::getLL(chpletPlacement);
+
+        ofs << ".measure DC IRDrop" << chipletTitles[i] << "_" <<  chipletLL.x() << "_" << chipletLL.y() << "_" << rec::getWidth(chpletPlacement) << "_" << rec::getHeight(chpletPlacement);
+        ofs << "_" << uBump.instanceToBallOutMap[chipletTitles[i]]->getMaxCurrent();
+        ofs << " param=\'V(pcb_out) - V(" << chipletTitles[i] << "_o" << ")\'" << std::endl;
+    }
+    ofs << std::endl;
+
+    // ofs << ".OPTION RELTOL=1e-4 ABSTOL=1e-8 VNTOL=1e-6" << std::endl;
+    ofs << ".end" << std::endl;
+    ofs.close();
+}
+
+void PowerDistributionNetwork::exportPhysicalToCircuit(const Technology &tch, const EqCktExtractor &extor, const std::string &filePathPrefix){
+    for(SignalType st : phySOI){
+        std::string filePath = filePathPrefix + to_string(st) + ".sp";
+        exportPhysicalToCircuitBySignal(st, tch, extor, filePath);
+    }
 }
 
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes){

@@ -31,6 +31,7 @@
 #include "units.hpp"
 #include "segment.hpp"
 #include "cord.hpp"
+#include "forderedSegment.hpp"
 
 class OrderedSegment{
 private:
@@ -43,6 +44,7 @@ public:
 
     // conversion operator that allows Line to be casted to Segment
     operator Segment() const;
+    operator FOrderedSegment() const;
     bool operator == (const OrderedSegment &comp) const;
     inline Cord getLow() const {return mLow;}
     inline Cord getHigh() const {return mHigh;}

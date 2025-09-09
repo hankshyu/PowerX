@@ -143,10 +143,16 @@ if __name__ == "__main__":
                     cellCentre = filein.readline().strip()
                     cellCentreX = 0
                     cellCentreY = 0
-                    match = re.match(r"\(?\s*(-?\d+)\s*,\s*(-?\d+)\s*\)?", cellCentre)
+                    match = re.match(r"^\s*f?\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)\s*,?\s*$", cellCentre)
                     if match:
-                        cellCentreX, cellCentreY = map(int, match.groups())
-                        circle = plt.Circle((GRID_MUL*cellCentreX, GRID_MUL*cellCentreY), radius=POINT_RAIDUS, color=color, fill=True, alpha = 1.0)
+                        cellCentreX, cellCentreY = map(float, match.groups())
+                        circle = plt.Circle(
+                            (GRID_MUL * cellCentreX, GRID_MUL * cellCentreY),
+                            radius=POINT_RAIDUS,
+                            color=color,
+                            fill=True,
+                            alpha=1.0
+                        )
                         ax.add_patch(circle)
                     else:
                         print("Centre cell no match " + cellCentre)

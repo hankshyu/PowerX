@@ -43,11 +43,11 @@ LINKFLAGS = -L$(FLUTE_LIB_PATH) -L$(GEOS_LIB_PATH) -L$(GUROBI_LIB_PATH) $(OPENMP
 		$(FLUTE_LIB_PATH)/libflute.a $(GEOS_LIB_PATH)/libgeos.a $(GEOS_LIB_PATH)/libgeos_c.a
 
 INF_OBJS =	isotropy.o interval.o cord.o fcord.o segment.o rectangle.o doughnutPolygon.o doughnutPolygonSet.o \
-			tile.o line.o lineTile.o orderedSegment.o \
+			tile.o line.o lineTile.o orderedSegment.o forderedSegment.o\
 			rectilinear.o cornerStitching.o
 	
 PI_OBJS =	technology.o eqCktExtractor.o signalType.o ballOut.o objectArray.o c4Bump.o microBump.o \
-			powerDistributionNetwork.o \
+			pdnNode.o pdnEdge.o powerDistributionNetwork.o \
 			dsu.o voronoiPDNGen.o
 
 PRESSUREMODEL_OBJS = 	fpoint.o fbox.o fpolygon.o fmultipolygon.o \

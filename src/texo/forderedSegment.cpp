@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 //  Engineer:           Tzu-Han Hsu
-//  Create Date:        03/30/2025 13:46:01
-//  Module Name:        orderedSegment.cpp
+//  Create Date:        09/06/2025 13:55:21
+//  Module Name:        FOrderedSegment.cpp
 //  Project Name:       PowerX
 //  C++(Version):       C++17 
 //  g++(Version):       Apple clang version 16.0.0 (clang-1600.0.26.6)
@@ -9,8 +9,7 @@
 //  Thread model:       posix
 //
 //////////////////////////////////////////////////////////////////////////////////
-//  Description:        Different from the Boost provided Segment, orderedSegment 
-//                      assures that low < high
+//  Description:        A floating point version of the OrderedSegment Class
 //
 //////////////////////////////////////////////////////////////////////////////////
 //  Revision:
@@ -23,43 +22,36 @@
 #include <ostream>
 
 // 2. Boost Library:
-#include "segment.hpp"
+#include "boost/functional/hash.hpp"
 
 // 3. Texo Library:
-#include "orderedSegment.hpp"
+#include "forderedSegment.hpp"
 #include "units.hpp"
-#include "segment.hpp"
-#include "cord.hpp"
+#include "fcord.hpp"
 
-OrderedSegment::OrderedSegment(): mLow(Cord(0, 0)), mHigh(Cord(0, 0)) {
+FOrderedSegment::FOrderedSegment(): mLow(FCord(0, 0)), mHigh(FCord(0, 0)) {
 
 }
-OrderedSegment::OrderedSegment(const Cord &low, const Cord &high): mLow(low), mHigh(high) {
+
+FOrderedSegment::FOrderedSegment(const FCord &low, const FCord &high): mLow(low), mHigh(high) {
     if(low > high){
         std::swap(mLow, mHigh);
     }
 }
 
-OrderedSegment::operator Segment() const{
-    return Segment(mLow, mHigh);
-}
 
-OrderedSegment::operator FOrderedSegment() const{
-    return FOrderedSegment(FCord(mLow), FCord(mHigh));
-}
-
-bool OrderedSegment::operator == (const OrderedSegment &comp) const{
+bool FOrderedSegment::operator == (const FOrderedSegment &comp) const{
     return (this->mLow == comp.getLow()) && (this->mHigh == comp.getHigh());
 }
 
 
-std::ostream &operator << (std::ostream &os, const OrderedSegment &odsm){
-    return os << "OS[" << odsm.mLow << " -- " << odsm.mHigh << "]";
+std::ostream &operator << (std::ostream &os, const FOrderedSegment &odsm){
+    return os << "FOS[" << odsm.mLow << " -- " << odsm.mHigh << "]";
 }
 
 
 // OrderedSegment class hash functions
-size_t std::hash<OrderedSegment>::operator()(const OrderedSegment &key) const {
+size_t std::hash<FOrderedSegment>::operator()(const FOrderedSegment &key) const {
     std::size_t seed = 0;
     boost::hash_combine(seed, key.getLow());
     boost::hash_combine(seed, key.getHigh());
@@ -68,12 +60,10 @@ size_t std::hash<OrderedSegment>::operator()(const OrderedSegment &key) const {
 }
 
 
-size_t boost::hash<OrderedSegment>::operator()(const OrderedSegment &key) const {
+size_t boost::hash<FOrderedSegment>::operator()(const FOrderedSegment &key) const {
     std::size_t seed = 0;
     boost::hash_combine(seed, key.getLow());
     boost::hash_combine(seed, key.getHigh());
 
     return seed;
 }
-
-

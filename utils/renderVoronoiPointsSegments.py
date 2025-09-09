@@ -143,10 +143,10 @@ if __name__ == "__main__":
                 segmentCount = int(LineBuffer[1])
                 for seg in range(segmentCount):
                     LineBuffer = filein.readline().strip()
-                    matches = re.findall(r'\((\d+),\s*(\d+)\)', LineBuffer)
+                    matches = re.findall(r'\(([\d.+-]+),\s*([\d.+-]+)\)', LineBuffer)
 
-                    x1, y1 = map(int, matches[0])
-                    x2, y2 = map(int, matches[1])
+                    x1, y1 = map(float, matches[0])
+                    x2, y2 = map(float, matches[1])
 
                     circle = plt.Circle((GRID_MUL*x1, GRID_MUL*y1), radius=POINT_RAIDUS, color=color, fill=True)
                     ax.add_patch(circle)
@@ -163,7 +163,7 @@ if __name__ == "__main__":
                 pointCount = int(LineBuffer[1])
                 for pt in range(pointCount):
                     LineBuffer = filein.readline().strip()
-                    x, y = map(int, LineBuffer.strip("()").split(","))
+                    x, y = map(float, LineBuffer.strip("()").split(","))
                     circle = plt.Circle((GRID_MUL*x, GRID_MUL*y), radius=POINT_RAIDUS, color=color, fill=True)
                     ax.add_patch(circle)
             

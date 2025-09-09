@@ -39,6 +39,10 @@
 #include "microBump.hpp"
 #include "c4Bump.hpp"
 
+
+#include "pdnNode.hpp"
+#include "pdnEdge.hpp"
+
 class PowerDistributionNetwork{
 protected:
     int m_gridWidth;
@@ -61,7 +65,21 @@ public:
     const static std::unordered_map<SignalType, SignalType> defulatuBumpSigPadMap;
     const static std::unordered_map<SignalType, SignalType> defulatc4SigPadMap;
 
+
+    int physicalGridWidth;
+    int physicalGridHeight;
+    int physicalGridLayer;
+
+    std::vector<SignalType> phySOI;
+    std::unordered_map<SignalType, std::vector<std::string>> phyChipletNames;
+    std::unordered_map<std::string, std::vector<PDNNode *>> phyChipletNodes; 
+    std::unordered_map<SignalType, std::vector<PDNNode *>> phySignalInNodes;
+
+    std::vector<PDNEdge *> pdnEdgeOwner;
+    std::vector<std::vector<std::vector<PDNNode *>>> physicalNodes;
+
     PowerDistributionNetwork(const std::string &fileName);
+    ~PowerDistributionNetwork();
 
     inline int getGridWidth() const {return this->m_gridWidth;}
     inline int getGridHeight() const {return this->m_gridHeight;}
@@ -82,6 +100,16 @@ public:
     void assignVias();
     void removeFloatingPlanes(int layer);
     void exportEquivalentCircuit(const SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
+
+
+    void buildPhysicalImplementation();
+    void growPDNNodeEdges();
+    bool connectivityAwareAssignment(const std::vector<SignalType> &priority = {});
+    void exportPhysicalToCircuitBySignal(SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
+    void exportPhysicalToCircuit(const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
+
+    friend bool visualisePhysicalImplementation(const PowerDistributionNetwork &pdn, int layer, const std::string &filePath);
+
 };
 
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes);

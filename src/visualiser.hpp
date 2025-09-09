@@ -41,6 +41,7 @@
 #include "voronoiPDNGen.hpp"
 #include "pressureSimulator.hpp"
 #include "diffusionEngine.hpp"
+#include "powerDistributionNetwork.hpp"
 
 using FPGMPoint = boost::geometry::model::d2::point_xy<flen_t>;
 using FPGMPolygon = boost::geometry::model::polygon<FPGMPoint>;
@@ -64,6 +65,7 @@ bool visualiseMicroBump(const MicroBump &microBump, const Technology &tch, const
 
 // use "renderVoronoiPointsSegments" to render points and segments structures in the voronoi algorithm
 bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &segments, const std::string &filePath);
+bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<FCord>> &fpoints, const std::unordered_map<SignalType, std::vector<FOrderedSegment>> &fsegments, const std::string &filePath);
 bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath);
 bool visualiseMultiPolygons(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygons, const std::string &filePath);
 
@@ -76,4 +78,9 @@ bool visualiseSoftBodiesWithPins(const PressureSimulator &ps, const std::vector<
 bool visualiseDiffusionEngineMetal(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
 bool visualiseDiffusionEngineVia(const DiffusionEngine &dfe, size_t layer, const std::string &filePath);
 bool visualiseDiffusionEngineMetalAndVia(const DiffusionEngine &dfe, size_t metalLayer, size_t viaLayer, const std::string &filePath);
+
+// user "renderPhysicalImplementation" to render PDNNode/PDNEdge 
+bool visualisePhysicalImplementation(const PowerDistributionNetwork &pdn, int layer, const std::string &filePath);
+
+
 #endif // __VISUALIZER_H__

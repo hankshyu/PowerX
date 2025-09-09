@@ -380,6 +380,63 @@ bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<
     return true;
 }
 
+bool visualisePointsSegments(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<FCord>> &fpoints, const std::unordered_map<SignalType, std::vector<FOrderedSegment>> &fsegments, const std::string &filePath){
+
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    std::unordered_set<SignalType> allSignals;
+    std::unordered_set<FCord> knownCords;
+
+    ofs << "VORONOI_POINTS_SEGMENTS VISUALISATION " << vpg.getPinWidth() << " " << vpg.getPinHeight() << std::endl;
+    // calculate all appear signals in points and segments
+    for(std::unordered_map<SignalType, std::vector<FCord>>::const_iterator cit = fpoints.begin(); cit != fpoints.end(); ++cit){
+        allSignals.insert(cit->first);
+    }
+    for(std::unordered_map<SignalType, std::vector<FOrderedSegment>>::const_iterator cit = fsegments.begin(); cit != fsegments.end(); ++cit){
+        allSignals.insert(cit->first);
+    }
+    
+    
+    ofs << "SIGNALS" << " " << allSignals.size() << std::endl;
+    for(SignalType st : allSignals){
+        ofs << st << std::endl;
+        if(fsegments.count(st) != 0){
+            ofs << "SEGMENTS " << fsegments.at(st).size() << std::endl;
+            for(const FOrderedSegment &cos : fsegments.at(st)){
+                FCord c1(cos.getLow());
+                FCord c2(cos.getHigh());
+                knownCords.insert(c1);
+                knownCords.insert(c2);
+                ofs << c1 << " " << c2 << std::endl;
+            }
+        }else{
+            ofs << "SEGMENTS " << 0 << std::endl;
+        }
+
+        if(fpoints.count(st) != 0){
+            std::unordered_set<FCord> unseenCords;
+            for(const FCord &c : fpoints.at(st)){
+                if(knownCords.count(c) == 0) unseenCords.insert(c);
+            }
+            ofs << "POINTS " << unseenCords.size() << std::endl;
+            for(const FCord &c : unseenCords){
+                ofs << c << std::endl;
+            }
+            knownCords.insert(unseenCords.begin(), unseenCords.end());
+
+        }else{
+            ofs << "POINTS " << 0 << std::endl;
+        }
+    }
+
+    ofs.close();
+    return true;
+}
+
+
 bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<Cord>> &points, const std::unordered_map<Cord, std::vector<FCord>> &cells, const std::string &filePath){
 
     std::ofstream ofs(filePath, std::ios::out);
@@ -410,6 +467,37 @@ bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<Si
     ofs.close();
     return true; 
 }
+
+bool visualiseVoronoiGraph(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, std::vector<FCord>> &fpoints, const std::unordered_map<FCord, std::vector<FCord>> &fcells, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+    ofs << "VORONOI_GRAPH VISUALISATION " << vpg.getPinWidth() << " " << vpg.getPinHeight() << std::endl;
+    ofs << "SIGNALS" << " " << fpoints.size() << std::endl;
+
+    for(std::unordered_map<SignalType, std::vector<FCord>>::const_iterator cit = fpoints.begin(); cit != fpoints.end(); ++cit){
+        SignalType st = cit->first;
+        ofs << st << std::endl;
+        ofs << "POINTS " << cit->second.size() << std::endl;
+        for(const FCord &c : cit->second){
+            ofs << c << std::endl;
+            std::unordered_map<FCord, std::vector<FCord>>::const_iterator fcit = fcells.find(c);
+            if(fcit == fcells.end()) ofs << 0 << std::endl;
+            else{
+                for(const FCord &fc : fcit->second){
+                    ofs << fc << " ";
+                }
+                ofs << std::endl;
+            }
+        }
+    }
+
+    ofs.close();
+    return true; 
+}
+
 
 bool visualiseMultiPolygons(const VoronoiPDNGen &vpg, const std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygons, const std::string &filePath){
     std::ofstream ofs(filePath, std::ios::out);
@@ -659,6 +747,45 @@ bool visualiseDiffusionEngineMetalAndVia(const DiffusionEngine &dfe, size_t meta
             ofs << vc.cellLabels[j] << " " << dfe.cellLabelToSigType[vc.cellLabels[j]] << " " << vc.cellParticles[j] << std::endl;
         }
     }
+    ofs.close();
+    return true;
+}
+
+bool visualisePhysicalImplementation(const PowerDistributionNetwork &pdn, int layer, const std::string &filePath){
+    std::ofstream ofs(filePath, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return false;
+
+
+
+    ofs << "PHYSICAL_IMPLEMENTATION VISUALISATION" << std::endl;
+    ofs << "W = " << pdn.physicalGridWidth << ", H = " << pdn.physicalGridHeight << std::endl;
+
+    for(int j = 0; j < pdn.physicalGridHeight; ++j){
+        for(int i = 0; i < pdn.physicalGridWidth; ++i){
+            PDNNode *node = pdn.physicalNodes[layer][j][i];
+            ofs << i << ", " << j << ": " << node->signal << " ";
+            if(node->up != nullptr){
+                ofs << "up = " << node->up->signal << " ";
+            }else{
+                ofs << "up = nullptr" << " ";
+            }
+
+            if(node->down != nullptr){
+                ofs << "down = " << node->down->signal << std::endl;
+            }else{
+                ofs << "down = nullptr" << std::endl;
+            }
+        }
+    }
+
+    for(PDNEdge *edge : pdn.pdnEdgeOwner){
+        if(edge->isVia) continue;
+        if(edge->n0->layer != layer) continue;
+        ofs << edge->n0->x << " " << edge->n0->y << " " << edge->n1->x << " " << edge->n1->y << " " << edge->signal << std::endl;
+    }
+
     ofs.close();
     return true;
 }

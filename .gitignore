@@ -16,3 +16,4 @@ venv/*
 archive/**/*.png
 utils/__pycache__
 vid/*
+*.html
