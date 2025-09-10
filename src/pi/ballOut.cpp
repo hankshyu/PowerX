@@ -182,7 +182,8 @@ BallOut::BallOut(const std::string &filePath): m_rotation(BallOutRotation::R0) {
     file.close();
 }
 
-BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_maxCurrent(ref.m_maxCurrent), m_rotation(rotation), allSignalTypes(ref.allSignalTypes) {
+BallOut::BallOut(const BallOut &ref, enum BallOutRotation rotation) :m_name(ref.m_name), m_maxCurrent(ref.m_maxCurrent), m_seriesResistance(ref.m_seriesResistance), m_seriesInductance(ref.m_seriesInductance), m_shuntCapacitance(ref.m_shuntCapacitance),
+    m_rotation(rotation), allSignalTypes(ref.allSignalTypes) {
 
     for(const SignalType &st : this->allSignalTypes){
         this->SignalTypeToAllCords[st] = {};

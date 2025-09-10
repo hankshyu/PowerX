@@ -35,7 +35,7 @@ int main(int argc, char **argv){
     printWelcomeBanner();
     
     // checkSetUp();
-    runVoronoiDiagramBasedAlgorithm(false, false, true, true);
+    runVoronoiDiagramBasedAlgorithm(false, true, true, true);
 
     // runMyAlgorithm(&argc, &argv, true, true, false);
     

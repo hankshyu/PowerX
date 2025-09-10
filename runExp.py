@@ -9,8 +9,6 @@ port = 10073
 username = 'orange'
 password = 'irislab123'
 
-
-
 SPICE_FILE_NAME = ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"]
 spice_result_file = [s.replace('.sp', '.lis') for s in SPICE_FILE_NAME]
 
