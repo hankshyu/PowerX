@@ -1,23 +1,40 @@
-# 
-# Launch processes in the background and store their PIDs
 
 # python3 utils/renderVoronoiPointsSegments.py -i outputs/ps0.txt -o outputs/ps0.png --dpi 480 -v &
 # python3 utils/renderVoronoiPointsSegments.py -i outputs/ps1.txt -o outputs/ps1.png --dpi 480 -v &
 # python3 utils/renderVoronoiPointsSegments.py -i outputs/ps2.txt -o outputs/ps2.png --dpi 480 -v &
 
-python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m0.txt -o outputs/2mcffix_gawp_mk0.png --pinSize 3.5 --dpi 640 -v &
-python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m1.txt -o outputs/2mcffix_gawp_mk1.png --pinSize 3.5 --dpi 640 -v &
-python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m2.txt -o outputs/2mcffix_gawp_mk2.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/mm0.txt -o outputs/mm0.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/mm1.txt -o outputs/mm1.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/mm1_up.txt -o outputs/mm1_up.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/mm1_down.txt -o outputs/mm1_down.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderObjectArray.py -g -i outputs/mm2.txt -o outputs/mm2.png --pinSize 3.5 --dpi 640 -v &
 
-python3 utils/renderObjectArray.py -g -i outputs/m0.txt -o outputs/m0.png --pinSize 3.5 --dpi 640 -v &
 
-python3 utils/renderObjectArray.py -g -i outputs/m1_up.txt -o outputs/m1_up.png --pinSize 3.5 --dpi 640 -v &
-python3 utils/renderObjectArray.py -g -i outputs/m1_down.txt -o outputs/m1_down.png --pinSize 3.5 --dpi 640 -v &
-python3 utils/renderObjectArray.py -g -i outputs/m1.txt -o outputs/m1.png --pinSize 3.5 --dpi 640 -v &
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi_m0.txt -o outputs/phyrlz_m0.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi_m1.txt -o outputs/phyrlz_m1.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi_m2.txt -o outputs/phyrlz_m2.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi2_m0.txt -o outputs/phyrlz2_m0.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi2_m1.txt -o outputs/phyrlz2_m1.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+python3 utils/renderPhysicalImplementation.py -i outputs/phyrlz_pi2_m2.txt -o outputs/phyrlz2_m2.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle &
+    
+python3 utils/renderFinalOutput.py -i outputs/fnl_fnl_m0.txt -o outputs/final_m0.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle -he & 
+python3 utils/renderFinalOutput.py -i outputs/fnl_fnl_m1.txt -o outputs/final_m1.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle -he & 
+python3 utils/renderFinalOutput.py -i outputs/fnl_fnl_m2.txt -o outputs/final_m2.png --dpi 480 --pxPerCell 40 --lineScale 3 --noLegend --noTitle -he &
+
+# python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m0.txt -o outputs/2mcffix_gawp_mk0.png --pinSize 3.5 --dpi 640 -v &
+# python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m1.txt -o outputs/2mcffix_gawp_mk1.png --pinSize 3.5 --dpi 640 -v &
+# python3 utils/renderObjectArray.py -g -i outputs/2mcffix_gawp_m2.txt -o outputs/2mcffix_gawp_mk2.png --pinSize 3.5 --dpi 640 -v &
+
+# python3 utils/renderObjectArray.py -g -i outputs/m0.txt -o outputs/m0.png --pinSize 3.5 --dpi 640 -v &
+
+# python3 utils/renderObjectArray.py -g -i outputs/m1_up.txt -o outputs/m1_up.png --pinSize 3.5 --dpi 640 -v &
+# python3 utils/renderObjectArray.py -g -i outputs/m1_down.txt -o outputs/m1_down.png --pinSize 3.5 --dpi 640 -v &
+# python3 utils/renderObjectArray.py -g -i outputs/m1.txt -o outputs/m1.png --pinSize 3.5 --dpi 640 -v &
 
 # python3 utils/renderObjectArray.py -g -i outputs/m2_up.txt -o outputs/m2_up.png --pinSize 3.5 --dpi 640 -v & 
 # python3 utils/renderObjectArray.py -g -i outputs/m2_down.txt -o outputs/m2_down.png --pinSize 3.5 --dpi 640 -v & 
-python3 utils/renderObjectArray.py -g -i outputs/m2.txt -o outputs/m2.png --pinSize 3.5 --dpi 640 -v & 
+# python3 utils/renderObjectArray.py -g -i outputs/m2.txt -o outputs/m2.png --pinSize 3.5 --dpi 640 -v & 
 
 # python3 utils/renderObjectArray.py -g -i outputs/m3.txt -o outputs/m3.png --pinSize 3.5 --dpi 640 -v & 
 

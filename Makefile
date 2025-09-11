@@ -36,6 +36,7 @@ MPI_LINK_FLAGS = -L$(OPENMPI_LIB_PATH) -lmpi
 CXX = clang++
 
 OPTFLAGS = -O2
+RELEASE_OPTFLAGS = -O3
 FLAGS = -std=c++20 -stdlib=libc++ -I/opt/homebrew/include -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
 		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) -I$(GUROBI_INCLUDE_PATH) $(OPENMP_COMPILE_FLAGS) $(PETSC_CFLAGS) -D_Alignof=alignof
 
@@ -59,9 +60,11 @@ DIFFUSIONMODEL_OBJS =	diffusionChamber.o metalCell.o viaCell.o flowNode.o flowEd
 _OBJS = main.o timeProfiler.o visualiser.o units.o $(INF_OBJS) $(PI_OBJS) $(PRESSUREMODEL_OBJS) $(DIFFUSIONMODEL_OBJS)
 
 OBJS = $(patsubst %,$(OBJPATH)/%,$(_OBJS))
+RELEASE_OBJS = $(patsubst %.o, $(OBJPATH)/%_release.o, $(_OBJS))
 DBG_OBJS = $(patsubst %.o, $(OBJPATH)/%_dbg.o, $(_OBJS))
 
 all: pwrx
+release: pwrx_release
 debug: pwrx_dbg
 
 pwrx: $(OBJS)
@@ -85,9 +88,30 @@ $(OBJPATH)/%.o: $(PRESSUREMODEL_SRCPATH)/%.cpp $(PRESSUREMODEL_SRCPATH)/%.hpp
 $(OBJPATH)/%.o: $(DIFFUSIONMODEL_SRCPATH)/%.cpp $(DIFFUSIONMODEL_SRCPATH)/%.hpp
 	$(CXX) $(FLAGS) $(OPTFLAGS) -c $< -o $@
 
+pwrx_release: $(RELEASE_OBJS)
+	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -g -o $(BINPATH)/$@
+
+$(OBJPATH)/main_release.o: $(SRCPATH)/main.cpp 
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c -DCOMPILETIME="\"`date`\"" $^ -o $@
+
+$(OBJPATH)/%_release.o: $(SRCPATH)/%.cpp $(SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+
+$(OBJPATH)/%_release.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+
+$(OBJPATH)/%_release.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+
+$(OBJPATH)/%_release.o: $(PRESSUREMODEL_SRCPATH)/%.cpp $(PRESSUREMODEL_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+
+$(OBJPATH)/%_release.o: $(DIFFUSIONMODEL_SRCPATH)/%.cpp $(DIFFUSIONMODEL_SRCPATH)/%.hpp
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
 
 
-pwrx_dbg: $(DBG_OBJS)
+
+pwrx_dbg: $(RELEASE_OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -g -o $(BINPATH)/$@
 
 $(OBJPATH)/main_dbg.o: $(SRCPATH)/main.cpp 

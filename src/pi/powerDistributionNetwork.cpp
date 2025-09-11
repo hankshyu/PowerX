@@ -736,9 +736,7 @@ void PowerDistributionNetwork::buildPhysicalImplementation(){
                     if (!inCanvas(cy, cx)) return;  // skip out-of-range cells
                     SignalType gridSig = this->metalLayers[layer].canvas[cy][cx];
 
-                    if (gridSig == SignalType::SIGNAL ||
-                        gridSig == SignalType::OBSTACLE ||
-                        gridSig == SignalType::GROUND) {
+                    if (gridSig == SignalType::SIGNAL || gridSig == SignalType::OBSTACLE || gridSig == SignalType::GROUND) {
                         isObstacle = true;
                     }
 
@@ -871,7 +869,7 @@ void PowerDistributionNetwork::growPDNNodeEdges(){
 }
 
 bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<SignalType> &priority){
-    
+    bool priorityEmpty = priority.empty();
     auto checkConnectivity = [&](SignalType st, const std::vector<PDNNode *> &destinations) -> bool {
         
         std::unordered_set<PDNNode *> destinationSet(destinations.begin(), destinations.end());
@@ -967,7 +965,7 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
         for(const std::string &chipletName : phyChipletNames[st]){
             if(!checkConnectivity(st, phyChipletNodes[chipletName])){
                 if(!fixConnectivity(st, phyChipletNodes[chipletName])){
-                    std::cout << "[Physical Implementation] Chiplet " << chipletName << " of " << st << " connect connect to current source! " << std::endl;
+                    std::cout << "[Physical Implementation] Chiplet " << chipletName << " of " << st << " fails to connect to current source! " << std::endl;
                     return false;
                 }
             }
@@ -975,52 +973,53 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
     }
 
     std::cout << "[Physical Implementation] All chiplet Passes connectivity test" << std::endl;
+    
+    std::unordered_map<SignalType, unsigned int> sigPriority;
+    if(!priorityEmpty){
+        unsigned int sigWeight = 2 << (phySOI.size()+3);
+        for(int i = 0; i < priority.size(); ++i){
+            SignalType st = priority[i];
+            if(std::find(phySOI.begin(), phySOI.end(), st) == phySOI.end()) continue;
+            if(sigPriority.count(st) != 0) continue;
+            sigPriority[st] = sigWeight;
+            sigWeight = sigWeight >> 1;
+        }
 
-    int allSigTypes = 0;
-    std::unordered_map<SignalType, int> sigPriority;
-    for(int i = 0; i < priority.size(); ++i){
-        SignalType st = priority[i];
-        if(std::find(phySOI.begin(), phySOI.end(), st) == phySOI.end()) continue;
-        if(sigPriority.count(st) != 0) continue;
-        allSigTypes++;
-        sigPriority[st] = allSigTypes;
-    }
-
-    if(sigPriority.size() != phySOI.size()){
-        std::unordered_map<SignalType, double> currentRequirement;
-        for(SignalType st : phySOI){
-            if(sigPriority.count(st) == 0){
-                double totalCurrentRequirement = 0;
-                for(const std::string &chipletName : uBump.signalTypeToInstances[st]){
-                    totalCurrentRequirement += uBump.instanceToBallOutMap[chipletName]->getMaxCurrent();
+        if(sigPriority.size() != phySOI.size()){
+            std::unordered_map<SignalType, double> currentRequirement;
+            for(SignalType st : phySOI){
+                if(sigPriority.count(st) == 0){
+                    double totalCurrentRequirement = 0;
+                    for(const std::string &chipletName : uBump.signalTypeToInstances[st]){
+                        totalCurrentRequirement += uBump.instanceToBallOutMap[chipletName]->getMaxCurrent();
+                    }
+                    currentRequirement[st] = totalCurrentRequirement;
                 }
-                currentRequirement[st] = totalCurrentRequirement;
+            }
+            std::vector<SignalType> lostSigs;
+            for(const auto&[st, cr] : currentRequirement){
+                lostSigs.push_back(st);
+            }
+            std::sort(lostSigs.begin(),lostSigs.end(), [&](SignalType &st1, SignalType &st2){return currentRequirement[st1] > currentRequirement[st2]; });
+            for(int i = 0; i < lostSigs.size(); ++i){
+                sigPriority[lostSigs[i]] = sigWeight;
+                sigWeight = sigWeight >> 1;
             }
         }
-        std::vector<SignalType> lostSigs;
-        for(const auto&[st, cr] : currentRequirement){
-            lostSigs.push_back(st);
-        }
-        std::sort(lostSigs.begin(),lostSigs.end(), [&](SignalType &st1, SignalType &st2){return currentRequirement[st1] > currentRequirement[st2]; });
-        for(int i = 0; i < lostSigs.size(); ++i){
-            allSigTypes++;
-            sigPriority[lostSigs[i]] = allSigTypes;
-        }
     }
 
-    std::unordered_set<PDNNode *> allUsefulNodes;
+    std::unordered_set<PDNNode *> sourceReachableNodes;
+    std::unordered_set<PDNNode *> sinkUsedNodes;
 
-    auto markUsefulNodes = [&](SignalType st){
-        
-        std::unordered_set<PDNNode *> destinationSet;
-        for(const std::string &chipletName : phyChipletNames[st]){
-            destinationSet.insert(phyChipletNodes[chipletName].begin(), phyChipletNodes[chipletName].end());
-        }
+    std::unordered_set<PDNNode *> mustExistNodes;
+    std::unordered_set<PDNNode *> notWorthGrowingNodes;
 
+    
+    auto markReachableNodes = [&](SignalType st, const std::vector<PDNNode *> &seedNodes, std::unordered_set<PDNNode *> &reachableNodes){
         std::unordered_set<PDNNode *> visisted;
         std::queue<PDNNode *> q;
 
-        for(PDNNode *node : phySignalInNodes[st]){
+        for(PDNNode *node : seedNodes){
             visisted.insert(node);
             q.push(node);
         }
@@ -1029,7 +1028,6 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
             if(neighborEdge == nullptr || neighborEdge->signal != st) return;
             
             PDNNode *neighborNode = (neighborEdge->n0 == node)? neighborEdge->n1 : neighborEdge->n0;
-            if(destinationSet.count(neighborNode) != 0) return;
             if(visisted.count(neighborNode) == 0){
                 visisted.insert(neighborNode);
                 q.push(neighborNode);
@@ -1047,20 +1045,40 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
             pushNieghbors(node, node->up);
             pushNieghbors(node, node->down);
         }
-        allUsefulNodes.insert(visisted.begin(), visisted.end());
+        reachableNodes.insert(visisted.begin(), visisted.end());
     };
 
     for(SignalType st : phySOI){
-        markUsefulNodes(st);
+
+        // forward pass, from source side bfs
+        markReachableNodes(st, phySignalInNodes[st], sourceReachableNodes);
+        
+        
+        // backward pass, from sink side bfs
+        std::vector<PDNNode *> signalAllSinks;
+        for(const std::string &chipletName : phyChipletNames[st]){
+            for(PDNNode *node : phyChipletNodes[chipletName]){
+                signalAllSinks.push_back(node);
+            }
+        }
+        markReachableNodes(st, signalAllSinks, sinkUsedNodes);
+
+        mustExistNodes.insert(phySignalInNodes[st].begin(), phySignalInNodes[st].end());
+        mustExistNodes.insert(signalAllSinks.begin(), signalAllSinks.end());
     }
 
+    
     for(size_t layer = 0; layer < physicalGridLayer; ++layer){
         for(size_t y = 0; y < physicalGridHeight; ++y){
             for(size_t x = 0; x < physicalGridWidth; ++x){
                 PDNNode *node = physicalNodes[layer][y][x];
+                if(mustExistNodes.count(node)){
+                    if(!sourceReachableNodes.count(node) || !sinkUsedNodes.count(node)) notWorthGrowingNodes.insert(node);
+                    continue;
+                }
                 SignalType nodeSt = node->signal;
 
-                if(POWER_SIGNAL_SET.count(nodeSt) != 0 && allUsefulNodes.count(node) == 0){
+                if(POWER_SIGNAL_SET.count(nodeSt) && (!sourceReachableNodes.count(node) || !sinkUsedNodes.count(node))){
                     node->signal = SignalType::EMPTY;
                     if(node->north != nullptr && POWER_SIGNAL_SET.count(node->north->signal)) node->north->signal = SignalType::EMPTY;
                     if(node->south != nullptr && POWER_SIGNAL_SET.count(node->south->signal)) node->south->signal = SignalType::EMPTY;
@@ -1100,6 +1118,7 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
             auto bump = [&](PDNEdge* p) {
                 if(p == nullptr) return;
                 PDNNode *neighbor = (p->n0 == node)? p->n1 : p->n0;
+                if(notWorthGrowingNodes.count(neighbor)) return;
 
                 if (POWER_SIGNAL_SET.count(neighbor->signal)) {
                     ++edgeCount[neighbor->signal];
@@ -1114,15 +1133,27 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
             bump(node->down);
 
             if (!edgeCount.empty()) {
-                // Pick the SignalType with the highest count
-                auto itMax = edgeCount.begin();
-                for (auto itEC = std::next(edgeCount.begin()); itEC != edgeCount.end(); ++itEC) {
-                    if (itEC->second > itMax->second) itMax = itEC;
-                }
-                node->signal = itMax->first;
-                // std::cout << "Assigned " << node->layer << " " << node->y << " " << node->x << " as signal " << node->signal << std::endl;
+                if(priorityEmpty){
+                    auto itMax = edgeCount.begin();
+                    // use NN logic to fill the empty nodes
+                    for (auto itEC = std::next(edgeCount.begin()); itEC != edgeCount.end(); ++itEC) {
+                        if (itEC->second > itMax->second) itMax = itEC;
+                    }
+                    node->signal = itMax->first;
 
-                // Correct: erase by iterator; returns next iterator
+                }else{
+                    // use priority logic to fill empty nodes
+
+                    for(auto &[sig, count] : edgeCount){
+                        count = count * (sigPriority[sig] + 1);
+                    }
+
+                    auto itMax = edgeCount.begin();
+                    for (auto itEC = std::next(edgeCount.begin()); itEC != edgeCount.end(); ++itEC) {
+                        if (itEC->second > itMax->second) itMax = itEC;
+                    }
+                    node->signal = itMax->first;
+                }
                 it = emptyNodes.erase(it);
             } else {
                 ++it; // nothing to do for this node

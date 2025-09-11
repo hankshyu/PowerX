@@ -48,8 +48,8 @@ REMOTE_DIR = 'PowerS/'    # remote working dir
 case_to_spfiles = {
     'case01': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"],
     'case02': ["POWER_1.sp", "POWER_2.sp"],
-    'case03': ["POWER_1.sp", "POWER_2.sp", "POWER__3.sp"],
-    'case04': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp", "POWER_3.sp"],  # duplicate per spec
+    'case03': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"],
+    'case04': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp", "POWER_4.sp"],  # duplicate per spec
     'case05': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"],
     'case06': ["POWER_1.sp", "POWER_2.sp", "POWER_3.sp"],
 }
@@ -59,7 +59,7 @@ experiment = {
     'case01': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis"],
     'case02': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis"],
     'case03': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis"],
-    'case04': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis", BASE_DIR+"POWER_3.lis"],
+    'case04': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis", BASE_DIR+"POWER_4.lis"],
     'case05': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis"],
     'case06': [BASE_DIR+"POWER_1.lis", BASE_DIR+"POWER_2.lis", BASE_DIR+"POWER_3.lis"],
 }

@@ -194,7 +194,7 @@ def render_pdn_layer(
     # Helpers
     def center(i, j):
         x = (i + 0.5) * cell_size
-        y = (H - 1 - j + 0.5) * cell_size  # flip vertical so (0,0) bottom-left
+        y = (j + 0.5) * cell_size
         return x, y
 
     # --- Nodes: filled circles ---

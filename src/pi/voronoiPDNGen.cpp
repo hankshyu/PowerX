@@ -1583,8 +1583,6 @@ void VoronoiPDNGen::generateVoronoiDiagramX(
 }
 
 
-
-
 void VoronoiPDNGen::mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap){
 
     for(std::unordered_map<SignalType, std::vector<Cord>>::const_iterator cordit = layerPoints.begin(); cordit != layerPoints.end(); ++cordit){

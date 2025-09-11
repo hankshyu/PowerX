@@ -16,7 +16,7 @@
 
 #include "gurobi_c++.h"
 
-std::string CASE_NAME = "case01";
+std::string CASE_NAME = "case05";
 std::string FILEPATH_TCH = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".tch";
 std::string FILEPATH_BUMPS = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".pinout";
 std::string FILEPATH_CONFIG = "inputs/" + CASE_NAME + "/" + CASE_NAME + ".config";
@@ -35,8 +35,7 @@ int main(int argc, char **argv){
     printWelcomeBanner();
     
     // checkSetUp();
-    runVoronoiDiagramBasedAlgorithm(false, true, true, true);
-
+    runVoronoiDiagramBasedAlgorithm(false, false, true, false);
     // runMyAlgorithm(&argc, &argv, true, true, false);
     
     printExitBanner();
@@ -260,13 +259,16 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
         if(displayIntermediateResults) displayGridArrayWithPin(vpg, technology, false, "outputs/postp_gawp_m");    
     timeProfiler.pauseTimer("Post-porcessing");
 
-    timeProfiler.startTimer("Physcial Realisation");
-        vpg.buildPhysicalImplementation();
-        displayPhysicalImplementation("outputs/phyrlz_pi_m");
-        
-        vpg.connectivityAwareAssignment();
-        
-    timeProfiler.pauseTimer("Physcial Realisation");
+    displayGridArrayWithPin(vpg, technology, true, "outputs/mm");
+
+    // timeProfiler.startTimer("Physcial Realisation");
+    vpg.buildPhysicalImplementation();
+    displayPhysicalImplementation("outputs/phyrlz_pi_m");
+    
+    vpg.connectivityAwareAssignment();
+    displayPhysicalImplementation("outputs/phyrlz_pi2_m");
+    
+    // timeProfiler.pauseTimer("Physcial Realisation");
 
 
     if(displayFinalResult) displayPhysicalImplementation("outputs/fnl_fnl_m");
