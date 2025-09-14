@@ -87,36 +87,15 @@ public:
     void runMSTRouting(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
     
     void ripAndReroute(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
-    void generateInitialPowerPlanePoints(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<SignalType, std::vector<OrderedSegment>> &layerSegments);
-    
-    void generateInitialPowerPlanePointsX(
-        const std::unordered_map<SignalType, std::vector<Cord>> &inLayerPoints, 
-        const std::unordered_map<SignalType, std::vector<OrderedSegment>> &inLayerSegments,
-        std::unordered_map<SignalType, std::vector<FCord>> &outLayerPoints, 
-        std::unordered_map<SignalType, std::vector<FOrderedSegment>> &outLayerSegments
-    );
-    void generateInitialPowerPlanePointsX2(
-        const std::unordered_map<SignalType, std::vector<Cord>> &inLayerPoints, 
-        const std::unordered_map<SignalType, std::vector<OrderedSegment>> &inLayerSegments,
-        std::unordered_map<SignalType, std::vector<FCord>> &outLayerPoints, 
-        std::unordered_map<SignalType, std::vector<FOrderedSegment>> &outLayerSegments
-    );
+
+    void generateInitialPowerPlanePointsX2(const std::unordered_map<SignalType, std::vector<Cord>> &inLayerPoints, const std::unordered_map<SignalType, std::vector<OrderedSegment>> &inLayerSegments,
+        std::unordered_map<SignalType, std::vector<FCord>> &outLayerPoints, std::unordered_map<SignalType, std::vector<FOrderedSegment>> &outLayerSegments);
    
-    void generateVoronoiDiagram(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells);
-    void generateVoronoiDiagramNew(const std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCells);
-    
-    void generateVoronoiDiagramX(
-        const std::unordered_map<SignalType, std::vector<FCord>> &flayerPoints, 
-        std::unordered_map<FCord, std::vector<FCord>> &voronoiCells
-    );
+    void generateVoronoiDiagramX(const std::unordered_map<SignalType, std::vector<FCord>> &flayerPoints, std::unordered_map<FCord, std::vector<FCord>> &voronoiCells);
 
     
-    void mergeVoronoiCells(std::unordered_map<SignalType, std::vector<Cord>> &layerPoints, std::unordered_map<Cord, std::vector<FCord>> &voronoiCellMap, std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap);
-    void mergeVoronoiCellsX(
-        std::unordered_map<SignalType, std::vector<FCord>> &flayerPoints, 
-        std::unordered_map<FCord, std::vector<FCord>> &voronoiCellMap, 
-        std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap
-    );
+    void mergeVoronoiCellsX( std::unordered_map<SignalType, std::vector<FCord>> &flayerPoints, std::unordered_map<FCord, std::vector<FCord>> &voronoiCellMap, 
+        std::unordered_map<SignalType, FPGMMultiPolygon> &multiPolygonMap);
     
 
     void exportToCanvas(std::vector<std::vector<SignalType>> &canvas, std::unordered_map<SignalType, FPGMMultiPolygon> &signalPolygon, bool overlayEmtpyGrids = true);
@@ -125,8 +104,6 @@ public:
     
     void enhanceCrossLayerPI();
     void enhanceCrossLayerPINew();
-
-    void handCraft();
 
     /*
     void enhanceCrossLayerPI(std::unordered_map<SignalType, FPGMMultiPolygon> &m5PolygonMap, std::unordered_map<SignalType, FPGMMultiPolygon> &PolygonMap);    

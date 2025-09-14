@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional
 
-INPUT_DIR = "outputs/"
+INPUT_DIR = "./outputs/"
 
 PATTERN_TO_LABEL: List[Tuple[str, str]] = [
     ("init_gawp_m*",       "01_Initial_m"),
@@ -26,8 +26,9 @@ PATTERN_TO_LABEL: List[Tuple[str, str]] = [
     ("enhance_gawp_m*",    "11_ExchageOptimisation_m"),
     ("releg_gawp_m*",      "12_ReLegalisation_m"),
     ("postvd_gawp_m*",     "13_PostProcessing_m"),
-    ("phyrlz_pi_m*",       "14_PhysicalImplementation_m"),
-    ("fnl_fnl_m*",         "15_FinalImplementation_m")
+    ("phyrlz_pi_m*",       "14_InitialPhysicalImplementation_m"),
+    ("phyrlz_pi2_m*",      "14_PhysicalImplementation_m"),
+    ("fnl_fnl_m*",         "16_FinalImplementation_m")
 ]
 
 _M_SUFFIX_RE = re.compile(r"_m(\d+)$")

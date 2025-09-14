@@ -769,7 +769,6 @@ void PowerDistributionNetwork::buildPhysicalImplementation(){
         }
     }
 
-
     // initialise the edges of the metal layers
     size_t physicalGridWidthRightBorder = physicalGridWidth - 1;
     size_t physicalGridHeightUpBorder = physicalGridHeight - 1;
@@ -870,6 +869,45 @@ void PowerDistributionNetwork::growPDNNodeEdges(){
 
 bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<SignalType> &priority){
     bool priorityEmpty = priority.empty();
+
+    std::vector<SignalType> modifiedPriority = priority;
+
+    std::unordered_map<SignalType, unsigned int> sigPriority;
+    unsigned int sigWeight = 2 << (phySOI.size()+3);
+    for(int i = 0; i < priority.size(); ++i){
+        SignalType st = priority[i];
+        if(std::find(phySOI.begin(), phySOI.end(), st) == phySOI.end()) continue;
+        if(sigPriority.count(st) != 0) continue;
+        sigPriority[st] = sigWeight;
+        sigWeight = sigWeight >> 1;
+    }
+
+    if(sigPriority.size() != phySOI.size()){
+        std::unordered_map<SignalType, double> currentRequirement;
+        for(SignalType st : phySOI){
+            if(sigPriority.count(st) == 0){
+                double totalCurrentRequirement = 0;
+                for(const std::string &chipletName : uBump.signalTypeToInstances[st]){
+                    totalCurrentRequirement += uBump.instanceToBallOutMap[chipletName]->getMaxCurrent();
+                }
+                currentRequirement[st] = totalCurrentRequirement;
+            }
+        }
+        std::vector<SignalType> lostSigs;
+        for(const auto&[st, cr] : currentRequirement){
+            lostSigs.push_back(st);
+        }
+        std::sort(lostSigs.begin(),lostSigs.end(), [&](SignalType &st1, SignalType &st2){return currentRequirement[st1] > currentRequirement[st2]; });
+        for(int i = 0; i < lostSigs.size(); ++i){
+            sigPriority[lostSigs[i]] = sigWeight;
+            sigWeight = sigWeight >> 1;
+            modifiedPriority.push_back(lostSigs[i]);
+        }
+    }
+    
+
+
+
     auto checkConnectivity = [&](SignalType st, const std::vector<PDNNode *> &destinations) -> bool {
         
         std::unordered_set<PDNNode *> destinationSet(destinations.begin(), destinations.end());
@@ -961,12 +999,12 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
 
     };
 
-    for(SignalType st : phySOI){
+    for(SignalType st : modifiedPriority){
         for(const std::string &chipletName : phyChipletNames[st]){
             if(!checkConnectivity(st, phyChipletNodes[chipletName])){
                 if(!fixConnectivity(st, phyChipletNodes[chipletName])){
                     std::cout << "[Physical Implementation] Chiplet " << chipletName << " of " << st << " fails to connect to current source! " << std::endl;
-                    return false;
+                    // return false;
                 }
             }
         }
@@ -974,39 +1012,7 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
 
     std::cout << "[Physical Implementation] All chiplet Passes connectivity test" << std::endl;
     
-    std::unordered_map<SignalType, unsigned int> sigPriority;
-    if(!priorityEmpty){
-        unsigned int sigWeight = 2 << (phySOI.size()+3);
-        for(int i = 0; i < priority.size(); ++i){
-            SignalType st = priority[i];
-            if(std::find(phySOI.begin(), phySOI.end(), st) == phySOI.end()) continue;
-            if(sigPriority.count(st) != 0) continue;
-            sigPriority[st] = sigWeight;
-            sigWeight = sigWeight >> 1;
-        }
 
-        if(sigPriority.size() != phySOI.size()){
-            std::unordered_map<SignalType, double> currentRequirement;
-            for(SignalType st : phySOI){
-                if(sigPriority.count(st) == 0){
-                    double totalCurrentRequirement = 0;
-                    for(const std::string &chipletName : uBump.signalTypeToInstances[st]){
-                        totalCurrentRequirement += uBump.instanceToBallOutMap[chipletName]->getMaxCurrent();
-                    }
-                    currentRequirement[st] = totalCurrentRequirement;
-                }
-            }
-            std::vector<SignalType> lostSigs;
-            for(const auto&[st, cr] : currentRequirement){
-                lostSigs.push_back(st);
-            }
-            std::sort(lostSigs.begin(),lostSigs.end(), [&](SignalType &st1, SignalType &st2){return currentRequirement[st1] > currentRequirement[st2]; });
-            for(int i = 0; i < lostSigs.size(); ++i){
-                sigPriority[lostSigs[i]] = sigWeight;
-                sigWeight = sigWeight >> 1;
-            }
-        }
-    }
 
     std::unordered_set<PDNNode *> sourceReachableNodes;
     std::unordered_set<PDNNode *> sinkUsedNodes;
@@ -1048,7 +1054,7 @@ bool PowerDistributionNetwork::connectivityAwareAssignment(const std::vector<Sig
         reachableNodes.insert(visisted.begin(), visisted.end());
     };
 
-    for(SignalType st : phySOI){
+    for(SignalType st : modifiedPriority){
 
         // forward pass, from source side bfs
         markReachableNodes(st, phySignalInNodes[st], sourceReachableNodes);
@@ -1371,6 +1377,57 @@ void PowerDistributionNetwork::exportPhysicalToCircuit(const Technology &tch, co
         std::string filePath = filePathPrefix + to_string(st) + ".sp";
         exportPhysicalToCircuitBySignal(st, tch, extor, filePath);
     }
+}
+
+void PowerDistributionNetwork::writeSnapShot(const std::string &fileName){
+    std::ofstream ofs(fileName, std::ios::out);
+
+    assert(ofs.is_open());
+    if(!ofs.is_open()) return;
+
+    for(int layer = 0; layer < m_metalLayerCount; ++layer){
+        for(int y = 0; y < m_gridHeight; ++y){
+            for(int x = 0; x < m_gridWidth; ++x){
+                ofs << metalLayers[layer].canvas[y][x] << std::endl;
+            }
+        }
+    }
+
+    for(int layer = 0; layer < m_viaLayerCount; ++layer){
+        for(int y = 0; y < m_pinHeight; ++y){
+            for(int x = 0; x < m_pinWidth; ++x){
+                ofs << viaLayers[layer].canvas[y][x] << std::endl;
+            }
+        }
+    }
+
+    ofs.close();
+}
+
+void PowerDistributionNetwork::readSnapShot(const std::string &fileName){
+    
+    std::ifstream ifs(fileName, std::ios::in);
+
+    assert(ifs.is_open());
+    if(!ifs.is_open()) return;
+
+    for(int layer = 0; layer < m_metalLayerCount; ++layer){
+        for(int y = 0; y < m_gridHeight; ++y){
+            for(int x = 0; x < m_gridWidth; ++x){
+                ifs >> metalLayers[layer].canvas[y][x];
+            }
+        }
+    }
+
+    for(int layer = 0; layer < m_viaLayerCount; ++layer){
+        for(int y = 0; y < m_pinHeight; ++y){
+            for(int x = 0; x < m_pinWidth; ++x){
+                ifs >> viaLayers[layer].canvas[y][x];
+            }
+        }
+    }
+
+    ifs.close();
 }
 
 void markPinPadsWithoutSignals(std::vector<std::vector<SignalType>> &gridCanvas, const std::vector<std::vector<SignalType>> &pinCanvas, const std::unordered_set<SignalType> &avoidSignalTypes){

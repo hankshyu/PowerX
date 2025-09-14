@@ -36,7 +36,7 @@ MPI_LINK_FLAGS = -L$(OPENMPI_LIB_PATH) -lmpi
 CXX = clang++
 
 OPTFLAGS = -O2
-RELEASE_OPTFLAGS = -O3
+RELEASE_OPTFLAGS = -O3 -ffp-contract=fast -fno-math-errno -mcpu=apple-m4
 FLAGS = -std=c++20 -stdlib=libc++ -I/opt/homebrew/include -I$(SRCPATH) -I$(TEXO_SRCPATH) -I$(PI_SRCPATH) -I$(PRESSUREMODEL_SRCPATH) -I$(DIFFUSIONMODEL_SRCPATH) \
 		-I$(BOOSTPATH) -I$(FLUTE_HEADER_PATH) -I$(GEOS_HEADER_PATH) -I$(GUROBI_INCLUDE_PATH) $(OPENMP_COMPILE_FLAGS) $(PETSC_CFLAGS) -D_Alignof=alignof
 
@@ -92,22 +92,22 @@ pwrx_release: $(RELEASE_OBJS)
 	$(CXX) $(FLAGS) $(LINKFLAGS) $^ -g -o $(BINPATH)/$@
 
 $(OBJPATH)/main_release.o: $(SRCPATH)/main.cpp 
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c -DCOMPILETIME="\"`date`\"" $^ -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c -DCOMPILETIME="\"`date`\"" $^ -o $@
 
 $(OBJPATH)/%_release.o: $(SRCPATH)/%.cpp $(SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c $< -o $@
 
 $(OBJPATH)/%_release.o: $(TEXO_SRCPATH)/%.cpp $(TEXO_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c $< -o $@
 
 $(OBJPATH)/%_release.o: $(PI_SRCPATH)/%.cpp $(PI_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c $< -o $@
 
 $(OBJPATH)/%_release.o: $(PRESSUREMODEL_SRCPATH)/%.cpp $(PRESSUREMODEL_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c $< -o $@
 
 $(OBJPATH)/%_release.o: $(DIFFUSIONMODEL_SRCPATH)/%.cpp $(DIFFUSIONMODEL_SRCPATH)/%.hpp
-	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -g -c $< -o $@
+	$(CXX) $(FLAGS) $(RELEASE_OPTFLAGS) -c $< -o $@
 
 
 

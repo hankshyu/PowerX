@@ -8,7 +8,7 @@ TECHNOLOGY_END
 
 PDN_PREPLACE_START
 METAL_LAYER 0 "inputs/case04/case04_preplaced_m0.txt"
-METAL_LAYER 1 "inputs/case04/case04_preplaced_m1_2.txt"
+METAL_LAYER 1 "inputs/case04/case04_preplaced_m1.txt"
 METAL_LAYER 2 "inputs/case04/case04_preplaced_m2.txt"
 
 VIA_LAYER 0 "inputs/case04/case04_preplaced_v0.txt"

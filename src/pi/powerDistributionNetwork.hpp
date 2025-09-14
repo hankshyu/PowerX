@@ -108,6 +108,9 @@ public:
     void exportPhysicalToCircuitBySignal(SignalType st, const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
     void exportPhysicalToCircuit(const Technology &tch, const EqCktExtractor &extor, const std::string &filePath);
 
+    void writeSnapShot(const std::string &fileName);
+    void readSnapShot(const std::string &fileName);
+
     friend bool visualisePhysicalImplementation(const PowerDistributionNetwork &pdn, int layer, const std::string &filePath);
 
 };
