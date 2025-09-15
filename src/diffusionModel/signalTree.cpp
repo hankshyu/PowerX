@@ -30,9 +30,52 @@
 #include "candVertex.hpp"
 #include "signalTree.hpp"
 
-SignalTree::SignalTree(): signal(SignalType::UNKNOWN), chipletCount(0), currentBudget(0) {}
+// SignalTree::SignalTree(): signal(SignalType::UNKNOWN), chipletCount(0), currentBudget(0) {}
 
-SignalTree::SignalTree(SignalType signal, int chipletCount, double budget): signal(signal), chipletCount(chipletCount), currentBudget(budget) {
+// SignalTree::SignalTree(SignalType signal, int chipletCount, double budget): signal(signal), chipletCount(chipletCount), currentBudget(budget) {
+//     assert(chipletCount >= 1);
+
+// }
+
+SignalTree::SignalTree()
+: signal(SignalType::UNKNOWN), chipletCount(0), currentBudget(0) {}
+
+SignalTree::SignalTree(SignalType signal, int chipletCount, double budget)
+: signal(signal), chipletCount(chipletCount), currentBudget(budget) {
     assert(chipletCount >= 1);
-
 }
+
+SignalTree::~SignalTree() {
+    clearWT();
+    clearW();
+    clearDenseHelpers();
+    clearMatrices();
+    clearKSP();
+}
+
+void SignalTree::clearKSP() {
+    if (ksp_n) { KSPDestroy(&ksp_n); ksp_n = nullptr; }
+    kspPrepared = false;
+}
+
+void SignalTree::clearDenseHelpers() {
+    if (I_n) { MatDestroy(&I_n); I_n = nullptr; }
+    if (V_n) { MatDestroy(&V_n); V_n = nullptr; }
+}
+
+void SignalTree::clearW() {
+    if (W) { MatDestroy(&W); W = nullptr; }
+}
+
+void SignalTree::clearWT() {
+    if (WT) { MatDestroy(&WT); WT = nullptr; }
+    WTIndex.clear();
+    haveWT = false;
+}
+
+void SignalTree::clearMatrices() {
+    if (G_n) { MatDestroy(&G_n); G_n = nullptr; }
+}
+
+
+

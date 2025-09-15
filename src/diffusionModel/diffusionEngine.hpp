@@ -214,9 +214,36 @@ public:
 
     /* These are functions for Resistor Network Solving to fill empty spaces */
     void initialiseFiller();
+
+
     void initialiseSignalTrees();
     void runInitialEvaluation();
     void evaluateAndFill();
+
+    void initialiseSignalTreesX();
+    void runInitialEvaluationX();
+    void evaluateAndFillX();
+
+    // Helper to configure SPD Cholesky with CHOLMOD and ordering
+    static inline void SetupSPDCholeskyWithOrdering(KSP ksp, Mat G) {
+        KSPSetType(ksp, KSPPREONLY);
+
+        PC pc; KSPGetPC(ksp, &pc);
+        PCSetType(pc, PCCHOLESKY);
+        PCFactorSetMatSolverType(pc, MATSOLVERCHOLMOD);
+
+        // Choose ordering: default ND; override with PX_ORDERING=amd
+        const char* ord = std::getenv("PX_ORDERING");
+        const bool useND = !(ord && (std::string(ord) == "amd"));
+        PCFactorSetMatOrderingType(pc, useND ? MATORDERINGND : MATORDERINGAMD);
+
+        // Reuse to avoid recomputing ordering/fill when structure is unchanged
+        PCFactorSetReuseOrdering(pc, PETSC_TRUE);
+        PCFactorSetReuseFill(pc,      PETSC_TRUE);
+
+        // Help PETSc/CHOLMOD: graph is symmetric
+        MatSetOption(G, MAT_STRUCTURALLY_SYMMETRIC, PETSC_TRUE);
+    }
 
     double calculateNewRGain(const std::vector<double> &newR) const;
 

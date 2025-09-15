@@ -373,12 +373,26 @@ void runMyAlgorithm(int *argc, char ***argv, bool displayIntermediateResults, bo
         dse.initialiseFiller();
         // dse.checkFillerInitialisation();
     
-        dse.initialiseSignalTrees();
-        dse.runInitialEvaluation();
+        dse.initialiseSignalTreesX();
+        dse.runInitialEvaluationX();
+
+
+        // dse.initialiseSignalTrees();
+        // dse.runInitialEvaluation();
+
+
     timeProfiler.pauseTimer("R-based Filling Stage");
 
+    // // timeProfiler.startTimer("R-based Filling Iterate");
+    // //     dse.evaluateAndFill();
+    // //     if(displayIntermediateResults){
+    // //         dse.writeBackToPDN();
+    // //         displayGridArrayWithPin(dse, technology, false, "outputs/2rfill_gawp_m");
+    // //     }
+    // // timeProfiler.pauseTimer("R-based Filling Iterate");
+    
     timeProfiler.startTimer("R-based Filling Iterate");
-        dse.evaluateAndFill();
+        dse.evaluateAndFillX();
         if(displayIntermediateResults){
             dse.writeBackToPDN();
             displayGridArrayWithPin(dse, technology, false, "outputs/2rfill_gawp_m");
