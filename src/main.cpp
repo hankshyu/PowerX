@@ -36,8 +36,8 @@ int main(int argc, char **argv){
     printWelcomeBanner();
     
     // checkSetUp();
-    runVoronoiDiagramBasedAlgorithm(false, true, true, true);
-    // runMyAlgorithm(&argc, &argv, true, true, false);
+    // runVoronoiDiagramBasedAlgorithm(false, true, true, true);
+    runMyAlgorithm(&argc, &argv, true, true, true);
     
     printExitBanner();
 
@@ -255,13 +255,13 @@ void runVoronoiDiagramBasedAlgorithm(bool useFLUTERouting, bool displayIntermedi
 
     timeProfiler.pauseTimer("ReLegalisation Stage");
 
-    timeProfiler.startTimer("Post-porcessing");
+    timeProfiler.startTimer("Post-Processing");
         vpg.assignVias();
         for(int i = 0; i < vpg.getMetalLayerCount(); ++i){
             vpg.removeFloatingPlanes(i);
         }
         if(displayIntermediateResults) displayGridArrayWithPin(vpg, technology, false, "outputs/postp_gawp_m");    
-    timeProfiler.pauseTimer("Post-porcessing");
+    timeProfiler.pauseTimer("Post-Processing");
 
     vpg.writeSnapShot("snap.txt");
     // vpg.readSnapShot("snap.txt");
@@ -288,23 +288,33 @@ void runMyAlgorithm(int *argc, char ***argv, bool displayIntermediateResults, bo
     TimeProfiler timeProfiler;
     timeProfiler.startTimer("Preprocessing");
 
-    Technology technology(FILEPATH_TCH);
-    EqCktExtractor EqCktExtor(technology);
-    DiffusionEngine dse(FILEPATH_BUMPS, FILEPATH_CONFIG);
+        Technology technology(FILEPATH_TCH);
+        EqCktExtractor EqCktExtor(technology);
+        DiffusionEngine dse(FILEPATH_BUMPS, FILEPATH_CONFIG);
+
+
+        auto displayPhysicalImplementation = [&](std::string fileNamePrefix){
+            for(int layer = 0; layer < dse.getMetalLayerCount(); ++layer){
+                std::string displayFileName = fileNamePrefix + std::to_string(layer) + ".txt";
+                visualisePhysicalImplementation(dse, layer, displayFileName);
+            }
+        };
+
         
         PetscInitialize(argc, argv, NULL, NULL);
-        
         
         dse.markPreplacedAndInsertPadsOnCanvas();
         if(displayIntermediateResults) displayGridArrayWithPin(dse, technology, false, "outputs/2init_gawp_m");
         
         dse.markObstaclesOnCanvas();
+        dse.initialiseGraphWithPreplaced();
         if(displayIntermediateResults) displayGridArrayWithPin(dse, technology, false, "outputs/2fillobst_gawp_m");
         
-        dse.initialiseGraphWithPreplaced();
-        
         dse.fillEnclosedRegions();
-        if(displayIntermediateResults) displayGridArrayWithPin(dse, technology, false, "outputs/2fillEnclosed_gawp_m");
+        if(displayIntermediateResults){
+            dse.writeBackToPDN();
+            displayGridArrayWithPin(dse, technology, false, "outputs/2fillEnclosed_gawp_m");
+        } 
 
     timeProfiler.pauseTimer("Preprocessing");
 
@@ -313,7 +323,7 @@ void runMyAlgorithm(int *argc, char ***argv, bool displayIntermediateResults, bo
         dse.initialiseMCFSolver();
         dse.runMCFSolver("", 1);
         if(displayIntermediateResults){
-            // dse.writeBackToPDN();
+            dse.writeBackToPDN();
             displayGridArrayWithPin(dse, technology, false, "outputs/2mcfraw_gawp_m");
         }
 
@@ -333,9 +343,35 @@ void runMyAlgorithm(int *argc, char ***argv, bool displayIntermediateResults, bo
 
     timeProfiler.pauseTimer("Post-MCF Repair & WB");
 
+    dse.writeBackToPDN();
+    
+    size_t blankCountMetal = 0;
+    size_t blankCountVia = 0;
+
+    for(size_t layer = 0; layer < dse.getMetalLayerCount(); ++layer){
+        for(size_t y = 0; y < dse.getGridHeight(); ++y){
+            for(size_t x = 0; x < dse.getGridWidth(); ++x){
+                if(dse.metalLayers[layer].canvas[y][x] == SignalType::EMPTY) blankCountMetal++;
+
+            }
+        }
+    }
+
+    for(size_t layer = 0; layer < dse.getViaLayerCount(); ++layer){
+        for(size_t y = 0; y < dse.getPinHeight(); ++y){
+            for(size_t x = 0; x < dse.getPinWidth(); ++x){
+                if(dse.viaLayers[layer].canvas[y][x] == SignalType::EMPTY) blankCountVia++;
+
+            }
+        }
+    }
+
+    std::cout << "Empty Metal/Via Count = " << colours::GREEN << blankCountMetal << "/" << blankCountVia << colours::COLORRST << std::endl;
+
+
     timeProfiler.startTimer("R-based Filling Stage");
         dse.initialiseFiller();
-    // // dse.checkFillerInitialisation();
+        // dse.checkFillerInitialisation();
     
         dse.initialiseSignalTrees();
         dse.runInitialEvaluation();
@@ -343,18 +379,35 @@ void runMyAlgorithm(int *argc, char ***argv, bool displayIntermediateResults, bo
 
     timeProfiler.startTimer("R-based Filling Iterate");
         dse.evaluateAndFill();
+        if(displayIntermediateResults){
+            dse.writeBackToPDN();
+            displayGridArrayWithPin(dse, technology, false, "outputs/2rfill_gawp_m");
+        }
     timeProfiler.pauseTimer("R-based Filling Iterate");
 
-    dse.writeBackToPDN();
-    displayGridArrayWithPin(dse, technology, false);
 
-    // if(displayFinalResult) displayGridArrayWithPin(dse, technology, false, "outputs/final_m");
-    // if(exportCircuit) exportEquivalentCircuits(dse, technology, EqCktExtor, "outputs/");
+
+
+    timeProfiler.startTimer("Post-Processing");
+        dse.assignVias();
+        for(int i = 0; i < dse.getMetalLayerCount(); ++i){
+            dse.removeFloatingPlanes(i);
+        }
+        if(displayIntermediateResults) displayGridArrayWithPin(dse, technology, false, "outputs/2postp_gawp_m");    
+    timeProfiler.pauseTimer("Post-Processing");
+
+    // Start Physical Implementation
+    timeProfiler.startTimer("Physcial Realisation");
+        dse.buildPhysicalImplementation();
+        if(displayIntermediateResults) displayPhysicalImplementation("outputs/2phyrlz_pi_m");
+        dse.connectivityAwareAssignment();
+        if(displayIntermediateResults) displayPhysicalImplementation("outputs/2phyrlz_pi2_m");
+    timeProfiler.pauseTimer("Physcial Realisation");
+
+
+    if(displayFinalResult) displayPhysicalImplementation("outputs/2fnl_fnl_m");
+    if(exportCircuit) dse.exportPhysicalToCircuit(technology, EqCktExtor, "outputs/");
 
     timeProfiler.printTimingReport();
-    // visualiseDiffusionEngineMetalAndVia(dse, 0, 0, "outputs/dse_m0_v0.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 1, 0, "outputs/dse_m1_v0.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 1, 1, "outputs/dse_m1_v1.txt");
-    // visualiseDiffusionEngineMetalAndVia(dse, 2, 1, "outputs/dse_m2_v1.txt");
 
 }

@@ -1,0 +1,43 @@
+[info] Running remote job for case01 ...
+STDOUT:
+set hspice version: 2024.09-sp1/ (default)
+Using: /nfs/home/cad/synopsys/hspice/2024.09-sp1/hspice/linux64/hspice  -i 'PowerS/POWER_1.sp' -o 'PowerS/POWER_1.lis'
+
+>info:         ***** hspice job concluded
+Using: /nfs/home/cad/synopsys/hspice/2024.09-sp1/hspice/linux64/hspice  -i 'PowerS/POWER_2.sp' -o 'PowerS/POWER_2.lis'
+
+>info:         ***** hspice job concluded
+Using: /nfs/home/cad/synopsys/hspice/2024.09-sp1/hspice/linux64/hspice  -i 'PowerS/POWER_3.sp' -o 'PowerS/POWER_3.lis'
+
+>info:         ***** hspice job concluded
+
+STDERR:
+
+[info] Experiment mode: case01
+
+== IR-drop outputs (filtered) ==
+[POWER_1] irdrop01cpu1_23_88_27_27_1.05= 6.4818e-03
+[POWER_2] irdrop01gpu1_4_4_42_42_2.95= 2.0200e-02
+[POWER_2] irdrop01gpu0_77_77_42_42_2.95= 2.7430e-02
+[POWER_3] irdrop01hbm1_57_87_16_26_0.2= 1.3352e-02
+[POWER_3] irdrop01hbm2_50_16_16_26_0.2= 1.0394e-02
+[POWER_3] irdrop01hbm0_39_67_26_16_0.2= 1.1060e-02
+
+== Resistor power summary ==
+[POWER_1] 0.0678118283125236 W
+[POWER_2] 1.8925633773671933 W
+[POWER_3] 0.09708078981742184 W
+Grand Total resistor power: 2.0574559954971385 W
+
+=== Global Top-5 contributors (by |power|) ===
+[POWER_2]          4:rpath  |  type: resistor  |  0.8703 W
+[POWER_2]          3:rpath  |  type: resistor  |  0.8702 W
+[POWER_1]          3:rpath  |  type: resistor  |  0.06064 W
+[POWER_3]          3:rpath  |  type: resistor  |  0.03 W
+[POWER_3]          4:rpath  |  type: resistor  |  0.03 W
+
+Final report:
+Worse IRDrop: 27.4300 mV
+Weighted-Average IRDrop: 20.4339 mV
+Total Power Loss: 2.0575 W
+[info] Saved visualization to: exp/case01.png

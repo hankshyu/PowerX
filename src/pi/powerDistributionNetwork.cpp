@@ -1373,7 +1373,15 @@ void PowerDistributionNetwork::exportPhysicalToCircuitBySignal(SignalType st, co
 }
 
 void PowerDistributionNetwork::exportPhysicalToCircuit(const Technology &tch, const EqCktExtractor &extor, const std::string &filePathPrefix){
-    for(SignalType st : phySOI){
+    
+    std::vector<SignalType> signalsToExport;
+    for(const auto&[st, nameSet] : uBump.signalTypeToInstances){
+        if(POWER_SIGNAL_SET.count(st) == 0) continue;
+        signalsToExport.push_back(st);
+    }
+    
+    
+    for(SignalType st : signalsToExport){
         std::string filePath = filePathPrefix + to_string(st) + ".sp";
         exportPhysicalToCircuitBySignal(st, tch, extor, filePath);
     }

@@ -158,7 +158,6 @@ void DiffusionEngine::readConfigurations(const std::string &configFileName){
 
 }
 
-
 DiffusionEngine::DiffusionEngine(const std::string &fileName, const std::string &configFileName): PowerDistributionNetwork(fileName) {
     this->m_metalGridLayers = m_metalLayerCount;
     this->m_metalGridWidth = m_gridWidth;
@@ -688,8 +687,7 @@ void DiffusionEngine::fillEnclosedRegions() {
                 size_t cellIdx = calMetalIdx(layer, y, x);
                 MetalCell *cellPointer = &metalGrid[cellIdx];
 
-                if (cellPointer->type != CellType::EMPTY || visited[y][x])
-                    continue;
+                if (cellPointer->type != CellType::EMPTY || visited[y][x]) continue;
 
                 SignalType cellSignalType = cellPointer->signal;
 
@@ -3743,8 +3741,6 @@ void DiffusionEngine::initialiseSignalTrees(){
         sigTree.exp_size = expSize;
         sigTree.n_size = nSize;
         
-
-
         auto PrintNonZeroRows = [&](const Mat &A) {
             PetscInt nrows, ncols;
             MatGetSize(A, &nrows, &ncols);
@@ -4046,8 +4042,6 @@ void DiffusionEngine::initialiseSignalTrees(){
         // std::cout << "Verifying St = " << st << "\'s G_n 3: " << groundIdx << std::endl;
         // CheckConductanceMatrix(G_n, true);
         // CheckAllRowsNonZero(G_n);
-
-
     }
 }
 
@@ -4140,6 +4134,8 @@ void DiffusionEngine::runInitialEvaluation(){
 }
 
 void DiffusionEngine::evaluateAndFill(){
+    
+    TimeProfiler subtp;
 
     struct CandChamber{
 
@@ -4156,11 +4152,13 @@ void DiffusionEngine::evaluateAndFill(){
     while(!allCandidateNodes.empty()){
         
         runIteration++;
-        if(runIteration > 20) break;
+        // if(runIteration > 80) break;
 
         std::vector<CandChamber> performanceVector;
         std::unordered_map<DiffusionChamber *, double> overlapNodePerformance;
         std::unordered_map<DiffusionChamber *, size_t> overlapNodeToPerformanceVectorIdx;
+        
+        subtp.startTimer("Decide");
 
         for(auto &[st, sigTree] : this->signalTrees){
             // std::cout << st << std::endl;
@@ -4189,7 +4187,7 @@ void DiffusionEngine::evaluateAndFill(){
             std::vector<PetscScalar> betaVals(expSize + 1);
 
             // Helper to add a neighbor with unit conductance
-            auto addNeighbor = [&](DiffusionChamber *dc, PetscScalar &D)->void {
+            auto addNeighbor = [&](DiffusionChamber *dc, PetscScalar &D) -> void {
                 if (!dc) return;
                 if (dc->signal != st) return;
                 auto it = sigTree.nodeToGIdx.find(dc);
@@ -4228,10 +4226,11 @@ void DiffusionEngine::evaluateAndFill(){
                     addNeighbor(vc->downULCell, D);
                     addNeighbor(vc->downURCell, D);
                 }
-                if (D == (PetscScalar)0.0) continue; // isolated or wrong-net candidate
+                if (D == PetscScalar(0.0)) continue; // isolated or wrong-net candidate
 
                 // Finalize B (required before use)
-                VecAssemblyBegin(B); VecAssemblyEnd(B);
+                VecAssemblyBegin(B); 
+                VecAssemblyEnd(B);
 
                 // beta = G^{-1} B
                 KSPSolve(ksp, B, beta);
@@ -4285,7 +4284,6 @@ void DiffusionEngine::evaluateAndFill(){
                         if(overlapNodePerformance[cand] < gain){
                             overlapNodePerformance[cand] = gain;
 
-                            
                             CandChamber &candCB = performanceVector[overlapNodeToPerformanceVectorIdx[cand]];
                             candCB.gainValue = gain;
                             candCB.sig = st;
@@ -4303,12 +4301,32 @@ void DiffusionEngine::evaluateAndFill(){
 
         // decide which to commit
 
-        int commitCount = std::max(64, int(allCandidateNodes.size() * 0.75));
+        int commitCount = std::max(256, int(allCandidateNodes.size() * 0.5));
         commitCount = std::min(commitCount, int(performanceVector.size()));
         
-        std::cout << "Iteration " << runIteration << " cand = " << commitCount << "/" << performanceVector.size() << "/" << allCandidateNodes.size() << " ";
-
+        // count the number of emtpy nodes
+        size_t emtpyMetalGrid = 0;
+        size_t candMetalGrid = 0;
+        
+        size_t emptyViaGrid = 0;
+        size_t candViaGrid = 0;
+        for(int i = 0; i < metalGrid.size(); ++i){
+            if(metalGrid[i].type == CellType::EMPTY) emtpyMetalGrid++;
+            else if(metalGrid[i].type == CellType::CANDIDATE) candMetalGrid++;
+        }
+        for(int i = 0; i < viaGrid.size(); ++i){
+            if(viaGrid[i].type== CellType::EMPTY) emptyViaGrid++;
+            else if(viaGrid[i].type == CellType::CANDIDATE) candViaGrid++;
+        }
+        std::cout << std::endl << std::endl;
+        std::cout << "Iteration " << runIteration;
+        std::cout << " (Commit count, pfVector, allCand) = (" << commitCount << ", " << performanceVector.size() << ", " << allCandidateNodes.size() << ")" << std::endl;
+        std::cout << "Empty (M, V, S) = (" << emtpyMetalGrid << ", " << emptyViaGrid << ", " << emtpyMetalGrid+emptyViaGrid << ") " << std::endl;
+        std::cout << "Candidate (M, V, S) = (" << candMetalGrid << ", " << candViaGrid << ", " << candMetalGrid+candViaGrid << ") " << std::endl;
+        std::cout << "All Void (M, V, S) = " << emtpyMetalGrid+candMetalGrid<< ", " << emptyViaGrid+candViaGrid << ", " << emtpyMetalGrid+candMetalGrid+emptyViaGrid+candViaGrid << ") " << std::endl;
+        
         // Partition so that [0, k) are the k largest gainValues (order inside is unspecified)
+       
         if(commitCount < (int)performanceVector.size() && commitCount > 0) {
             // Partition so [0, commitCount) are the highest gainValues (order inside is unspecified)
             auto nth = performanceVector.begin() + commitCount;   // VALID now
@@ -4348,15 +4366,26 @@ void DiffusionEngine::evaluateAndFill(){
                 for(SignalType sigType : overlapNodes[ccDc]){
                     SignalTree &processSignalTree = signalTrees[sigType];
 
-                    if(sigType == ccSig){
-                        processSignalTree.candidateNodes.erase(ccDc);
-                        processSignalTree.preplacedOrMarkedNodes.insert(ccDc);
-                    }else{
-                        processSignalTree.candidateNodes.erase(ccDc);
-                    }
+                    processSignalTree.candidateNodes.erase(ccDc);
+
+                    if(sigType == ccSig) processSignalTree.preplacedOrMarkedNodes.insert(ccDc);
                 }
             }
         }
+        size_t totalUpdated = 0;
+        std::unordered_set<DiffusionChamber *> updatedvsCells;
+        for(auto&[sigl, vdcs] : updatedNodes){
+            totalUpdated += vdcs.size();
+            std::cout << sigl << " has updated " << vdcs.size() << std::endl;
+            for(DiffusionChamber *dcc : vdcs){
+                if(updatedvsCells.count(dcc)) std::cout << "repeated commit found" << std::endl;
+                else(updatedvsCells.insert(dcc));
+            }
+        }
+        std::cout << "Iteration total commit = " << totalUpdated << std::endl;
+        
+        subtp.pauseTimer("Decide");
+        subtp.startTimer("Update");
 
         pairWiseResistance = std::vector<double>(totalChipletCount, -1);
         for(std::unordered_map<SignalType, std::vector<DiffusionChamber *>>::iterator it = updatedNodes.begin(); it != updatedNodes.end(); ++it){
@@ -4381,8 +4410,8 @@ void DiffusionEngine::evaluateAndFill(){
                     if(canit == overlapNodes.end()){ // is candidate but not overlap
                         if(st != dc->signal){ 
                             // promote to overlap
+                            overlapNodes[dc] = {st, dc->signal};
                             dc->signal = SignalType::UNKNOWN;
-                            overlapNodes[dc] = {st};
                             sigTree.candidateNodes.insert(dc);
                         }
                     }else{ // already a candidate, add to it
@@ -4645,8 +4674,13 @@ void DiffusionEngine::evaluateAndFill(){
 
         this->initWeightedAvgVdrop /= sumCurrent;
         std::cout << "loss = " << initWorseVdrop << ", " << initWeightedAvgVdrop << ", " << initTotalPowerLoss << std::endl;
-    
+        subtp.pauseTimer("Update");
+        subtp.printTimingReport();
+
+        
     }
+    std::cout << "print Final timing report = " << std::endl;
+    subtp.printTimingReport();
 }
 
 double DiffusionEngine::calculateNewRGain(const std::vector<double> &newR) const{

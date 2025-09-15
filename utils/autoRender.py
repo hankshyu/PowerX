@@ -27,8 +27,19 @@ PATTERN_TO_LABEL: List[Tuple[str, str]] = [
     ("releg_gawp_m*",      "12_ReLegalisation_m"),
     ("postvd_gawp_m*",     "13_PostProcessing_m"),
     ("phyrlz_pi_m*",       "14_InitialPhysicalImplementation_m"),
-    ("phyrlz_pi2_m*",      "14_PhysicalImplementation_m"),
-    ("fnl_fnl_m*",         "16_FinalImplementation_m")
+    ("phyrlz_pi2_m*",      "15_PhysicalImplementation_m"),
+    ("fnl_fnl_m*",         "16_FinalImplementation_m"),
+
+    ("2init_gawp_m*",           "01_Initial_m"),
+    ("2fillobst_gawp_m*",       "02_FillObstacles_m"),
+    ("2fillEnclosed_gawp_m*",   "03_FillEnclosedRegions_m"),
+    ("2mcfraw_gawp_m*",         "04_MCF_m"),
+    ("2rfill_gawp_m*",          "05_ResistorNetworkBasedFilling_m"),
+    ("2postp_gawp_m*",          "06_PostProcessing_m"),
+    ("2phyrlz_pi_m*",           "07_InitialPhysicalImplementation_m"),
+    ("2phyrlz_pi2_m*",          "08_PhysicalImplementation_m"),
+    ("2fnl_fnl_m*",             "09_FinalImplementation_m")
+
 ]
 
 _M_SUFFIX_RE = re.compile(r"_m(\d+)$")
