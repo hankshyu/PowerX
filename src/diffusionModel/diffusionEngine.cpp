@@ -91,6 +91,14 @@ void DiffusionEngine::readConfigurations(const std::string &configFileName){
         {"viaBudgetCurrentQuota", &viaBudgetCurrentQuota},
 
         {"minChipletBudgetAvgPctg", &minChipletBudgetAvgPctg},
+
+        {"batchSize", &batchSize},
+        {"iterationCommitLBPctg", &iterationCommitLBPctg},
+        {"minCommitRate", &minCommitRate},
+        {"maxCommitRate", &maxCommitRate},
+        {"expectedFillingCycles", &expectedFillingCycles},
+        {"maxFillingRate", &maxFillingRate},
+
     };
 
     std::set<std::string> seenKeys;
@@ -5199,518 +5207,6 @@ void DiffusionEngine::runInitialEvaluationX() {
     this->initWeightedAvgVdrop = (sumCurrent > 0.0) ? (this->initWeightedAvgVdrop / sumCurrent) : 0.0;
 }
 
-
-// void DiffusionEngine::evaluateAndFillX() {
-//     struct CandChamber {
-//         DiffusionChamber *dc;
-//         double            gainValue;
-//         SignalType        sig;
-//         bool              isOverlap;
-//         CandChamber(DiffusionChamber *dc, double gain, SignalType st, bool isOverlap)
-//         : dc(dc), gainValue(gain), sig(st), isOverlap(isOverlap) {}
-//     };
-
-//     // --- Helper: add neighbor → collect reduced row index or count as "ground-ish" ---
-//     auto addNeighborIdx = [&](SignalTree &sigTree,
-//                               DiffusionChamber *nb,
-//                               std::vector<PetscInt> &nbrRows,
-//                               PetscInt &D_ng, PetscInt &D_g) {
-//         if (!nb) return;
-//         auto it = sigTree.nodeToGIdx.find(nb);
-//         if (it == sigTree.nodeToGIdx.end()) { ++D_g; return; }  // not yet in graph ≈ ground-ish tie
-
-//         const PetscInt j_full = (PetscInt)it->second + (1 + sigTree.exp_size);
-//         if (j_full == sigTree.ground_full_idx) { ++D_g; return; }
-//         if (j_full < 0 || j_full >= sigTree.n_size) { ++D_g; return; }
-
-//         const PetscInt j_red = sigTree.full2red[(size_t)j_full];
-//         if (j_red < 0 || j_red >= sigTree.n_size_red) { ++D_g; return; }
-
-//         nbrRows.push_back(j_red);
-//         ++D_ng;
-//     };
-
-//     // --- Build ACTIVE nRed×nRed Laplacian, factor it, refresh W & pairWiseResistance; return Gact (caller destroys) ---
-//     auto buildGactFactorAndRefresh = [&](SignalType st) -> Mat {
-//         SignalTree &sigTree = this->signalTrees[st];
-
-//         // Active sizes & maps
-//         const PetscInt expSize = sigTree.exp_size;
-//         sigTree.n_size = (PetscInt)(sigTree.GIdxToNode.size() + (1 + expSize));
-//         if (sigTree.n_size > sigTree.n_size_cap) sigTree.n_size = sigTree.n_size_cap;
-//         sigTree.ground_full_idx = (PetscInt)sigTree.pinInIdxBegin;
-
-//         sigTree.full2red.assign((size_t)sigTree.n_size, -1);
-//         sigTree.red2full.clear();
-//         sigTree.red2full.reserve((size_t)sigTree.n_size - 1);
-
-//         PetscInt nRed = 0;
-//         for (PetscInt i = 0; i < sigTree.n_size; ++i) {
-//             if (i == sigTree.ground_full_idx) continue;
-//             sigTree.full2red[(size_t)i] = nRed++;
-//             sigTree.red2full.push_back(i);
-//         }
-//         sigTree.n_size_red = nRed;
-
-//         // Assemble ACTIVE G in CSR (ground-aware)
-//         struct ColVal { PetscInt c; PetscScalar v; };
-//         std::vector<std::vector<ColVal>> rows((size_t)nRed);
-//         for (auto &r : rows) r.reserve(16);
-
-//         auto add_diag = [&](PetscInt r, PetscScalar v) {
-//             if (r >= 0) rows[(size_t)r].push_back({r, v});
-//         };
-//         auto add_off = [&](PetscInt r, PetscInt c, PetscScalar v) {
-//             if (r >= 0 && c >= 0 && r != c) rows[(size_t)r].push_back({c, v});
-//         };
-//         auto add_edge_full = [&](PetscInt i_full, PetscInt j_full) {
-//             if (i_full < 0 || j_full < 0) return;
-//             if (i_full >= sigTree.n_size || j_full >= sigTree.n_size) return;
-
-//             const bool i_is_g = (i_full == sigTree.ground_full_idx);
-//             const bool j_is_g = (j_full == sigTree.ground_full_idx);
-//             if (i_is_g && j_is_g) return;
-
-//             const PetscScalar w = (PetscScalar)1.0;
-//             if (i_is_g ^ j_is_g) { // edge to ground → diag only
-//                 const PetscInt u = sigTree.full2red[(size_t)(i_is_g ? j_full : i_full)];
-//                 add_diag(u, w);
-//                 return;
-//             }
-
-//             const PetscInt i = sigTree.full2red[(size_t)i_full];
-//             const PetscInt j = sigTree.full2red[(size_t)j_full];
-//             if (i < 0 || j < 0 || i == j) return;
-//             add_off(i, j, -w); add_off(j, i, -w);
-//             add_diag(i,  w);   add_diag(j,  w);
-//         };
-
-//         // Source ↔ pin-in pads
-//         for (PetscInt i = (PetscInt)sigTree.pinInIdxBegin; i < (PetscInt)sigTree.pinInIdxEnd; ++i)
-//             add_edge_full(/*src=*/0, i);
-
-//         // Sinks ↔ uBump pads (reconstruct ranges)
-//         {
-//             size_t cursor = sigTree.pinInIdxEnd;
-//             int instIdx = 0;
-//             for (const std::string &instName : this->uBump.signalTypeToInstances[st]) {
-//                 BallOut *bo = this->uBump.instanceToBallOutMap[instName];
-//                 size_t cnt = 0; for (const Cord &c : bo->SignalTypeToAllCords[st]) { (void)c; cnt += 4; }
-//                 const size_t b = cursor, e = cursor + cnt;
-//                 const PetscInt sink = instIdx + 1;
-//                 for (size_t jIdx = b; jIdx < e; ++jIdx) add_edge_full(sink, (PetscInt)jIdx);
-//                 cursor = e; ++instIdx;
-//             }
-//         }
-
-//         // Cell graph (only j>i)
-//         const PetscInt firstCellFullIdx = (PetscInt)sigTree.pinInIdxBegin;
-//         const PetscInt lastFull         = sigTree.n_size;
-//         for (PetscInt i_full = firstCellFullIdx; i_full < lastFull; ++i_full) {
-//             if (i_full == sigTree.ground_full_idx) continue;
-//             DiffusionChamber *dc = nullptr;
-//             const PetscInt offset = i_full - (1 + expSize);
-//             if (offset >= 0 && (size_t)offset < sigTree.GIdxToNode.size())
-//                 dc = sigTree.GIdxToNode[(size_t)offset];
-//             if (!dc) continue;
-
-//             auto consider = [&](DiffusionChamber *nb) {
-//                 if (!nb) return;
-//                 auto it = sigTree.nodeToGIdx.find(nb);
-//                 if (it == sigTree.nodeToGIdx.end()) return;
-//                 const PetscInt j_full = (PetscInt)it->second + (1 + expSize);
-//                 if (j_full > i_full) add_edge_full(i_full, j_full);
-//             };
-
-//             if (dc->metalViaType == DiffusionChamberType::METAL) {
-//                 auto *mc = static_cast<MetalCell*>(dc);
-//                 consider(mc->northCell); consider(mc->southCell);
-//                 consider(mc->eastCell);  consider(mc->westCell);
-//                 consider(mc->upCell);    consider(mc->downCell);
-//             } else {
-//                 auto *vc = static_cast<ViaCell*>(dc);
-//                 consider(vc->upLLCell);   consider(vc->upLRCell);
-//                 consider(vc->upULCell);   consider(vc->upURCell);
-//                 consider(vc->downLLCell); consider(vc->downLRCell);
-//                 consider(vc->downULCell); consider(vc->downURCell);
-//             }
-//         }
-
-//         // Compress rows → CSR
-//         PetscInt nnz = 0;
-//         for (auto &vec : rows) {
-//             if (vec.empty()) continue;
-//             std::sort(vec.begin(), vec.end(), [](const ColVal&a,const ColVal&b){return a.c<b.c;});
-//             size_t w = 0;
-//             for (size_t q = 0; q < vec.size();) {
-//                 const PetscInt c = vec[q].c; PetscScalar acc = 0.0;
-//                 do { acc += vec[q].v; ++q; } while (q < vec.size() && vec[q].c == c);
-//                 vec[w++] = {c, acc};
-//             }
-//             vec.resize(w);
-//             nnz += (PetscInt)w;
-//         }
-
-//         std::vector<PetscInt>    ii((size_t)nRed + 1);
-//         std::vector<PetscInt>    jj((size_t)nnz);
-//         std::vector<PetscScalar> vv((size_t)nnz);
-//         ii[0] = 0;
-//         for (PetscInt r = 0; r < nRed; ++r) ii[(size_t)r + 1] = ii[(size_t)r] + (PetscInt)rows[(size_t)r].size();
-//         {
-//             PetscInt p = 0;
-//             for (PetscInt r = 0; r < nRed; ++r)
-//                 for (const auto &cv : rows[(size_t)r]) { jj[(size_t)p] = cv.c; vv[(size_t)p] = cv.v; ++p; }
-//         }
-
-//         Mat Gact = nullptr;
-//         MatCreateSeqAIJ(PETSC_COMM_SELF, nRed, nRed, 0, nullptr, &Gact);
-//         MatSeqAIJSetPreallocationCSR(Gact, ii.data(), jj.data(), vv.data());
-//         MatSetOption(Gact, MAT_SYMMETRIC, PETSC_TRUE);
-//         MatSetOption(Gact, MAT_SPD,       PETSC_TRUE);
-//         MatAssemblyBegin(Gact, MAT_FINAL_ASSEMBLY);
-//         MatAssemblyEnd  (Gact, MAT_FINAL_ASSEMBLY);
-
-//         // KSP on ACTIVE
-//         if (!sigTree.ksp_n) {
-//             KSPCreate(PETSC_COMM_SELF, &sigTree.ksp_n);
-//             KSPSetType(sigTree.ksp_n, KSPPREONLY);
-//             PC pc; KSPGetPC(sigTree.ksp_n, &pc);
-//             PCSetType(pc, PCCHOLESKY);
-//             PCFactorSetMatSolverType(pc, MATSOLVERCHOLMOD);
-//             PCFactorSetMatOrderingType(pc, MATORDERINGAMD);   // try MATORDERINGND for more speed
-//             PCFactorSetReuseOrdering(pc, PETSC_TRUE);
-//             PCFactorSetReuseFill(pc,      PETSC_TRUE);
-//         } else {
-//             KSPReset(sigTree.ksp_n);
-//         }
-//         KSPSetOperators(sigTree.ksp_n, Gact, Gact);
-//         KSPSetUp(sigTree.ksp_n);
-
-//         // Baseline W = G^{-1} E_S (cheap; expSize+1 RHS)
-//         MatDestroy(&sigTree.W);
-//         Mat E = nullptr, &W = sigTree.W;
-//         MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nRed, expSize + 1, NULL, &E);
-//         for (PetscInt s = 0; s <= expSize; ++s) {
-//             const PetscInt r = (s == sigTree.ground_full_idx) ? -1 :
-//                                ((s < sigTree.n_size) ? sigTree.full2red[(size_t)s] : -1);
-//             if (r >= 0) MatSetValue(E, r, s, 1.0, INSERT_VALUES);
-//         }
-//         MatAssemblyBegin(E, MAT_FINAL_ASSEMBLY);
-//         MatAssemblyEnd  (E, MAT_FINAL_ASSEMBLY);
-
-//         MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nRed, expSize + 1, NULL, &W);
-//         { PC pc; KSPGetPC(sigTree.ksp_n, &pc); Mat F; PCFactorGetMatrix(pc, &F); MatMatSolve(F, E, W); }
-//         MatDestroy(&E);
-
-//         // Refresh pairWiseResistance from W
-//         const size_t base = sigTree.resultIdxBegin;
-//         const PetscScalar *Warr = nullptr;
-//         MatDenseGetArrayRead(W, &Warr);
-//         auto Wrc = [&](PetscInt r_red, PetscInt c_super)->PetscScalar {
-//             return Warr[(size_t)c_super * (size_t)nRed + (size_t)r_red];
-//         };
-//         const PetscInt src_red = (sigTree.ground_full_idx == 0) ? -1 : sigTree.full2red[(size_t)0];
-//         const double Ginv_00 = (src_red >= 0) ? PetscRealPart(Wrc(src_red, 0)) : 0.0;
-//         for (PetscInt k = 0; k < expSize; ++k) {
-//             const PetscInt sink_red = (k+1 == sigTree.ground_full_idx) ? -1 : sigTree.full2red[(size_t)(k+1)];
-//             const double Ginv_0s = (src_red  >= 0) ? PetscRealPart(Wrc(src_red , k+1)) : 0.0;
-//             const double Ginv_ss = (sink_red >= 0) ? PetscRealPart(Wrc(sink_red, k+1)) : 0.0;
-//             pairWiseResistance[base + (size_t)k] = Ginv_00 - 2.0*Ginv_0s + Ginv_ss;
-//         }
-//         MatDenseRestoreArrayRead(W, &Warr);
-
-//         return Gact; // caller will MatDestroy()
-//     };
-
-//     // ====================== MAIN GROWTH LOOP (BATCHED EVAL) ======================
-//     constexpr int BATCH = 1024; // tune: 256–4096 depending on memory/threads
-//     int runIteration = 0;
-
-//     while (!allCandidateNodes.empty()) {
-//         ++runIteration;
-
-//         std::vector<CandChamber> performanceVector;
-//         performanceVector.reserve(allCandidateNodes.size());
-//         std::unordered_map<DiffusionChamber*, double> overlapNodePerformance;
-//         std::unordered_map<DiffusionChamber*, size_t> overlapNodeToPerformanceVectorIdx;
-
-//         // Keep ACTIVE matrices alive during evaluation
-//         std::unordered_map<SignalType, Mat> activeG;
-
-//         // ----------------- EVALUATION PHASE (batched) -----------------
-//         for (auto &[st, sigTree] : this->signalTrees) {
-//             if (sigTree.candidateNodes.empty()) continue;
-
-//             Mat Gact = buildGactFactorAndRefresh(st);
-//             activeG[st] = Gact;
-
-//             const PetscInt nRed    = sigTree.n_size_red;
-//             const PetscInt expSize = sigTree.exp_size;
-
-//             // quick exits
-//             if (nRed <= 0) continue;
-
-//             // Build candidate chunks
-//             std::vector<DiffusionChamber*> chunk;           chunk.reserve(BATCH);
-//             std::vector<std::vector<PetscInt>> nbrIdx;      nbrIdx.reserve(BATCH);
-//             std::vector<int> Dng; Dng.reserve(BATCH);
-//             std::vector<int> Dg;  Dg.reserve(BATCH);
-
-//             auto flush_chunk = [&](){
-//                 const int m = (int)chunk.size();
-//                 if (!m) return;
-
-//                 // Build dense Bm (nRed × m) with 1s at neighbor rows
-//                 Mat Bm = nullptr, BetaM = nullptr;
-//                 MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nRed, m, NULL, &Bm);
-//                 for (int c = 0; c < m; ++c) {
-//                     for (PetscInt r : nbrIdx[c]) MatSetValue(Bm, r, c, 1.0, INSERT_VALUES);
-//                 }
-//                 MatAssemblyBegin(Bm, MAT_FINAL_ASSEMBLY);
-//                 MatAssemblyEnd  (Bm, MAT_FINAL_ASSEMBLY);
-
-//                 // BetaM = G^{-1} * Bm  (one BLAS-3 solve)
-//                 MatCreateDense(PETSC_COMM_SELF, PETSC_DECIDE, PETSC_DECIDE, nRed, m, NULL, &BetaM);
-//                 { PC pc; KSPGetPC(sigTree.ksp_n, &pc); Mat F; PCFactorGetMatrix(pc, &F); MatMatSolve(F, Bm, BetaM); }
-//                 MatDestroy(&Bm);
-
-//                 const PetscScalar *BA = nullptr;
-//                 MatDenseGetArrayRead(BetaM, &BA);
-//                 auto Bcol = [&](int c, PetscInt row)->PetscScalar {
-//                     return BA[(size_t)c * (size_t)nRed + (size_t)row]; // column-major
-//                 };
-
-//                 const PetscInt src_red = (sigTree.ground_full_idx == 0) ? -1 : sigTree.full2red[(size_t)0];
-//                 const size_t base = sigTree.resultIdxBegin;
-
-//                 for (int c = 0; c < m; ++c) {
-//                     const int Dtot = Dng[c] + Dg[c];
-//                     if (Dtot == 0) continue;
-
-//                     // den = Dtot - sum_{i in neighbors} BetaM[i,c]
-//                     PetscScalar sumNbr = 0.0;
-//                     for (PetscInt r : nbrIdx[c]) sumNbr += Bcol(c, r);
-//                     const PetscScalar den = (PetscScalar)Dtot - sumNbr;
-//                     if (PetscAbsScalar(den) <= (PetscScalar)1e-14) continue;
-
-//                     PetscScalar beta0 = 0.0;
-//                     if (src_red >= 0) beta0 = Bcol(c, src_red);
-
-//                     std::vector<double> newRVec(this->pairWiseResistance); // local copy per cand
-
-//                     for (PetscInt j = 0; j < expSize; ++j) {
-//                         const PetscInt sink_full = j + 1;
-//                         const PetscInt sink_red  = (sink_full == sigTree.ground_full_idx) ? -1 :
-//                                                    sigTree.full2red[(size_t)sink_full];
-
-//                         PetscScalar betak = 0.0;
-//                         if (sink_red >= 0) betak = Bcol(c, sink_red);
-
-//                         const PetscScalar cj = beta0 - betak;
-//                         const double Rk_old  = pairWiseResistance[base + (size_t)j];
-//                         const double Rk_new  = Rk_old + PetscRealPart((cj * cj) / den);
-//                         newRVec[base + (size_t)j] = Rk_new;
-//                     }
-
-//                     const double gain = calculateNewRGain(newRVec);
-//                     DiffusionChamber *cand = chunk[c];
-
-//                     if (overlapNodes.count(cand) == 0) {
-//                         performanceVector.emplace_back(cand, gain, st, false);
-//                     } else {
-//                         if (overlapNodePerformance.count(cand) == 0) {
-//                             performanceVector.emplace_back(cand, gain, st, true);
-//                             overlapNodePerformance[cand] = gain;
-//                             overlapNodeToPerformanceVectorIdx[cand] = performanceVector.size() - 1;
-//                         } else if (overlapNodePerformance[cand] < gain) {
-//                             overlapNodePerformance[cand] = gain;
-//                             CandChamber &candCB = performanceVector[overlapNodeToPerformanceVectorIdx[cand]];
-//                             candCB.gainValue = gain;
-//                             candCB.sig = st;
-//                         }
-//                     }
-//                 }
-
-//                 MatDenseRestoreArrayRead(BetaM, &BA);
-//                 MatDestroy(&BetaM);
-
-//                 // reset chunk
-//                 chunk.clear(); nbrIdx.clear(); Dng.clear(); Dg.clear();
-//             };
-
-//             // Fill chunks
-//             for (DiffusionChamber *cand : sigTree.candidateNodes) {
-//                 std::vector<PetscInt> neigh; neigh.reserve(8);
-//                 PetscInt D_ng = 0, D_g = 0;
-
-//                 if (cand->metalViaType == DiffusionChamberType::METAL) {
-//                     auto *mc = static_cast<MetalCell*>(cand);
-//                     addNeighborIdx(sigTree, mc->northCell, neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, mc->southCell, neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, mc->eastCell , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, mc->westCell , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, mc->upCell   , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, mc->downCell , neigh, D_ng, D_g);
-//                 } else {
-//                     auto *vc = static_cast<ViaCell*>(cand);
-//                     addNeighborIdx(sigTree, vc->upLLCell  , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->upLRCell  , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->upULCell  , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->upURCell  , neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->downLLCell, neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->downLRCell, neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->downULCell, neigh, D_ng, D_g);
-//                     addNeighborIdx(sigTree, vc->downURCell, neigh, D_ng, D_g);
-//                 }
-
-//                 if ((D_ng + D_g) == 0) continue; // isolated → skip
-
-//                 chunk.push_back(cand);
-//                 nbrIdx.push_back(std::move(neigh));
-//                 Dng.push_back((int)D_ng);
-//                 Dg .push_back((int)D_g);
-
-//                 if ((int)chunk.size() == BATCH) flush_chunk();
-//             }
-//             // tail
-//             flush_chunk();
-//         } // end per-tree eval
-
-//         // ----------------- SELECT + COMMIT -----------------
-//         int commitCount = std::max(256, int(allCandidateNodes.size() * 0.5));
-//         commitCount = std::min(commitCount, int(performanceVector.size()));
-
-//         if (commitCount > 0 && commitCount < (int)performanceVector.size()) {
-//             auto nth = performanceVector.begin() + commitCount;
-//             std::nth_element(performanceVector.begin(), nth, performanceVector.end(),
-//                              [](const auto &a, const auto &b){ return a.gainValue > b.gainValue; });
-//             performanceVector.erase(nth, performanceVector.end());
-//         }
-
-//         std::unordered_map<SignalType, std::vector<DiffusionChamber *>> updatedNodes;
-//         updatedNodes.reserve(performanceVector.size());
-//         for (const CandChamber &cc : performanceVector) {
-//             DiffusionChamber *dc = cc.dc;
-//             SignalType st = cc.sig;
-//             const bool isOverlap = cc.isOverlap;
-
-//             updatedNodes[st].push_back(dc);
-
-//             dc->signal = st;
-//             dc->type   = CellType::MARKED;
-
-//             allCandidateNodes.erase(dc);
-//             allPreplacedOrMarkedNodes.insert(dc);
-
-//             if (!isOverlap) {
-//                 auto &tree = signalTrees[st];
-//                 tree.candidateNodes.erase(dc);
-//                 tree.preplacedOrMarkedNodes.insert(dc);
-//             } else {
-//                 for (SignalType sigType : overlapNodes[dc]) {
-//                     auto &tree = signalTrees[sigType];
-//                     tree.candidateNodes.erase(dc);
-//                     if (sigType == st) tree.preplacedOrMarkedNodes.insert(dc);
-//                 }
-//             }
-//         }
-
-//         size_t totalUpdated = 0;
-//         for (auto &[st, nodes] : updatedNodes) totalUpdated += nodes.size();
-
-//         // Free ACTIVE matrices
-//         for (auto &[st, Gact] : activeG) {
-//             KSPReset(signalTrees[st].ksp_n); // drop factors to release refs
-//             MatDestroy(&Gact);
-//         }
-//         activeG.clear();
-
-//         // ----------------- UPDATE PHASE -----------------
-//         for (auto &[st, nodes] : updatedNodes) {
-//             auto &sigTree = signalTrees[st];
-//             for (DiffusionChamber *dc : nodes) {
-//                 sigTree.GIdxToNode.push_back(dc);
-//                 sigTree.nodeToGIdx[dc] = sigTree.GIdxToNode.size() - 1;
-
-//                 auto pullInNewCandidates = [&](DiffusionChamber *nbr){
-//                     if (!nbr) return;
-//                     if (nbr->type == CellType::EMPTY) {
-//                         allCandidateNodes.insert(nbr);
-//                         sigTree.candidateNodes.insert(nbr);
-//                         nbr->type = CellType::CANDIDATE;
-//                         nbr->signal = st;
-//                     } else if (nbr->type == CellType::CANDIDATE) {
-//                         auto it = overlapNodes.find(nbr);
-//                         if (it == overlapNodes.end()) {
-//                             if (st != nbr->signal) {
-//                                 overlapNodes[nbr] = {st, nbr->signal};
-//                                 nbr->signal = SignalType::UNKNOWN;
-//                                 sigTree.candidateNodes.insert(nbr);
-//                             }
-//                         } else if (std::find(it->second.begin(), it->second.end(), st) == it->second.end()) {
-//                             it->second.push_back(st);
-//                             sigTree.candidateNodes.insert(nbr);
-//                         }
-//                     }
-//                 };
-
-//                 if (dc->metalViaType == DiffusionChamberType::METAL) {
-//                     auto *mc = static_cast<MetalCell*>(dc);
-//                     pullInNewCandidates(mc->northCell);
-//                     pullInNewCandidates(mc->southCell);
-//                     pullInNewCandidates(mc->eastCell);
-//                     pullInNewCandidates(mc->westCell);
-//                     pullInNewCandidates(mc->upCell);
-//                     pullInNewCandidates(mc->downCell);
-//                 } else {
-//                     auto *vc = static_cast<ViaCell*>(dc);
-//                     pullInNewCandidates(vc->upLLCell);
-//                     pullInNewCandidates(vc->upLRCell);
-//                     pullInNewCandidates(vc->upULCell);
-//                     pullInNewCandidates(vc->upURCell);
-//                     pullInNewCandidates(vc->downLLCell);
-//                     pullInNewCandidates(vc->downLRCell);
-//                     pullInNewCandidates(vc->downULCell);
-//                     pullInNewCandidates(vc->downURCell);
-//                 }
-//             }
-//         }
-
-//         // Recompute baselines for changed trees
-//         for (auto &[st, nodes] : updatedNodes) {
-//             if (!nodes.empty()) {
-//                 Mat Gact = buildGactFactorAndRefresh(st);
-//                 KSPReset(signalTrees[st].ksp_n);
-//                 MatDestroy(&Gact);
-//             }
-//         }
-
-//         // --------- Metrics + one-line print ----------
-//         this->initWorseVdrop       = 0.0;
-//         this->initWeightedAvgVdrop = 0.0;
-//         this->initTotalPowerLoss   = 0.0;
-//         for (size_t k = 0; k < currentDemands.size(); ++k) {
-//             const double Ik = currentDemands[k];
-//             const double Rk = pairWiseResistance[k];
-//             if (Rk < 0.0) continue;
-//             const double dv = Rk * Ik;
-//             if (dv > this->initWorseVdrop) this->initWorseVdrop = dv;
-//             initWeightedAvgVdrop += Ik * dv;
-//             initTotalPowerLoss   += Ik * dv;  // == Rk * Ik^2
-//         }
-//         this->initWeightedAvgVdrop = (sumCurrent > 0.0) ? (this->initWeightedAvgVdrop / sumCurrent) : 0.0;
-
-//         std::cout << "Iteration " << runIteration
-//                   << " with " << totalUpdated << " commits, "
-//                   << "loss = " << initWorseVdrop
-//                   << ", " << initWeightedAvgVdrop
-//                   << ", " << initTotalPowerLoss
-//                   << std::endl;
-//     } // while candidates
-// }
-
-
-
 void DiffusionEngine::evaluateAndFillX() {
     struct CandChamber {
         DiffusionChamber *dc;
@@ -5934,8 +5430,23 @@ void DiffusionEngine::evaluateAndFillX() {
     };
 
     // ====================== MAIN GROWTH LOOP (BATCHED EVAL) ======================
-    constexpr int BATCH = 1024; // tune: 256–4096 depending on memory/threads
+    int BATCH = int(batchSize); // tune: 256–4096 depending on memory/threads
     int runIteration = 0;
+    double iterationCommitRate = minCommitRate;
+    
+    double iterationCommitGrowth = (maxCommitRate - minCommitRate) / (int(expectedFillingCycles) - 1);
+
+    size_t totalEmptyNodes = 0;
+    for(const MetalCell &mc : metalGrid){
+        if(mc.type == CellType::CANDIDATE || mc.type == CellType::EMPTY) totalEmptyNodes++;
+    }
+    for(const ViaCell &vc : viaGrid){
+        if(vc.type == CellType::CANDIDATE || vc.type == CellType::EMPTY) totalEmptyNodes++;
+    }
+    size_t totalCommitedNodes = 0;
+
+    int iterationComiitLB = int(double(totalEmptyNodes) * iterationCommitLBPctg);
+
 
     while (!allCandidateNodes.empty()) {
         ++runIteration;
@@ -6088,7 +5599,10 @@ void DiffusionEngine::evaluateAndFillX() {
         } // end per-tree eval
 
         // ----------------- SELECT + COMMIT -----------------
-        int commitCount = std::max(256, int(allCandidateNodes.size() * 0.5));
+
+        if(iterationCommitRate < maxCommitRate) iterationCommitRate += iterationCommitGrowth;
+
+        int commitCount = std::max(iterationComiitLB, int(allCandidateNodes.size() * iterationCommitRate));
         commitCount = std::min(commitCount, int(performanceVector.size()));
 
         if (commitCount > 0 && commitCount < (int)performanceVector.size()) {
@@ -6210,13 +5724,17 @@ void DiffusionEngine::evaluateAndFillX() {
             initTotalPowerLoss   += Ik * dv;  // == Rk * Ik^2
         }
         this->initWeightedAvgVdrop = (sumCurrent > 0.0) ? (this->initWeightedAvgVdrop / sumCurrent) : 0.0;
-
+        
+        totalCommitedNodes += totalUpdated;
+        double commitedPtcg = double(totalCommitedNodes) / double(totalEmptyNodes);
         std::cout << "Iteration " << runIteration
-                  << " with " << totalUpdated << " commits, "
-                  << "loss = " << initWorseVdrop
-                  << ", " << initWeightedAvgVdrop
-                  << ", " << initTotalPowerLoss
-                  << std::endl;
+            << " with " << totalUpdated << " commits (" << commitedPtcg << "), "
+            
+            << "loss = " << initWorseVdrop
+            << ", " << initWeightedAvgVdrop
+            << ", " << initTotalPowerLoss
+            << std::endl;
+        if(commitedPtcg >= maxFillingRate) return;
     } // while candidates
 }
 

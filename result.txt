@@ -16,18 +16,18 @@ STDERR:
 [info] Experiment mode: case01
 
 == IR-drop outputs (filtered) ==
-[POWER_1] irdrop01cpu1_23_88_27_27_1.05= 6.9534e-03
-[POWER_2] irdrop01gpu1_4_4_42_42_2.95= 2.2870e-02
-[POWER_2] irdrop01gpu0_77_77_42_42_2.95= 2.9185e-02
-[POWER_3] irdrop01hbm1_57_87_16_26_0.2= 5.2313e-03
-[POWER_3] irdrop01hbm2_50_16_16_26_0.2= 5.9391e-03
-[POWER_3] irdrop01hbm0_39_67_26_16_0.2= 4.8643e-03
+[POWER_1] irdrop01cpu1_23_88_27_27_1.05= 6.9353e-03
+[POWER_2] irdrop01gpu1_4_4_42_42_2.95= 2.2024e-02
+[POWER_2] irdrop01gpu0_77_77_42_42_2.95= 2.8078e-02
+[POWER_3] irdrop01hbm1_57_87_16_26_0.2= 5.2463e-03
+[POWER_3] irdrop01hbm2_50_16_16_26_0.2= 6.0168e-03
+[POWER_3] irdrop01hbm0_39_67_26_16_0.2= 4.8777e-03
 
 == Resistor power summary ==
-[POWER_1] 0.06830704252228627 W
-[POWER_2] 1.905616946896712 W
-[POWER_3] 0.0933264402948661 W
-Grand Total resistor power: 2.067250429713864 W
+[POWER_1] 0.06828807020066696 W
+[POWER_2] 1.899856135905044 W
+[POWER_3] 0.09334771083092326 W
+Grand Total resistor power: 2.0614919169366344 W
 
 === Global Top-5 contributors (by |power|) ===
 [POWER_2]          3:rpath  |  type: resistor  |  0.8703 W
@@ -37,7 +37,7 @@ Grand Total resistor power: 2.067250429713864 W
 [POWER_3]          4:rpath  |  type: resistor  |  0.03 W
 
 Final report:
-Worse IRDrop: 29.1850 mV
-Weighted-Average IRDrop: 21.7312 mV
-Total Power Loss: 2.0673 W
+Worse IRDrop: 28.0780 mV
+Weighted-Average IRDrop: 20.9684 mV
+Total Power Loss: 2.0615 W
 [info] Saved visualization to: exp/case01.png
